@@ -21,17 +21,22 @@ The code is already in `C:\Users\홍성우\Desktop\Fotel\haeday` with a local gi
 3. In the project canvas → **+ Create** → **Database** → **PostgreSQL**.
 4. **+ Create** → **GitHub Repo** → `haeday` again → name it `worker` → Settings → config file `railway/worker.json` (or Start command `pnpm worker`). In Settings → Networking, do not generate a domain for the worker.
 5. Rename the environment to `staging` (top left environment menu → Settings).
-6. Variables. Open **web** → **Variables** → **Raw Editor** and paste (Claude will give you the generated secret values in chat; never paste them anywhere else):
+6. Generate the secrets yourself (they never go through chat). In Git Bash inside the haeday folder run:
+   ```bash
+   node -e "const r=()=>require('crypto').randomBytes(32).toString('base64');console.log('SESSION_SECRET='+r());console.log('ENCRYPTION_KEYS={\"k1\":\"'+r()+'\"}');console.log('EMAIL_LOOKUP_KEY='+r())"
+   ```
+   Keep a copy in a password manager: losing ENCRYPTION_KEYS means stored customer data can no longer be read.
+   Open **web** → **Variables** → **Raw Editor** and paste:
    ```
    APP_ENV=staging
    APP_ORIGIN=https://<web domain from step 7>
    DATABASE_URL=${{Postgres.DATABASE_URL}}
-   SESSION_SECRET=<from Claude>
+   SESSION_SECRET=<generated>
    PAYMENTS_MODE=test
    LIVE_PAYMENTS_APPROVED=false
-   ENCRYPTION_KEYS=<from Claude>
+   ENCRYPTION_KEYS=<generated>
    ENCRYPTION_ACTIVE_KEY_ID=k1
-   EMAIL_LOOKUP_KEY=<from Claude>
+   EMAIL_LOOKUP_KEY=<generated>
    ```
    Do the same for **worker** (same values).
 7. **web** → Settings → Networking → **Generate Domain**. Put that https address into `APP_ORIGIN` for both services.
