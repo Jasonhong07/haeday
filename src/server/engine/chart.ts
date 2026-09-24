@@ -1,5 +1,5 @@
-// haeday-chart-v1 (ENGINE_SPEC). Pure functions, no I/O besides the bundled jie table and runtime tz data.
-import { JIE_LONS, JIE_TIMES, equationOfTimeMinutes, jieIndexAt } from "./astro";
+// haeday-chart-v2 (ENGINE_SPEC). Pure functions, no I/O besides the bundled jie table and runtime tz data.
+import { JIE_LONS, JIE_TIMES, jieIndexAt } from "./astro";
 import {
   BRANCHES, BRANCH_ELEMENT, BRANCH_EN, BRANCH_MAIN_STEM, JIE_LON_TO_BRANCH, STEMS, STEM_ELEMENT, STEM_EN, STEM_YINYANG,
   dayIndex60, hourBranch, hourStem, join60, mod, monthStem, split60, tenGod, yearIndex60,
@@ -7,7 +7,7 @@ import {
 } from "./tables";
 import { runtimeTzdataVersion, standardOffsetMinutes, wallToUtc, zoneOf } from "./time";
 
-export const POLICY_VERSION = "haeday-chart-v1";
+export const POLICY_VERSION = "haeday-chart-v2";
 export const COVERAGE_VERSION = "cov-1";
 export type DayBoundary = "midnight" | "zi_23";
 
@@ -31,8 +31,8 @@ export interface Candidate { reason: Warning | "timeWindow"; pillars: Pillars; w
 export interface BoundaryQuestion { type: "timeWindow"; askCustomer: boolean; windows: Array<{ index: number; from: string; to: string; minutes: number }>; defaultIndex: number }
 export interface Audit {
   inputLocal: string; tz: string; tzdataVersion: string; utc: string | null; offsetMinutes: number | null;
-  stdOffsetMinutes: number | null; lonCorrectionMin: number | null; eotMin: number | null; trueSolar: string | null;
-  jieBefore: string | null; jieAfter: string | null; eotMethod: "noaa-meeus";
+  stdOffsetMinutes: number | null; lonCorrectionMin: number | null; solarTime: string | null;
+  jieBefore: string | null; jieAfter: string | null; solarMethod: "local-mean-time";
 }
 export interface Chart {
   pillars: Pillars;
@@ -61,17 +61,20 @@ function pillar(idx60: number): Pillar {
   return { stem: STEMS[s]!, branch: BRANCHES[b]!, stemEn: STEM_EN[s]!, branchEn: BRANCH_EN[b]!, stemElement: STEM_ELEMENT[s]!, branchElement: BRANCH_ELEMENT[b]! };
 }
 
-interface Solar { utc: number; std: number; lonCorr: number; eot: number; trueSolar: number /* naive ms */ }
-export function trueSolarAt(utc: number, place: Place): Solar {
+interface Solar { utc: number; std: number; lonCorr: number; solarTime: number /* naive ms */ }
+/**
+ * Local mean solar time (지역시): the civil clock corrected for longitude only. Policy v2 (D28) does not add the
+ * equation of time, matching 포스텔러 and most Korean 만세력 apps.
+ */
+export function solarTimeAt(utc: number, place: Place): Solar {
   const std = standardOffsetMinutes(utc, place.tz);
   const lonCorr = wrap180(place.lon - std / 4) * 4;
-  const eot = equationOfTimeMinutes(utc);
   // Anchor the solar clock to the civil clock actually in use (ENGINE_SPEC §2.3, D09 "anchored to the civil date"):
   // offset + wrap180(lon − offset/4)·4 equals std + lonCorr whenever both stay within ±12 h, and it does not
   // depend on guessing DST, so a date-line move (Samoa 2011-12-31) cannot shift the day by 24 h.
   const offset = zoneOf(place.tz).offset(utc);
   const solarOffset = offset + wrap180(place.lon - offset / 4) * 4;
-  return { utc, std, lonCorr, eot, trueSolar: utc + (solarOffset + eot) * 60_000 };
+  return { utc, std, lonCorr, solarTime: utc + solarOffset * 60_000 };
 }
 
 function yearMonth(utc: number) {
@@ -86,9 +89,9 @@ function yearMonth(utc: number) {
   return { y60, m60, jieBefore: JIE_TIMES[i]!, jieAfter: JIE_TIMES[i + 1]! };
 }
 
-function dayHour(trueSolar: number, withHour: boolean, boundary: DayBoundary) {
-  const minutes = Math.floor(mod(trueSolar, 86_400_000) / 60_000);
-  let epochDay = Math.floor(trueSolar / 86_400_000);
+function dayHour(solarTime: number, withHour: boolean, boundary: DayBoundary) {
+  const minutes = Math.floor(mod(solarTime, 86_400_000) / 60_000);
+  let epochDay = Math.floor(solarTime / 86_400_000);
   if (boundary === "zi_23" && minutes >= 23 * 60) epochDay += 1;
   const d60 = dayIndex60(epochDay);
   let h60: number | null = null;
@@ -101,9 +104,9 @@ function dayHour(trueSolar: number, withHour: boolean, boundary: DayBoundary) {
 }
 
 function pillarsAt(utc: number, place: Place, withHour: boolean, boundary: DayBoundary) {
-  const solar = trueSolarAt(utc, place);
+  const solar = solarTimeAt(utc, place);
   const ym = yearMonth(utc);
-  const dh = dayHour(solar.trueSolar, withHour, boundary);
+  const dh = dayHour(solar.solarTime, withHour, boundary);
   const pillars: Pillars = { year: pillar(ym.y60), month: pillar(ym.m60), day: pillar(dh.d60), hour: dh.h60 === null ? null : pillar(dh.h60) };
   return { solar, ym, pillars };
 }
@@ -140,7 +143,7 @@ function warningsAndAlternatives(utc: number, place: Place, solar: Solar, ym: { 
   birthYear: number, approximate: boolean, boundary: DayBoundary) {
   const warnings: Warning[] = [];
   const alternatives: Candidate[] = [];
-  const minutes = mod(solar.trueSolar, 86_400_000) / MIN;
+  const minutes = mod(solar.solarTime, 86_400_000) / MIN;
   const hourWindow = approximate ? 60 : 5;
   // hour-branch edges at odd hours
   let nearest = 0, dist = Infinity;
@@ -219,7 +222,7 @@ export function computeChart(input: ChartInput): ChartResponse {
   const today = input.today ?? new Date().toISOString().slice(0, 10);
   if (y < 1900 || input.birthDate > today) return { kind: "invalid_input", reason: "date_out_of_range" };
 
-  const baseAudit = { inputLocal: `${input.birthDate} ${"hhmm" in input.time ? input.time.hhmm : "unknown"}`, tz: input.place.tz, tzdataVersion: runtimeTzdataVersion(), eotMethod: "noaa-meeus" as const };
+  const baseAudit = { inputLocal: `${input.birthDate} ${"hhmm" in input.time ? input.time.hhmm : "unknown"}`, tz: input.place.tz, tzdataVersion: runtimeTzdataVersion(), solarMethod: "local-mean-time" as const };
 
   if (input.time.kind === "unknown") {
     const { groups } = unknownGroups(input.birthDate, input.place, boundary);
@@ -241,7 +244,7 @@ export function computeChart(input: ChartInput): ChartResponse {
     const chart: Chart = {
       pillars: g.pillars, ...derive(g.pillars), timeBasis: "unknown", disclosure,
       policyVersion: POLICY_VERSION, coverageVersion: COVERAGE_VERSION,
-      audit: { ...baseAudit, utc: null, offsetMinutes: null, stdOffsetMinutes: null, lonCorrectionMin: null, eotMin: null, trueSolar: null, jieBefore: null, jieAfter: null },
+      audit: { ...baseAudit, utc: null, offsetMinutes: null, stdOffsetMinutes: null, lonCorrectionMin: null, solarTime: null, jieBefore: null, jieAfter: null },
     };
     const alternatives: Candidate[] = groups.filter((_, i) => i !== chosen).map((o) => ({ reason: "timeWindow", pillars: o.pillars, window: { from: o.from, to: o.to } }));
     return { kind: "computed", chart, alternatives, warnings: y < 1970 ? ["pre1970Tz"] : [], questions };
@@ -259,8 +262,8 @@ export function computeChart(input: ChartInput): ChartResponse {
     policyVersion: POLICY_VERSION, coverageVersion: COVERAGE_VERSION,
     audit: {
       ...baseAudit, utc: iso(utc), offsetMinutes: zoneOf(input.place.tz).offset(utc),
-      stdOffsetMinutes: round3(solar.std), lonCorrectionMin: round3(solar.lonCorr), eotMin: round3(solar.eot),
-      trueSolar: naiveIso(solar.trueSolar), jieBefore: iso(ym.jieBefore), jieAfter: iso(ym.jieAfter),
+      stdOffsetMinutes: round3(solar.std), lonCorrectionMin: round3(solar.lonCorr),
+      solarTime: naiveIso(solar.solarTime), jieBefore: iso(ym.jieBefore), jieAfter: iso(ym.jieAfter),
     },
   };
   return { kind: "computed", chart, alternatives, warnings, questions: [] };

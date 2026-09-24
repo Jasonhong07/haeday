@@ -10,10 +10,16 @@ export function json(body: unknown, status = 200, extra: Record<string, string> 
   return Response.json(body, { status, headers: { ...NO_STORE, ...extra } });
 }
 
-/** POSTs must come from our own pages. Browsers always send Origin on cross-site POSTs. */
+/**
+ * POSTs must come from our own pages. Browsers always send Origin on cross-site POSTs and a page cannot forge it.
+ * Accepted: the configured APP_ORIGIN, or the host this request was addressed to (e.g. the Railway staging domain).
+ */
 export function sameOrigin(request: Request, env: Env): boolean {
   const origin = request.headers.get("origin");
-  return origin !== null && origin === new URL(env.APP_ORIGIN).origin;
+  if (!origin) return false;
+  if (origin === new URL(env.APP_ORIGIN).origin) return true;
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  try { return host !== null && new URL(origin).host === host; } catch { return false; }
 }
 
 export function readCookie(request: Request, name: string): string | undefined {

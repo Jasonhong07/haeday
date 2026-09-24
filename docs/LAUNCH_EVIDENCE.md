@@ -39,3 +39,4 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 | 2026-09-24 | M2 E2E (iPhone 13 viewport) | cloud-dev | `pnpm e2e` | 9/9: exact-time flow with share preview, fold 1995-10-29 01:30 NYC, gap 1995-04-02 02:30, unknown time day split (disclosure), 立春 window question + I don't know, edit → new revision, other browser gets 404, no horizontal scroll | PASS | Claude |
 | 2026-09-24 | Full check after M2 | cloud-dev | `pnpm check` (with test DB) + `pnpm build` | 15 files / 140 tests | PASS | Claude |
 | | M2 on Railway staging | Railway | open staging URL, make a chart on a phone | | NOT RUN (needs push) | Jason |
+| 2026-09-24 | Policy v2: no equation of time (D28) | cloud-dev | `oracle:update` (43 cases) + `oracle:verify` + `oracle:lunar` + `pnpm check` + `pnpm e2e` | golden matches; lunar 3,000/3,000 (62 near-edge skipped); 포스텔러 10/10; 16 files / 145 tests; E2E 9/9 | PASS | Claude |

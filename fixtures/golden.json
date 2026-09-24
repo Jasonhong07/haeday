@@ -1,7 +1,6 @@
 {
- "policyVersion": "haeday-chart-v1",
+ "policyVersion": "haeday-chart-v2",
  "tzdata": "2026d",
- "eotToleranceSeconds": 60,
  "cases": [
   {
    "id": "F01",
@@ -25,15 +24,14 @@
     "utc": "1990-05-12T00:30:00Z",
     "stdOffsetMinutes": 540.0,
     "lonCorrectionMin": -32.088,
-    "eotMin": 3.68,
-    "trueSolar": "1990-05-12T09:01:35",
+    "solarTime": "1990-05-12T08:57:54",
     "jieBefore": "1990-05-05T18:35:26Z",
     "jieAfter": "1990-06-05T22:46:18Z",
     "pillars": {
      "year": "庚午",
      "month": "辛巳",
      "day": "丁丑",
-     "hour": "乙巳"
+     "hour": "甲辰"
     },
     "warnings": [
      "hourBoundary"
@@ -62,8 +60,7 @@
     "utc": "1985-03-20T19:15:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
-    "eotMin": -7.427,
-    "trueSolar": "1985-03-20T14:11:32",
+    "solarTime": "1985-03-20T14:18:58",
     "jieBefore": "1985-03-05T15:16:22Z",
     "jieAfter": "1985-04-04T20:13:35Z",
     "pillars": {
@@ -97,8 +94,7 @@
     "utc": "2000-09-01T13:45:00Z",
     "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
-    "eotMin": 0.156,
-    "trueSolar": "2000-09-01T05:52:10",
+    "solarTime": "2000-09-01T05:52:01",
     "jieBefore": "2000-08-07T05:02:59Z",
     "jieAfter": "2000-09-07T07:59:09Z",
     "pillars": {
@@ -132,8 +128,7 @@
     "utc": "1998-12-25T00:05:00Z",
     "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
-    "eotMin": 0.248,
-    "trueSolar": "1998-12-24T18:14:43",
+    "solarTime": "1998-12-24T18:14:28",
     "jieBefore": "1998-12-07T08:01:35Z",
     "jieAfter": "1999-01-05T19:17:08Z",
     "pillars": {
@@ -215,8 +210,7 @@
     "utc": "1995-10-29T06:30:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
-    "eotMin": 16.22,
-    "trueSolar": "1995-10-29T01:50:11",
+    "solarTime": "1995-10-29T01:33:58",
     "jieBefore": "1995-10-08T18:27:12Z",
     "jieAfter": "1995-11-07T21:35:36Z",
     "pillars": {
@@ -276,8 +270,7 @@
     "utc": "1995-07-15T08:50:00Z",
     "stdOffsetMinutes": -540.0,
     "lonCorrectionMin": -59.601,
-    "eotMin": -5.881,
-    "trueSolar": "1995-07-14T22:44:31",
+    "solarTime": "1995-07-14T22:50:23",
     "jieBefore": "1995-07-07T14:00:59Z",
     "jieAfter": "1995-08-07T23:51:44Z",
     "pillars": {
@@ -311,8 +304,7 @@
     "utc": "1995-02-10T05:20:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": -32.183,
-    "eotMin": -14.254,
-    "trueSolar": "1995-02-09T23:33:33",
+    "solarTime": "1995-02-09T23:47:49",
     "jieBefore": "1995-02-04T07:12:50Z",
     "jieAfter": "1995-03-06T01:16:03Z",
     "pillars": {
@@ -346,8 +338,7 @@
     "utc": "1992-06-11T04:49:00Z",
     "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
-    "eotMin": 0.398,
-    "trueSolar": "1992-06-10T22:58:52",
+    "solarTime": "1992-06-10T22:58:28",
     "jieBefore": "1992-06-05T10:22:20Z",
     "jieAfter": "1992-07-06T20:40:15Z",
     "pillars": {
@@ -383,8 +374,7 @@
     "utc": "1992-06-11T04:53:00Z",
     "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
-    "eotMin": 0.397,
-    "trueSolar": "1992-06-10T23:02:52",
+    "solarTime": "1992-06-10T23:02:28",
     "jieBefore": "1992-06-05T10:22:20Z",
     "jieAfter": "1992-07-06T20:40:15Z",
     "pillars": {
@@ -421,8 +411,7 @@
     "utc": "1992-06-11T04:53:00Z",
     "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
-    "eotMin": 0.397,
-    "trueSolar": "1992-06-10T23:02:52",
+    "solarTime": "1992-06-10T23:02:28",
     "jieBefore": "1992-06-05T10:22:20Z",
     "jieAfter": "1992-07-06T20:40:15Z",
     "pillars": {
@@ -458,8 +447,7 @@
     "utc": "1992-06-10T05:48:00Z",
     "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
-    "eotMin": 0.59,
-    "trueSolar": "1992-06-09T23:58:04",
+    "solarTime": "1992-06-09T23:57:28",
     "jieBefore": "1992-06-05T10:22:20Z",
     "jieAfter": "1992-07-06T20:40:15Z",
     "pillars": {
@@ -495,8 +483,7 @@
     "utc": "1992-06-10T05:52:00Z",
     "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
-    "eotMin": 0.59,
-    "trueSolar": "1992-06-10T00:02:04",
+    "solarTime": "1992-06-10T00:01:28",
     "jieBefore": "1992-06-05T10:22:20Z",
     "jieAfter": "1992-07-06T20:40:15Z",
     "pillars": {
@@ -532,8 +519,7 @@
     "utc": "2024-02-04T08:26:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
-    "eotMin": -13.814,
-    "trueSolar": "2024-02-04T03:16:09",
+    "solarTime": "2024-02-04T03:29:58",
     "jieBefore": "2024-01-05T20:49:23Z",
     "jieAfter": "2024-02-04T08:27:08Z",
     "pillars": {
@@ -569,8 +555,7 @@
     "utc": "2024-02-04T08:27:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
-    "eotMin": -13.814,
-    "trueSolar": "2024-02-04T03:17:09",
+    "solarTime": "2024-02-04T03:30:58",
     "jieBefore": "2024-01-05T20:49:23Z",
     "jieAfter": "2024-02-04T08:27:08Z",
     "pillars": {
@@ -606,8 +591,7 @@
     "utc": "2024-02-04T08:28:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
-    "eotMin": -13.814,
-    "trueSolar": "2024-02-04T03:18:09",
+    "solarTime": "2024-02-04T03:31:58",
     "jieBefore": "2024-02-04T08:27:08Z",
     "jieAfter": "2024-03-05T02:22:46Z",
     "pillars": {
@@ -643,8 +627,7 @@
     "utc": "1995-08-07T23:50:00Z",
     "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
-    "eotMin": -5.74,
-    "trueSolar": "1995-08-07T15:51:17",
+    "solarTime": "1995-08-07T15:57:01",
     "jieBefore": "1995-07-07T14:00:59Z",
     "jieAfter": "1995-08-07T23:51:44Z",
     "pillars": {
@@ -680,8 +663,7 @@
     "utc": "1995-08-07T23:51:00Z",
     "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
-    "eotMin": -5.74,
-    "trueSolar": "1995-08-07T15:52:17",
+    "solarTime": "1995-08-07T15:58:01",
     "jieBefore": "1995-07-07T14:00:59Z",
     "jieAfter": "1995-08-07T23:51:44Z",
     "pillars": {
@@ -717,8 +699,7 @@
     "utc": "1995-08-07T23:52:00Z",
     "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
-    "eotMin": -5.74,
-    "trueSolar": "1995-08-07T15:53:17",
+    "solarTime": "1995-08-07T15:59:01",
     "jieBefore": "1995-08-07T23:51:44Z",
     "jieAfter": "1995-09-08T02:48:34Z",
     "pillars": {
@@ -753,8 +734,8 @@
     "groups": [
      {
       "from": "00:00",
-      "to": "23:39",
-      "minutes": 1420,
+      "to": "23:56",
+      "minutes": 1437,
       "pillars": {
        "year": "庚午",
        "month": "丙戌",
@@ -762,9 +743,9 @@
       }
      },
      {
-      "from": "23:40",
+      "from": "23:57",
       "to": "23:59",
-      "minutes": 20,
+      "minutes": 3,
       "pillars": {
        "year": "庚午",
        "month": "丙戌",
@@ -795,8 +776,8 @@
     "groups": [
      {
       "from": "00:00",
-      "to": "00:49",
-      "minutes": 50,
+      "to": "00:50",
+      "minutes": 51,
       "pillars": {
        "year": "壬申",
        "month": "丙午",
@@ -804,9 +785,9 @@
       }
      },
      {
-      "from": "00:50",
+      "from": "00:51",
       "to": "23:59",
-      "minutes": 1390,
+      "minutes": 1389,
       "pillars": {
        "year": "壬申",
        "month": "丙午",
@@ -837,18 +818,8 @@
     "groups": [
      {
       "from": "00:00",
-      "to": "00:09",
-      "minutes": 10,
-      "pillars": {
-       "year": "癸卯",
-       "month": "乙丑",
-       "day": "丁酉"
-      }
-     },
-     {
-      "from": "00:10",
       "to": "03:27",
-      "minutes": 198,
+      "minutes": 208,
       "pillars": {
        "year": "癸卯",
        "month": "乙丑",
@@ -857,12 +828,22 @@
      },
      {
       "from": "03:28",
-      "to": "23:59",
-      "minutes": 1232,
+      "to": "23:56",
+      "minutes": 1229,
       "pillars": {
        "year": "甲辰",
        "month": "丙寅",
        "day": "戊戌"
+      }
+     },
+     {
+      "from": "23:57",
+      "to": "23:59",
+      "minutes": 3,
+      "pillars": {
+       "year": "甲辰",
+       "month": "丙寅",
+       "day": "己亥"
       }
      }
     ]
@@ -890,8 +871,7 @@
     "utc": "1955-06-15T00:30:00Z",
     "stdOffsetMinutes": 510.0,
     "lonCorrectionMin": -2.088,
-    "eotMin": 0.107,
-    "trueSolar": "1955-06-15T08:58:01",
+    "solarTime": "1955-06-15T08:57:54",
     "jieBefore": "1955-06-06T11:43:14Z",
     "jieAfter": "1955-07-07T22:05:40Z",
     "pillars": {
@@ -928,8 +908,7 @@
     "utc": "1987-07-14T14:40:00Z",
     "stdOffsetMinutes": 540.0,
     "lonCorrectionMin": -32.088,
-    "eotMin": -5.791,
-    "trueSolar": "1987-07-14T23:02:07",
+    "solarTime": "1987-07-14T23:07:54",
     "jieBefore": "1987-07-07T15:38:40Z",
     "jieAfter": "1987-08-08T01:29:14Z",
     "pillars": {
@@ -938,9 +917,7 @@
      "day": "甲子",
      "hour": "丙子"
     },
-    "warnings": [
-     "hourBoundary"
-    ]
+    "warnings": []
    }
   },
   {
@@ -965,8 +942,7 @@
     "utc": "1990-07-10T20:05:00Z",
     "stdOffsetMinutes": -420.0,
     "lonCorrectionMin": -28.296,
-    "eotMin": -5.349,
-    "trueSolar": "1990-07-10T12:31:21",
+    "solarTime": "1990-07-10T12:36:42",
     "jieBefore": "1990-07-07T09:00:29Z",
     "jieAfter": "1990-08-07T18:45:31Z",
     "pillars": {
@@ -1000,8 +976,7 @@
     "utc": "1990-03-01T11:15:00Z",
     "stdOffsetMinutes": -600.0,
     "lonCorrectionMin": -31.433,
-    "eotMin": -12.407,
-    "trueSolar": "1990-03-01T00:31:09",
+    "solarTime": "1990-03-01T00:43:34",
     "jieBefore": "1990-02-04T02:14:00Z",
     "jieAfter": "1990-03-05T20:19:17Z",
     "pillars": {
@@ -1035,8 +1010,7 @@
     "utc": "1990-07-01T17:00:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": -44.632,
-    "eotMin": -3.824,
-    "trueSolar": "1990-07-01T11:11:32",
+    "solarTime": "1990-07-01T11:15:22",
     "jieBefore": "1990-06-05T22:46:18Z",
     "jieAfter": "1990-07-07T09:00:29Z",
     "pillars": {
@@ -1070,8 +1044,7 @@
     "utc": "2010-07-01T16:00:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": -44.632,
-    "eotMin": -3.874,
-    "trueSolar": "2010-07-01T10:11:29",
+    "solarTime": "2010-07-01T10:15:22",
     "jieBefore": "2010-06-05T18:49:23Z",
     "jieAfter": "2010-07-07T05:02:24Z",
     "pillars": {
@@ -1105,8 +1078,7 @@
     "utc": "1995-01-15T12:10:00Z",
     "stdOffsetMinutes": 600.0,
     "lonCorrectionMin": 4.837,
-    "eotMin": -9.322,
-    "trueSolar": "1995-01-15T22:05:30",
+    "solarTime": "1995-01-15T22:14:50",
     "jieBefore": "1995-01-05T19:34:04Z",
     "jieAfter": "1995-02-04T07:12:50Z",
     "pillars": {
@@ -1140,8 +1112,7 @@
     "utc": "2000-06-14T17:00:00Z",
     "stdOffsetMinutes": 840.0,
     "lonCorrectionMin": -29.711,
-    "eotMin": -0.352,
-    "trueSolar": "2000-06-15T06:29:56",
+    "solarTime": "2000-06-15T06:30:17",
     "jieBefore": "2000-06-05T08:58:34Z",
     "jieAfter": "2000-07-06T19:13:56Z",
     "pillars": {
@@ -1175,8 +1146,7 @@
     "utc": "1985-03-20T19:40:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
-    "eotMin": -7.422,
-    "trueSolar": "1985-03-20T14:36:33",
+    "solarTime": "1985-03-20T14:43:58",
     "jieBefore": "1985-03-05T15:16:22Z",
     "jieAfter": "1985-04-04T20:13:35Z",
     "pillars": {
@@ -1213,8 +1183,7 @@
     "utc": "2011-12-30T22:00:00Z",
     "stdOffsetMinutes": 780.0,
     "lonCorrectionMin": -27.067,
-    "eotMin": -2.564,
-    "trueSolar": "2011-12-31T10:30:22",
+    "solarTime": "2011-12-31T10:32:55",
     "jieBefore": "2011-12-07T11:29:00Z",
     "jieAfter": "2012-01-05T22:43:56Z",
     "pillars": {
@@ -1248,8 +1217,7 @@
     "utc": "1993-08-22T00:00:00Z",
     "stdOffsetMinutes": 720.0,
     "lonCorrectionMin": -50.765,
-    "eotMin": -2.972,
-    "trueSolar": "1993-08-22T11:06:15",
+    "solarTime": "1993-08-22T11:09:14",
     "jieBefore": "1993-08-07T12:17:58Z",
     "jieAfter": "1993-09-07T15:07:47Z",
     "pillars": {
@@ -1283,8 +1251,7 @@
     "utc": "1961-09-15T03:00:00Z",
     "stdOffsetMinutes": 540.0,
     "lonCorrectionMin": -32.088,
-    "eotMin": 4.758,
-    "trueSolar": "1961-09-15T11:32:40",
+    "solarTime": "1961-09-15T11:27:54",
     "jieBefore": "1961-09-07T21:29:03Z",
     "jieAfter": "1961-10-08T12:50:47Z",
     "pillars": {
@@ -1320,17 +1287,18 @@
     "utc": "1974-01-15T16:00:00Z",
     "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
-    "eotMin": -9.424,
-    "trueSolar": "1974-01-15T10:54:33",
+    "solarTime": "1974-01-15T11:03:58",
     "jieBefore": "1974-01-05T17:19:55Z",
     "jieAfter": "1974-02-04T05:00:05Z",
     "pillars": {
      "year": "癸丑",
      "month": "乙丑",
      "day": "丙辰",
-     "hour": "癸巳"
+     "hour": "甲午"
     },
-    "warnings": []
+    "warnings": [
+     "hourBoundary"
+    ]
    }
   },
   {
@@ -1376,8 +1344,7 @@
     "utc": "1900-01-01T03:32:08Z",
     "stdOffsetMinutes": 507.867,
     "lonCorrectionMin": 0.045,
-    "eotMin": -2.765,
-    "trueSolar": "1900-01-01T11:57:16",
+    "solarTime": "1900-01-01T12:00:02",
     "jieBefore": "1899-12-07T07:03:48Z",
     "jieAfter": "1900-01-05T18:03:13Z",
     "pillars": {
@@ -1388,6 +1355,150 @@
     },
     "warnings": [
      "pre1970Tz"
+    ]
+   }
+  },
+  {
+   "id": "F38",
+   "input": {
+    "id": "F38",
+    "note": "v2 solar 22:58, 2 min before 子 hour",
+    "birthDate": "2000-01-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "22:49"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2000-01-16T04:49:00Z",
+    "stdOffsetMinutes": -360.0,
+    "lonCorrectionMin": 9.481,
+    "solarTime": "2000-01-15T22:58:28",
+    "jieBefore": "2000-01-06T01:00:41Z",
+    "jieAfter": "2000-02-04T12:40:23Z",
+    "pillars": {
+     "year": "己卯",
+     "month": "丁丑",
+     "day": "壬申",
+     "hour": "辛亥"
+    },
+    "warnings": [
+     "hourBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F39",
+   "input": {
+    "id": "F39",
+    "note": "v2 solar 23:02, 子 hour with next-day stem",
+    "birthDate": "2000-01-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "22:53"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2000-01-16T04:53:00Z",
+    "stdOffsetMinutes": -360.0,
+    "lonCorrectionMin": 9.481,
+    "solarTime": "2000-01-15T23:02:28",
+    "jieBefore": "2000-01-06T01:00:41Z",
+    "jieAfter": "2000-02-04T12:40:23Z",
+    "pillars": {
+     "year": "己卯",
+     "month": "丁丑",
+     "day": "壬申",
+     "hour": "壬子"
+    },
+    "warnings": [
+     "hourBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F40",
+   "input": {
+    "id": "F40",
+    "note": "v2 solar 23:58, before solar midnight",
+    "birthDate": "2000-01-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "23:49"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2000-01-16T05:49:00Z",
+    "stdOffsetMinutes": -360.0,
+    "lonCorrectionMin": 9.481,
+    "solarTime": "2000-01-15T23:58:28",
+    "jieBefore": "2000-01-06T01:00:41Z",
+    "jieAfter": "2000-02-04T12:40:23Z",
+    "pillars": {
+     "year": "己卯",
+     "month": "丁丑",
+     "day": "壬申",
+     "hour": "壬子"
+    },
+    "warnings": [
+     "dayBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F41",
+   "input": {
+    "id": "F41",
+    "note": "v2 solar 00:02 next day: longitude correction moves the day forward",
+    "birthDate": "2000-01-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "23:53"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2000-01-16T05:53:00Z",
+    "stdOffsetMinutes": -360.0,
+    "lonCorrectionMin": 9.481,
+    "solarTime": "2000-01-16T00:02:28",
+    "jieBefore": "2000-01-06T01:00:41Z",
+    "jieAfter": "2000-02-04T12:40:23Z",
+    "pillars": {
+     "year": "己卯",
+     "month": "丁丑",
+     "day": "癸酉",
+     "hour": "壬子"
+    },
+    "warnings": [
+     "dayBoundary"
     ]
    }
   }

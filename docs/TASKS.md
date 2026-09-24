@@ -14,7 +14,7 @@ Rules: one milestone at a time, in order. A box is ticked only with evidence rec
 
 ## M1 · Chart engine (9/24–9/26) · release gate 9/27 23:59 CT
 - [x] Engine approach decided: own implementation, no calendar library (D24)
-- [x] tools/oracle (Python 3.14 + Skyfield + tzdata pinned) → `data/jie_1900_2050.json` (+ ephemeris name/hash) via `pnpm oracle:update` · Jason approval of the table pending (sign-off line in docs/STATUS.md)
+- [x] tools/oracle (Python 3.14 + Skyfield + tzdata pinned) → `data/jie_1900_2050.json` (+ ephemeris name/hash) via `pnpm oracle:update` · Jason approved the table 2026-09-24 (D21)
 - [x] Bundled GeoNames cities15000 subset with lat/lon/tz; `GET /api/places?q=` autocomplete; server-side placeId resolution (D27)
 - [x] Engine implements ENGINE_SPEC §2–§4 exactly, returns the §3 union
 - [x] `fixtures/manifest.json` with F01–F30 (+F12z, F28b, F31 = 33 cases); `pnpm oracle:verify` in CI compares every step (utc, offsets, jie neighbors, trueSolar within tolerance, pillars, warnings)

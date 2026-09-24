@@ -5,9 +5,9 @@ TypeScript engine.
 How the comparison is fair: lunar_python has no time zones or solar-time correction and its solar terms are in
 Beijing time. So
   * year and month pillars: feed lunar the UTC instant shifted to UTC+8 (Beijing wall clock);
-  * day and hour pillars: feed lunar our true-solar wall clock, with sect=2 (晚子時 keeps the current day = 야자시).
+  * day and hour pillars: feed lunar our local-mean-solar wall clock, with sect=2 (晚子時 keeps the current day = 야자시).
 Samples within 5 minutes of a solar term or within 1 minute of an hour/day edge are skipped (the libraries' term
-instants differ by about a second and EoT methods by seconds).
+instants differ by about a second).
 
 Usage: pnpm oracle:lunar   (python tools/oracle/crosscheck_lunar.py [N=3000])
 """
@@ -15,7 +15,7 @@ from __future__ import annotations
 import json, random, sys
 from datetime import timedelta
 from lunar_python import Solar
-from compute import JIE_TIMES, true_solar, wall_to_utc, year_month, day_hour
+from compute import JIE_TIMES, solar_time, wall_to_utc, year_month, day_hour
 import bisect
 
 places = json.load(open("fixtures/manifest.json", encoding="utf-8"))["places"]
@@ -47,7 +47,7 @@ def main(n: int = 3000, seed: int = 20260924):
         u = cands[0]
         i = bisect.bisect_right(JIE_TIMES, u) - 1
         near_term = min(abs((u - JIE_TIMES[i]).total_seconds()), abs((JIE_TIMES[i + 1] - u).total_seconds())) < 300
-        ts, *_ = true_solar(u, place["lon"], place["tz"])
+        ts, *_ = solar_time(u, place["lon"], place["tz"])
         mins = ts.hour * 60 + ts.minute + ts.second / 60
         near_edge = min(abs(((mins - 60 * e) + 720) % 1440 - 720) for e in range(1, 24, 2)) < 1 or min(mins, 1440 - mins) < 1
         if near_term or near_edge:

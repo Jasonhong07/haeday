@@ -20,7 +20,7 @@ test("exact time: landing → input → chart with pillars, Day Master, details 
   await fill(page, "1990-05-12", "I know it", "09:30", "seoul", /^Seoul, South Korea$/);
   await expect(page).toHaveURL(/\/chart\/[0-9a-f-]{36}$/);
   const pillars = page.getByRole("list", { name: "Your four pillars" });
-  for (const p of ["Year pillar: 庚午", "Month pillar: 辛巳", "Day pillar: 丁丑", "Hour pillar: 乙巳"]) await expect(pillars).toContainText(p);
+  for (const p of ["Year pillar: 庚午", "Month pillar: 辛巳", "Day pillar: 丁丑", "Hour pillar: 甲辰"]) await expect(pillars).toContainText(p);
   await expect(page.getByRole("heading", { name: /Yin Fire/ })).toBeVisible();
   await expect(page.getByText("Out of 8 characters")).toBeVisible();
   await expect(page.getByText(/Your details: May 12, 1990, 9:30 AM, Seoul, South Korea\. Solar time adjusted\./)).toBeVisible();

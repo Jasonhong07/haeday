@@ -30,19 +30,19 @@ type ChartInput = {
    - Round-trip check: converting the UTC back must give the same wall time and offset.
    - The historical offset already contains DST. Never subtract DST again.
 3. **Year and month pillars** from the UTC birth instant compared with the canonical jie (節) table (§5). Month stem via 五虎遁 from the year stem of the same solar year.
-4. **True solar time, anchored to the civil date:**
+4. **Local mean solar time (지역시), anchored to the civil date** (policy `haeday-chart-v2`, D28; v1 also added the equation of time):
    - `standardClock = UTC + standardOffset` (standard offset at that date, DST excluded).
    - `lonCorrectionMin = wrap180(lon − meridian) × 4` where wrap180 maps to (−180°, 180°]. This keeps date-line places anchored to their civil date.
-   - `trueSolar = standardClock + lonCorrectionMin + EoT(UTC)` as a full datetime (date may roll forward/back).
-   - EoT: NOAA solar calculator (Meeus) formulation, minutes. Record `eotMethod: "noaa-meeus"` (D26).
-5. **Day pillar** from the trueSolar date via the 60-day cycle. Anchor: 1900-01-31 is 甲辰 (verify against at least two independent published 만세력 references and record them in DECISIONS before M1 is done). Boundary policy `dayBoundary: "midnight"`: 23:00–23:59 trueSolar keeps the current day pillar.
-6. **Hour pillar**: branch from trueSolar (子 23:00–00:59, 丑 01:00–02:59, ...). Stem via 五鼠遁 from the day stem; for 23:00–23:59 use the NEXT day's stem.
+   - `solarTime = standardClock + lonCorrectionMin` as a full datetime (date may roll forward/back). No equation of time (D28). Record `solarMethod: "local-mean-time"`.
+   - Implementation (D29): computed as `UTC + offset + wrap180(lon − offset/4) × 4` with the offset actually in use, which is identical whenever both forms stay within ±12 h and needs no DST guess.
+5. **Day pillar** from the solarTime date via the 60-day cycle. Anchor: 1900-01-31 is 甲辰 (verify against at least two independent published 만세력 references and record them in DECISIONS before M1 is done). Boundary policy `dayBoundary: "midnight"`: 23:00–23:59 solarTime keeps the current day pillar.
+6. **Hour pillar**: branch from solarTime (子 23:00–00:59, 丑 01:00–02:59, ...). Stem via 五鼠遁 from the day stem; for 23:00–23:59 use the NEXT day's stem.
 7. **Derived facts**, always recomputed from the final pillars of that candidate:
    - `dayMaster` {stem, element, yinYang}
    - `visibleElements`: counts over visible characters, denominator 8 (or 6 when hour is null). Label in UI: "visible element count", not a strength analysis.
    - `tenGods`: for each position except the day stem: stems use the stem relation table; branches use their main hidden stem (본기) table. Both tables live in `server/engine/tables.ts` and are reviewed by Jason.
    - Pillar carries `stemElement` and `branchElement` separately.
-8. **Warnings** (never block sales, D06): `hourBoundary` (trueSolar within ±5 min of an hour-branch edge), `dayBoundary` (±5 min of 00:00 trueSolar), `termBoundary` (UTC within ±30 min of a jie instant), `pre1970Tz`, `approximateTime`. For each warning, compute the alternative candidate and include it.
+8. **Warnings** (never block sales, D06): `hourBoundary` (solarTime within ±5 min of an hour-branch edge), `dayBoundary` (±5 min of 00:00 solarTime), `termBoundary` (UTC within ±30 min of a jie instant), `pre1970Tz`, `approximateTime`. For each warning, compute the alternative candidate and include it.
 
 ## 3. Output (discriminated union)
 ```ts
@@ -60,7 +60,7 @@ type Chart = {
   timeBasis: "exact" | "approximate" | "unknown";
   disclosure: string | null;      // exact customer-facing sentence when a default was applied
   policyVersion: "haeday-chart-v1"; coverageVersion: string;
-  audit: Audit;                    // input wall time, tz, tzdataVersion, utc (or interval list), offset, lonCorrectionMin, eotMin, trueSolar, jieBefore, jieAfter
+  audit: Audit;                    // input wall time, tz, tzdataVersion, utc (or interval list), offset, lonCorrectionMin, solarTime, jieBefore, jieAfter
 };
 ```
 Checkout never trusts client flags. It re-reads the stored chart revision (ARCHITECTURE §orders snapshot).
@@ -78,7 +78,7 @@ Checkout never trusts client flags. It re-reads the stored chart revision (ARCHI
 
 ## 5. Canonical jie table and oracle
 - `data/jie_1900_2050.json` (D21): UTC instants (second precision) of the 12 jie (Sun apparent ecliptic longitude 315°, 345°, 15°, …, step 30°), generated ONCE by the Python oracle with Skyfield + DE421 (`skyfield-data`), file name and hash recorded, time scale converted TT→UTC. Both engine and oracle read this file for year/month boundaries, so boundaries never disagree.
-- Engine and oracle compute EoT independently (NOAA vs Skyfield). Tolerance: |ΔEoT| ≤ 30 s. If a trueSolar value is within tolerance of an hour or day boundary, the fixture must assert the warning, not a single answer.
+- Engine and oracle compute the solar clock independently (Luxon vs Python zoneinfo); they must agree within 1 s.
 - `pnpm oracle:verify` (CI, read-only) and `pnpm oracle:update` (manual, produces a diff for Jason to approve). CI never rewrites expected values.
 - The day-cycle anchor is a published fact, not something copied from our own code.
 
@@ -88,7 +88,7 @@ Minimum 30 cases:
 - F05–F06 DST fold/gap at the timezone layer (2024 dates allowed here; this is a low-level test)
 - F07–F08 DST fold/gap in the supported product range (e.g. New York 1995-10-29 01:30 fold, 1995-04-02 02:30 gap)
 - F09–F10 date rollover by solar correction (Anchorage summer after midnight, a far-west-in-zone city early morning)
-- F11–F14 trueSolar at 22:58, 23:02, 23:58, 00:02 (hour and day boundaries)
+- F11–F14 (1992 DST date) and F38–F41 (2000-01-15, no DST): solarTime at 22:58, 23:02, 23:58, 00:02 (hour and day boundaries under policy v2)
 - F15–F20 立春 and one mid-year jie: 1 min before, exact minute, 1 min after (from the canonical table)
 - F21–F23 unknown time: day split by solar correction, DST date, jie date (month and year split)
 - F24–F25 historical: Seoul 1955-06 (UTC+8:30), Seoul 1987-07 (Korean DST)

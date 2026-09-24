@@ -17,7 +17,7 @@ def main(out="fixtures/golden.json"):
     for c in m["cases"]:
         case = {**c, "place": m["places"][c["place"]]}
         cases.append({"id": c["id"], "input": case, "expected": compute_case(case)})
-    data = {"policyVersion": m["policyVersion"], "tzdata": tzdata.IANA_VERSION, "eotToleranceSeconds": 60, "cases": cases}
+    data = {"policyVersion": m["policyVersion"], "tzdata": tzdata.IANA_VERSION, "cases": cases}
     json.dump(data, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"wrote {len(cases)} cases to {out}")
 

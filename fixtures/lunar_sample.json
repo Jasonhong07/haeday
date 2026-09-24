@@ -1,7 +1,7 @@
 {
 "source": "lunar_python (6tail) via tools/oracle/crosscheck_lunar.py",
 "seed": 20260924,
-"skippedNearEdges": 54,
+"skippedNearEdges": 62,
 "cases": [
 {
 "input": {
@@ -314,7 +314,7 @@
 "lunar": {
 "year": "丁酉",
 "month": "壬寅",
-"day": "辛未",
+"day": "壬申",
 "hour": "庚子"
 }
 },
@@ -446,27 +446,6 @@
 },
 {
 "input": {
-"birthDate": "1965-01-05",
-"time": {
-"kind": "exact",
-"hhmm": "09:01"
-},
-"place": {
-"label": "Hayes, GB",
-"lat": 51.5158,
-"lon": -0.4234,
-"tz": "Europe/London"
-}
-},
-"lunar": {
-"year": "甲辰",
-"month": "丙子",
-"day": "己未",
-"hour": "戊辰"
-}
-},
-{
-"input": {
 "birthDate": "1988-05-20",
 "time": {
 "kind": "exact",
@@ -526,27 +505,6 @@
 "month": "辛酉",
 "day": "丙戌",
 "hour": "戊子"
-}
-},
-{
-"input": {
-"birthDate": "1945-02-22",
-"time": {
-"kind": "exact",
-"hhmm": "01:32"
-},
-"place": {
-"label": "Gahanna, US",
-"lat": 40.0192,
-"lon": -82.8793,
-"tz": "America/New_York"
-}
-},
-"lunar": {
-"year": "乙酉",
-"month": "戊寅",
-"day": "辛酉",
-"hour": "庚子"
 }
 },
 {
@@ -651,7 +609,7 @@
 "year": "甲午",
 "month": "辛未",
 "day": "甲申",
-"hour": "癸酉"
+"hour": "甲戌"
 }
 },
 {
@@ -735,7 +693,7 @@
 "year": "丁巳",
 "month": "壬寅",
 "day": "丁酉",
-"hour": "丙午"
+"hour": "丁未"
 }
 },
 {
@@ -756,7 +714,7 @@
 "year": "己卯",
 "month": "辛未",
 "day": "己酉",
-"hour": "丙寅"
+"hour": "丁卯"
 }
 },
 {
@@ -819,7 +777,7 @@
 "year": "癸巳",
 "month": "甲子",
 "day": "甲午",
-"hour": "辛未"
+"hour": "庚午"
 }
 },
 {
@@ -924,7 +882,7 @@
 "year": "壬辰",
 "month": "辛亥",
 "day": "己卯",
-"hour": "庚午"
+"hour": "己巳"
 }
 },
 {
@@ -1155,7 +1113,7 @@
 "year": "辛丑",
 "month": "辛卯",
 "day": "甲午",
-"hour": "甲戌"
+"hour": "乙亥"
 }
 },
 {
@@ -1323,7 +1281,7 @@
 "year": "甲申",
 "month": "辛未",
 "day": "甲午",
-"hour": "癸酉"
+"hour": "甲戌"
 }
 },
 {
@@ -1491,7 +1449,7 @@
 "year": "壬戌",
 "month": "甲辰",
 "day": "癸亥",
-"hour": "癸亥"
+"hour": "壬戌"
 }
 },
 {
@@ -1660,27 +1618,6 @@
 "month": "庚午",
 "day": "辛丑",
 "hour": "戊子"
-}
-},
-{
-"input": {
-"birthDate": "1980-05-11",
-"time": {
-"kind": "exact",
-"hhmm": "04:56"
-},
-"place": {
-"label": "Sydney, NSW, AU",
-"lat": -33.8688,
-"lon": 151.2093,
-"tz": "Australia/Sydney"
-}
-},
-"lunar": {
-"year": "庚申",
-"month": "辛巳",
-"day": "甲申",
-"hour": "丁卯"
 }
 },
 {
@@ -2105,6 +2042,27 @@
 },
 {
 "input": {
+"birthDate": "1953-04-26",
+"time": {
+"kind": "exact",
+"hhmm": "13:50"
+},
+"place": {
+"label": "Teodoro Schmidt, CL",
+"lat": -38.9944,
+"lon": -73.0893,
+"tz": "America/Santiago"
+}
+},
+"lunar": {
+"year": "癸巳",
+"month": "丙辰",
+"day": "丁未",
+"hour": "丙午"
+}
+},
+{
+"input": {
 "birthDate": "1939-10-06",
 "time": {
 "kind": "exact",
@@ -2162,7 +2120,7 @@
 "lunar": {
 "year": "乙酉",
 "month": "壬午",
-"day": "戊子",
+"day": "己丑",
 "hour": "甲子"
 }
 },
@@ -2206,27 +2164,6 @@
 "month": "丁未",
 "day": "戊辰",
 "hour": "己未"
-}
-},
-{
-"input": {
-"birthDate": "1922-05-01",
-"time": {
-"kind": "exact",
-"hhmm": "21:21"
-},
-"place": {
-"label": "Mateur, TN",
-"lat": 37.0405,
-"lon": 9.6656,
-"tz": "Africa/Tunis"
-}
-},
-"lunar": {
-"year": "壬戌",
-"month": "甲辰",
-"day": "己巳",
-"hour": "乙亥"
 }
 },
 {
@@ -2672,27 +2609,6 @@
 },
 {
 "input": {
-"birthDate": "2004-04-18",
-"time": {
-"kind": "exact",
-"hhmm": "11:13"
-},
-"place": {
-"label": "Kagaznāgār, IN",
-"lat": 19.3316,
-"lon": 79.4661,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "甲申",
-"month": "戊辰",
-"day": "丁卯",
-"hour": "丙午"
-}
-},
-{
-"input": {
 "birthDate": "2011-05-17",
 "time": {
 "kind": "exact",
@@ -2793,27 +2709,6 @@
 "year": "乙丑",
 "month": "己丑",
 "day": "丁巳",
-"hour": "乙巳"
-}
-},
-{
-"input": {
-"birthDate": "1941-09-26",
-"time": {
-"kind": "exact",
-"hhmm": "08:46"
-},
-"place": {
-"label": "Chāībāsa, IN",
-"lat": 22.5504,
-"lon": 85.8025,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "辛巳",
-"month": "丁酉",
-"day": "丁丑",
 "hour": "乙巳"
 }
 },
@@ -2982,7 +2877,7 @@
 "year": "壬辰",
 "month": "壬寅",
 "day": "甲辰",
-"hour": "乙丑"
+"hour": "丙寅"
 }
 },
 {
@@ -3281,6 +3176,27 @@
 },
 {
 "input": {
+"birthDate": "2022-10-17",
+"time": {
+"kind": "exact",
+"hhmm": "08:24"
+},
+"place": {
+"label": "Ōamishirasato, JP",
+"lat": 35.5118,
+"lon": 140.3526,
+"tz": "Asia/Tokyo"
+}
+},
+"lunar": {
+"year": "壬寅",
+"month": "庚戌",
+"day": "癸卯",
+"hour": "丙辰"
+}
+},
+{
+"input": {
 "birthDate": "1931-05-01",
 "time": {
 "kind": "exact",
@@ -3445,6 +3361,27 @@
 "month": "己酉",
 "day": "丙子",
 "hour": "甲午"
+}
+},
+{
+"input": {
+"birthDate": "1965-05-15",
+"time": {
+"kind": "exact",
+"hhmm": "23:03"
+},
+"place": {
+"label": "Khairābād, IN",
+"lat": 27.527,
+"lon": 80.7546,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "乙巳",
+"month": "辛巳",
+"day": "己巳",
+"hour": "乙亥"
 }
 },
 {
@@ -3633,7 +3570,7 @@
 "year": "庚子",
 "month": "癸未",
 "day": "甲子",
-"hour": "乙亥"
+"hour": "丙子"
 }
 },
 {
@@ -4095,7 +4032,7 @@
 "year": "乙亥",
 "month": "辛巳",
 "day": "戊申",
-"hour": "庚申"
+"hour": "己未"
 }
 },
 {
@@ -4158,7 +4095,7 @@
 "year": "癸酉",
 "month": "壬戌",
 "day": "庚寅",
-"hour": "戊子"
+"hour": "丁亥"
 }
 },
 {
@@ -4242,7 +4179,7 @@
 "year": "丁卯",
 "month": "庚戌",
 "day": "己亥",
-"hour": "辛未"
+"hour": "庚午"
 }
 },
 {
@@ -4325,7 +4262,7 @@
 "lunar": {
 "year": "丁巳",
 "month": "辛亥",
-"day": "辛未",
+"day": "庚午",
 "hour": "戊子"
 }
 },
@@ -4473,7 +4410,7 @@
 "year": "癸卯",
 "month": "壬戌",
 "day": "壬子",
-"hour": "癸卯"
+"hour": "壬寅"
 }
 },
 {
@@ -4493,7 +4430,7 @@
 "lunar": {
 "year": "癸丑",
 "month": "丁巳",
-"day": "丙辰",
+"day": "乙卯",
 "hour": "戊子"
 }
 },
@@ -4704,7 +4641,7 @@
 "year": "戊寅",
 "month": "乙丑",
 "day": "丙辰",
-"hour": "乙未"
+"hour": "丙申"
 }
 },
 {
@@ -5208,7 +5145,7 @@
 "year": "甲辰",
 "month": "乙亥",
 "day": "己丑",
-"hour": "戊辰"
+"hour": "丁卯"
 }
 },
 {
@@ -5335,6 +5272,27 @@
 "month": "丙戌",
 "day": "壬寅",
 "hour": "丁未"
+}
+},
+{
+"input": {
+"birthDate": "1957-10-15",
+"time": {
+"kind": "exact",
+"hhmm": "23:07"
+},
+"place": {
+"label": "Gokalpur, IN",
+"lat": 28.7029,
+"lon": 77.2896,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "丁酉",
+"month": "庚戌",
+"day": "庚申",
+"hour": "丁亥"
 }
 },
 {
@@ -5591,27 +5549,6 @@
 },
 {
 "input": {
-"birthDate": "2016-01-19",
-"time": {
-"kind": "exact",
-"hhmm": "23:43"
-},
-"place": {
-"label": "Vlaardingen, NL",
-"lat": 51.9125,
-"lon": 4.3417,
-"tz": "Europe/Amsterdam"
-}
-},
-"lunar": {
-"year": "乙未",
-"month": "己丑",
-"day": "庚子",
-"hour": "丁亥"
-}
-},
-{
-"input": {
 "birthDate": "1995-10-16",
 "time": {
 "kind": "exact",
@@ -5717,27 +5654,6 @@
 },
 {
 "input": {
-"birthDate": "1921-09-16",
-"time": {
-"kind": "exact",
-"hhmm": "15:06"
-},
-"place": {
-"label": "Vila Formosa, BR",
-"lat": -23.5679,
-"lon": -46.546,
-"tz": "America/Sao_Paulo"
-}
-},
-"lunar": {
-"year": "辛酉",
-"month": "丁酉",
-"day": "壬午",
-"hour": "戊申"
-}
-},
-{
-"input": {
 "birthDate": "2003-10-28",
 "time": {
 "kind": "exact",
@@ -5796,7 +5712,7 @@
 "year": "癸未",
 "month": "癸亥",
 "day": "丁亥",
-"hour": "癸卯"
+"hour": "壬寅"
 }
 },
 {
@@ -5838,7 +5754,7 @@
 "year": "己酉",
 "month": "甲戌",
 "day": "癸丑",
-"hour": "癸亥"
+"hour": "壬戌"
 }
 },
 {
@@ -6473,27 +6389,6 @@
 },
 {
 "input": {
-"birthDate": "2024-12-22",
-"time": {
-"kind": "exact",
-"hhmm": "19:31"
-},
-"place": {
-"label": "Awgu, NG",
-"lat": 6.0728,
-"lon": 7.4774,
-"tz": "Africa/Lagos"
-}
-},
-"lunar": {
-"year": "甲辰",
-"month": "丙子",
-"day": "庚申",
-"hour": "丙戌"
-}
-},
-{
-"input": {
 "birthDate": "1969-11-16",
 "time": {
 "kind": "exact",
@@ -7035,7 +6930,7 @@
 "year": "癸巳",
 "month": "乙卯",
 "day": "壬辰",
-"hour": "庚子"
+"hour": "辛丑"
 }
 },
 {
@@ -7418,6 +7313,27 @@
 },
 {
 "input": {
+"birthDate": "2021-08-08",
+"time": {
+"kind": "exact",
+"hhmm": "11:13"
+},
+"place": {
+"label": "Bhadrāchalam, IN",
+"lat": 17.6685,
+"lon": 80.8889,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "辛丑",
+"month": "丙申",
+"day": "戊子",
+"hour": "戊午"
+}
+},
+{
+"input": {
 "birthDate": "1988-03-24",
 "time": {
 "kind": "exact",
@@ -7624,27 +7540,6 @@
 "month": "乙亥",
 "day": "辛未",
 "hour": "甲午"
-}
-},
-{
-"input": {
-"birthDate": "2004-04-05",
-"time": {
-"kind": "exact",
-"hhmm": "10:04"
-},
-"place": {
-"label": "Al Hindīyah, IQ",
-"lat": 32.5419,
-"lon": 44.2247,
-"tz": "Asia/Baghdad"
-}
-},
-"lunar": {
-"year": "甲申",
-"month": "戊辰",
-"day": "甲寅",
-"hour": "戊辰"
 }
 },
 {
@@ -8006,27 +7901,6 @@
 },
 {
 "input": {
-"birthDate": "1965-05-18",
-"time": {
-"kind": "exact",
-"hhmm": "07:18"
-},
-"place": {
-"label": "Câmpina, RO",
-"lat": 45.1262,
-"lon": 25.735,
-"tz": "Europe/Bucharest"
-}
-},
-"lunar": {
-"year": "乙巳",
-"month": "辛巳",
-"day": "壬申",
-"hour": "甲辰"
-}
-},
-{
-"input": {
 "birthDate": "1950-03-19",
 "time": {
 "kind": "exact",
@@ -8279,27 +8153,6 @@
 },
 {
 "input": {
-"birthDate": "1999-08-24",
-"time": {
-"kind": "exact",
-"hhmm": "16:55"
-},
-"place": {
-"label": "Mascot, AU",
-"lat": -33.926,
-"lon": 151.1935,
-"tz": "Australia/Sydney"
-}
-},
-"lunar": {
-"year": "己卯",
-"month": "壬申",
-"day": "戊申",
-"hour": "庚申"
-}
-},
-{
-"input": {
 "birthDate": "1938-06-27",
 "time": {
 "kind": "exact",
@@ -8526,7 +8379,7 @@
 "year": "丁未",
 "month": "庚戌",
 "day": "壬申",
-"hour": "辛丑"
+"hour": "庚子"
 }
 },
 {
@@ -8736,7 +8589,7 @@
 "year": "己卯",
 "month": "丁丑",
 "day": "己未",
-"hour": "丙寅"
+"hour": "丁卯"
 }
 },
 {
@@ -8799,7 +8652,7 @@
 "year": "戊子",
 "month": "癸亥",
 "day": "庚子",
-"hour": "戊子"
+"hour": "丁亥"
 }
 },
 {
@@ -8820,7 +8673,7 @@
 "year": "庚子",
 "month": "乙酉",
 "day": "甲戌",
-"hour": "乙亥"
+"hour": "甲戌"
 }
 },
 {
@@ -9051,7 +8904,7 @@
 "year": "辛卯",
 "month": "辛丑",
 "day": "壬辰",
-"hour": "丁未"
+"hour": "戊申"
 }
 },
 {
@@ -9749,6 +9602,27 @@
 },
 {
 "input": {
+"birthDate": "2022-09-23",
+"time": {
+"kind": "exact",
+"hhmm": "22:44"
+},
+"place": {
+"label": "San Francisco, SV",
+"lat": 13.6941,
+"lon": -88.1041,
+"tz": "America/El_Salvador"
+}
+},
+"lunar": {
+"year": "壬寅",
+"month": "己酉",
+"day": "己卯",
+"hour": "乙亥"
+}
+},
+{
+"input": {
 "birthDate": "1965-02-13",
 "time": {
 "kind": "exact",
@@ -9829,6 +9703,27 @@
 "month": "己巳",
 "day": "辛卯",
 "hour": "戊戌"
+}
+},
+{
+"input": {
+"birthDate": "1924-02-18",
+"time": {
+"kind": "exact",
+"hhmm": "20:53"
+},
+"place": {
+"label": "Kireçocağı, TR",
+"lat": 37.05,
+"lon": 35.2333,
+"tz": "Europe/Istanbul"
+}
+},
+"lunar": {
+"year": "甲子",
+"month": "丙寅",
+"day": "丁卯",
+"hour": "辛亥"
 }
 },
 {
@@ -9975,7 +9870,7 @@
 "year": "乙丑",
 "month": "己丑",
 "day": "庚午",
-"hour": "癸未"
+"hour": "甲申"
 }
 },
 {
@@ -10295,6 +10190,27 @@
 },
 {
 "input": {
+"birthDate": "1984-12-22",
+"time": {
+"kind": "exact",
+"hhmm": "07:21"
+},
+"place": {
+"label": "Narasimhanaickenpalayam, IN",
+"lat": 11.1173,
+"lon": 76.9363,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "甲子",
+"month": "丙子",
+"day": "庚寅",
+"hour": "己卯"
+}
+},
+{
+"input": {
 "birthDate": "1955-03-17",
 "time": {
 "kind": "exact",
@@ -10374,7 +10290,7 @@
 "year": "庚午",
 "month": "乙酉",
 "day": "己亥",
-"hour": "丁卯"
+"hour": "丙寅"
 }
 },
 {
@@ -10694,6 +10610,27 @@
 },
 {
 "input": {
+"birthDate": "1948-11-04",
+"time": {
+"kind": "exact",
+"hhmm": "11:12"
+},
+"place": {
+"label": "Ascheberg, DE",
+"lat": 51.7833,
+"lon": 7.6167,
+"tz": "Europe/Berlin"
+}
+},
+"lunar": {
+"year": "戊子",
+"month": "壬戌",
+"day": "癸巳",
+"hour": "丁巳"
+}
+},
+{
+"input": {
 "birthDate": "1916-07-15",
 "time": {
 "kind": "exact",
@@ -10941,7 +10878,7 @@
 "year": "庚戌",
 "month": "己丑",
 "day": "庚戌",
-"hour": "丙戌"
+"hour": "丁亥"
 }
 },
 {
@@ -10983,7 +10920,7 @@
 "year": "庚申",
 "month": "戊子",
 "day": "甲寅",
-"hour": "乙亥"
+"hour": "甲戌"
 }
 },
 {
@@ -11256,7 +11193,7 @@
 "year": "戊申",
 "month": "乙卯",
 "day": "丙子",
-"hour": "戊子"
+"hour": "己丑"
 }
 },
 {
@@ -11387,6 +11324,27 @@
 },
 {
 "input": {
+"birthDate": "1976-03-06",
+"time": {
+"kind": "exact",
+"hhmm": "06:21"
+},
+"place": {
+"label": "Guédiawaye, SN",
+"lat": 14.7745,
+"lon": -17.4021,
+"tz": "Africa/Dakar"
+}
+},
+"lunar": {
+"year": "丙辰",
+"month": "辛卯",
+"day": "丁巳",
+"hour": "癸卯"
+}
+},
+{
+"input": {
 "birthDate": "1943-10-14",
 "time": {
 "kind": "exact",
@@ -11445,7 +11403,7 @@
 "year": "壬辰",
 "month": "辛亥",
 "day": "丁卯",
-"hour": "壬子"
+"hour": "辛亥"
 }
 },
 {
@@ -11655,7 +11613,7 @@
 "year": "己亥",
 "month": "乙亥",
 "day": "丙寅",
-"hour": "丙申"
+"hour": "乙未"
 }
 },
 {
@@ -11697,7 +11655,7 @@
 "year": "戊子",
 "month": "乙卯",
 "day": "乙丑",
-"hour": "癸未"
+"hour": "甲申"
 }
 },
 {
@@ -11954,6 +11912,27 @@
 },
 {
 "input": {
+"birthDate": "1952-09-28",
+"time": {
+"kind": "exact",
+"hhmm": "15:09"
+},
+"place": {
+"label": "Mechcheri, IN",
+"lat": 11.8341,
+"lon": 77.9439,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "壬辰",
+"month": "己酉",
+"day": "丁丑",
+"hour": "丁未"
+}
+},
+{
+"input": {
 "birthDate": "2025-05-10",
 "time": {
 "kind": "exact",
@@ -12013,6 +11992,27 @@
 "month": "庚戌",
 "day": "戊辰",
 "hour": "甲寅"
+}
+},
+{
+"input": {
+"birthDate": "2003-09-09",
+"time": {
+"kind": "exact",
+"hhmm": "19:37"
+},
+"place": {
+"label": "Guelmim, MA",
+"lat": 28.987,
+"lon": -10.0574,
+"tz": "Africa/Casablanca"
+}
+},
+"lunar": {
+"year": "癸未",
+"month": "辛酉",
+"day": "乙酉",
+"hour": "乙酉"
 }
 },
 {
@@ -12097,27 +12097,6 @@
 "month": "癸卯",
 "day": "乙亥",
 "hour": "庚辰"
-}
-},
-{
-"input": {
-"birthDate": "1967-11-04",
-"time": {
-"kind": "exact",
-"hhmm": "23:01"
-},
-"place": {
-"label": "San Juan Nepomuceno, CO",
-"lat": 9.9516,
-"lon": -75.082,
-"tz": "America/Bogota"
-}
-},
-"lunar": {
-"year": "丁未",
-"month": "庚戌",
-"day": "壬申",
-"hour": "壬子"
 }
 },
 {
@@ -12557,7 +12536,7 @@
 "lunar": {
 "year": "丙寅",
 "month": "庚寅",
-"day": "癸酉",
+"day": "甲戌",
 "hour": "甲子"
 }
 },
@@ -13067,6 +13046,27 @@
 },
 {
 "input": {
+"birthDate": "1960-09-13",
+"time": {
+"kind": "exact",
+"hhmm": "23:58"
+},
+"place": {
+"label": "Gaoyou, CN",
+"lat": 32.7893,
+"lon": 119.4418,
+"tz": "Asia/Shanghai"
+}
+},
+"lunar": {
+"year": "庚子",
+"month": "乙酉",
+"day": "甲辰",
+"hour": "丙子"
+}
+},
+{
+"input": {
 "birthDate": "1997-04-24",
 "time": {
 "kind": "exact",
@@ -13293,7 +13293,7 @@
 "year": "乙酉",
 "month": "丙戌",
 "day": "辛亥",
-"hour": "己亥"
+"hour": "戊戌"
 }
 },
 {
@@ -13546,27 +13546,6 @@
 "month": "丁未",
 "day": "丙戌",
 "hour": "甲午"
-}
-},
-{
-"input": {
-"birthDate": "2006-10-21",
-"time": {
-"kind": "exact",
-"hhmm": "05:00"
-},
-"place": {
-"label": "Anchorage, AK, US",
-"lat": 61.2181,
-"lon": -149.9003,
-"tz": "America/Anchorage"
-}
-},
-"lunar": {
-"year": "丙戌",
-"month": "戊戌",
-"day": "癸未",
-"hour": "甲寅"
 }
 },
 {
@@ -14075,6 +14054,27 @@
 },
 {
 "input": {
+"birthDate": "1985-07-12",
+"time": {
+"kind": "exact",
+"hhmm": "23:30"
+},
+"place": {
+"label": "Ruangwa, TZ",
+"lat": -10.0667,
+"lon": 38.9333,
+"tz": "Africa/Dar_es_Salaam"
+}
+},
+"lunar": {
+"year": "乙丑",
+"month": "癸未",
+"day": "壬子",
+"hour": "壬子"
+}
+},
+{
+"input": {
 "birthDate": "1924-02-12",
 "time": {
 "kind": "exact",
@@ -14217,28 +14217,7 @@
 "year": "癸卯",
 "month": "甲寅",
 "day": "壬寅",
-"hour": "辛丑"
-}
-},
-{
-"input": {
-"birthDate": "1912-04-10",
-"time": {
-"kind": "exact",
-"hhmm": "11:04"
-},
-"place": {
-"label": "San Juan de la Maguana, DO",
-"lat": 18.8064,
-"lon": -71.2263,
-"tz": "America/Santo_Domingo"
-}
-},
-"lunar": {
-"year": "壬子",
-"month": "甲辰",
-"day": "丙辰",
-"hour": "癸巳"
+"hour": "壬寅"
 }
 },
 {
@@ -14386,6 +14365,27 @@
 "month": "丙辰",
 "day": "己巳",
 "hour": "丙寅"
+}
+},
+{
+"input": {
+"birthDate": "1912-09-26",
+"time": {
+"kind": "exact",
+"hhmm": "16:47"
+},
+"place": {
+"label": "Masamba, ID",
+"lat": -2.5537,
+"lon": 120.3279,
+"tz": "Asia/Makassar"
+}
+},
+"lunar": {
+"year": "壬子",
+"month": "己酉",
+"day": "乙巳",
+"hour": "甲申"
 }
 },
 {
@@ -14679,7 +14679,7 @@
 "year": "己亥",
 "month": "辛未",
 "day": "乙卯",
-"hour": "戊寅"
+"hour": "己卯"
 }
 },
 {
@@ -14826,7 +14826,7 @@
 "year": "戊戌",
 "month": "乙丑",
 "day": "癸亥",
-"hour": "丁巳"
+"hour": "戊午"
 }
 },
 {
@@ -14973,7 +14973,7 @@
 "year": "辛酉",
 "month": "己亥",
 "day": "甲申",
-"hour": "丙子"
+"hour": "乙亥"
 }
 },
 {
@@ -15057,7 +15057,7 @@
 "year": "己巳",
 "month": "丁丑",
 "day": "辛未",
-"hour": "丁酉"
+"hour": "戊戌"
 }
 },
 {
@@ -15120,7 +15120,7 @@
 "year": "辛丑",
 "month": "庚寅",
 "day": "庚辰",
-"hour": "庚辰"
+"hour": "辛巳"
 }
 },
 {
@@ -15162,7 +15162,7 @@
 "year": "丙申",
 "month": "丁酉",
 "day": "丁巳",
-"hour": "癸卯"
+"hour": "壬寅"
 }
 },
 {
@@ -15461,27 +15461,6 @@
 },
 {
 "input": {
-"birthDate": "1993-08-14",
-"time": {
-"kind": "exact",
-"hhmm": "15:56"
-},
-"place": {
-"label": "Dvůr Králové nad Labem, CZ",
-"lat": 50.4317,
-"lon": 15.814,
-"tz": "Europe/Prague"
-}
-},
-"lunar": {
-"year": "癸酉",
-"month": "庚申",
-"day": "丁卯",
-"hour": "丁未"
-}
-},
-{
-"input": {
 "birthDate": "1966-03-20",
 "time": {
 "kind": "exact",
@@ -15498,7 +15477,7 @@
 "year": "丙午",
 "month": "辛卯",
 "day": "戊寅",
-"hour": "己未"
+"hour": "庚申"
 }
 },
 {
@@ -15986,27 +15965,6 @@
 },
 {
 "input": {
-"birthDate": "1913-05-25",
-"time": {
-"kind": "exact",
-"hhmm": "15:00"
-},
-"place": {
-"label": "Jackson, US",
-"lat": 32.2988,
-"lon": -90.1848,
-"tz": "America/Chicago"
-}
-},
-"lunar": {
-"year": "癸丑",
-"month": "丁巳",
-"day": "丙午",
-"hour": "丙申"
-}
-},
-{
-"input": {
 "birthDate": "2018-05-06",
 "time": {
 "kind": "exact",
@@ -16066,27 +16024,6 @@
 "month": "乙卯",
 "day": "甲寅",
 "hour": "丙子"
-}
-},
-{
-"input": {
-"birthDate": "1939-07-12",
-"time": {
-"kind": "exact",
-"hhmm": "09:24"
-},
-"place": {
-"label": "Varkala, IN",
-"lat": 8.7333,
-"lon": 76.7167,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "己卯",
-"month": "辛未",
-"day": "庚戌",
-"hour": "庚辰"
 }
 },
 {
@@ -16653,7 +16590,7 @@
 "year": "乙巳",
 "month": "乙酉",
 "day": "辛未",
-"hour": "乙未"
+"hour": "甲午"
 }
 },
 {
@@ -17036,27 +16973,6 @@
 },
 {
 "input": {
-"birthDate": "1938-05-05",
-"time": {
-"kind": "exact",
-"hhmm": "05:13"
-},
-"place": {
-"label": "Thaba Nchu, ZA",
-"lat": -29.2093,
-"lon": 26.839,
-"tz": "Africa/Johannesburg"
-}
-},
-"lunar": {
-"year": "戊寅",
-"month": "丙辰",
-"day": "丁酉",
-"hour": "癸卯"
-}
-},
-{
-"input": {
 "birthDate": "1968-02-15",
 "time": {
 "kind": "exact",
@@ -17072,7 +16988,7 @@
 "lunar": {
 "year": "戊申",
 "month": "甲寅",
-"day": "甲寅",
+"day": "乙卯",
 "hour": "丙子"
 }
 },
@@ -17114,7 +17030,7 @@
 "lunar": {
 "year": "丙午",
 "month": "己亥",
-"day": "甲申",
+"day": "癸未",
 "hour": "甲子"
 }
 },
@@ -17409,7 +17325,7 @@
 "year": "壬子",
 "month": "辛亥",
 "day": "癸亥",
-"hour": "甲子"
+"hour": "癸亥"
 }
 },
 {
@@ -17640,7 +17556,7 @@
 "year": "辛卯",
 "month": "庚寅",
 "day": "辛卯",
-"hour": "己丑"
+"hour": "庚寅"
 }
 },
 {
@@ -17960,6 +17876,27 @@
 },
 {
 "input": {
+"birthDate": "1983-11-16",
+"time": {
+"kind": "exact",
+"hhmm": "00:55"
+},
+"place": {
+"label": "Logroño, ES",
+"lat": 42.4662,
+"lon": -2.4511,
+"tz": "Europe/Madrid"
+}
+},
+"lunar": {
+"year": "癸亥",
+"month": "癸亥",
+"day": "丁未",
+"hour": "壬子"
+}
+},
+{
+"input": {
 "birthDate": "1985-08-22",
 "time": {
 "kind": "exact",
@@ -18019,27 +17956,6 @@
 "month": "庚午",
 "day": "戊戌",
 "hour": "乙卯"
-}
-},
-{
-"input": {
-"birthDate": "1999-08-16",
-"time": {
-"kind": "exact",
-"hhmm": "11:53"
-},
-"place": {
-"label": "Central Islip, US",
-"lat": 40.7907,
-"lon": -73.2018,
-"tz": "America/New_York"
-}
-},
-"lunar": {
-"year": "己卯",
-"month": "壬申",
-"day": "庚子",
-"hour": "辛巳"
 }
 },
 {
@@ -18165,7 +18081,7 @@
 "year": "丁巳",
 "month": "己酉",
 "day": "壬午",
-"hour": "戊申"
+"hour": "丁未"
 }
 },
 {
@@ -18338,6 +18254,27 @@
 },
 {
 "input": {
+"birthDate": "1925-12-21",
+"time": {
+"kind": "exact",
+"hhmm": "14:54"
+},
+"place": {
+"label": "Janesville, US",
+"lat": 42.6828,
+"lon": -89.0187,
+"tz": "America/Chicago"
+}
+},
+"lunar": {
+"year": "乙丑",
+"month": "戊子",
+"day": "己卯",
+"hour": "辛未"
+}
+},
+{
+"input": {
 "birthDate": "1989-11-09",
 "time": {
 "kind": "exact",
@@ -18417,28 +18354,7 @@
 "year": "戊子",
 "month": "癸亥",
 "day": "癸丑",
-"hour": "丁巳"
-}
-},
-{
-"input": {
-"birthDate": "1906-05-05",
-"time": {
-"kind": "exact",
-"hhmm": "12:56"
-},
-"place": {
-"label": "Masamba, ID",
-"lat": -2.5537,
-"lon": 120.3279,
-"tz": "Asia/Makassar"
-}
-},
-"lunar": {
-"year": "丙午",
-"month": "壬辰",
-"day": "己酉",
-"hour": "辛未"
+"hour": "丙辰"
 }
 },
 {
@@ -18816,7 +18732,7 @@
 "year": "丙戌",
 "month": "戊戌",
 "day": "丁酉",
-"hour": "癸卯"
+"hour": "壬寅"
 }
 },
 {
@@ -18858,7 +18774,7 @@
 "year": "丙寅",
 "month": "庚寅",
 "day": "甲辰",
-"hour": "庚午"
+"hour": "辛未"
 }
 },
 {
@@ -18879,7 +18795,7 @@
 "year": "辛未",
 "month": "辛丑",
 "day": "丁酉",
-"hour": "庚戌"
+"hour": "辛亥"
 }
 },
 {
@@ -19031,27 +18947,6 @@
 },
 {
 "input": {
-"birthDate": "2004-06-05",
-"time": {
-"kind": "exact",
-"hhmm": "18:28"
-},
-"place": {
-"label": "Propriá, BR",
-"lat": -10.2111,
-"lon": -36.8403,
-"tz": "America/Maceio"
-}
-},
-"lunar": {
-"year": "甲申",
-"month": "庚午",
-"day": "乙卯",
-"hour": "丙戌"
-}
-},
-{
-"input": {
 "birthDate": "1950-01-18",
 "time": {
 "kind": "exact",
@@ -19178,27 +19073,6 @@
 },
 {
 "input": {
-"birthDate": "1919-07-16",
-"time": {
-"kind": "exact",
-"hhmm": "23:57"
-},
-"place": {
-"label": "Dvůr Králové nad Labem, CZ",
-"lat": 50.4317,
-"lon": 15.814,
-"tz": "Europe/Prague"
-}
-},
-"lunar": {
-"year": "己未",
-"month": "辛未",
-"day": "己巳",
-"hour": "丙子"
-}
-},
-{
-"input": {
 "birthDate": "1904-02-20",
 "time": {
 "kind": "exact",
@@ -19215,7 +19089,7 @@
 "year": "甲辰",
 "month": "丙寅",
 "day": "甲申",
-"hour": "辛未"
+"hour": "壬申"
 }
 },
 {
@@ -19340,7 +19214,7 @@
 "lunar": {
 "year": "戊子",
 "month": "丁巳",
-"day": "壬寅",
+"day": "辛丑",
 "hour": "庚子"
 }
 },
@@ -19426,27 +19300,6 @@
 "month": "丙申",
 "day": "庚子",
 "hour": "丁丑"
-}
-},
-{
-"input": {
-"birthDate": "1928-07-13",
-"time": {
-"kind": "exact",
-"hhmm": "03:30"
-},
-"place": {
-"label": "Thun, CH",
-"lat": 46.7512,
-"lon": 7.6217,
-"tz": "Europe/Zurich"
-}
-},
-"lunar": {
-"year": "戊辰",
-"month": "己未",
-"day": "甲寅",
-"hour": "乙丑"
 }
 },
 {
@@ -19745,27 +19598,6 @@
 },
 {
 "input": {
-"birthDate": "1901-02-05",
-"time": {
-"kind": "exact",
-"hhmm": "17:07"
-},
-"place": {
-"label": "Sezze, IT",
-"lat": 41.5003,
-"lon": 13.0618,
-"tz": "Europe/Rome"
-}
-},
-"lunar": {
-"year": "辛丑",
-"month": "庚寅",
-"day": "甲寅",
-"hour": "壬申"
-}
-},
-{
-"input": {
 "birthDate": "1952-10-07",
 "time": {
 "kind": "exact",
@@ -19845,7 +19677,7 @@
 "year": "丙申",
 "month": "庚寅",
 "day": "丁卯",
-"hour": "丁未"
+"hour": "戊申"
 }
 },
 {
@@ -19887,7 +19719,7 @@
 "year": "庚申",
 "month": "甲申",
 "day": "甲寅",
-"hour": "壬申"
+"hour": "癸酉"
 }
 },
 {
@@ -20391,7 +20223,7 @@
 "year": "壬午",
 "month": "庚戌",
 "day": "甲子",
-"hour": "甲戌"
+"hour": "癸酉"
 }
 },
 {
@@ -20497,48 +20329,6 @@
 "month": "癸酉",
 "day": "丁酉",
 "hour": "辛丑"
-}
-},
-{
-"input": {
-"birthDate": "1996-02-13",
-"time": {
-"kind": "exact",
-"hhmm": "07:35"
-},
-"place": {
-"label": "Dibate, ET",
-"lat": 10.65,
-"lon": 36.2167,
-"tz": "Africa/Addis_Ababa"
-}
-},
-"lunar": {
-"year": "丙子",
-"month": "庚寅",
-"day": "庚辰",
-"hour": "己卯"
-}
-},
-{
-"input": {
-"birthDate": "1944-10-26",
-"time": {
-"kind": "exact",
-"hhmm": "13:08"
-},
-"place": {
-"label": "Tinsukia, IN",
-"lat": 27.4891,
-"lon": 95.3599,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "甲申",
-"month": "甲戌",
-"day": "癸亥",
-"hour": "己未"
 }
 },
 {
@@ -20685,7 +20475,7 @@
 "year": "壬辰",
 "month": "辛亥",
 "day": "庚午",
-"hour": "戊寅"
+"hour": "丁丑"
 }
 },
 {
@@ -20916,7 +20706,7 @@
 "year": "戊戌",
 "month": "甲寅",
 "day": "己卯",
-"hour": "丁卯"
+"hour": "戊辰"
 }
 },
 {
@@ -21000,7 +20790,7 @@
 "year": "壬寅",
 "month": "壬寅",
 "day": "辛丑",
-"hour": "辛卯"
+"hour": "壬辰"
 }
 },
 {
@@ -21299,6 +21089,27 @@
 },
 {
 "input": {
+"birthDate": "2002-11-11",
+"time": {
+"kind": "exact",
+"hhmm": "04:32"
+},
+"place": {
+"label": "Bada Barabīl, IN",
+"lat": 22.1119,
+"lon": 85.3868,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "壬午",
+"month": "辛亥",
+"day": "癸未",
+"hour": "甲寅"
+}
+},
+{
+"input": {
 "birthDate": "1952-01-07",
 "time": {
 "kind": "exact",
@@ -21530,6 +21341,27 @@
 },
 {
 "input": {
+"birthDate": "1940-06-11",
+"time": {
+"kind": "exact",
+"hhmm": "16:57"
+},
+"place": {
+"label": "Noyabrsk, RU",
+"lat": 63.1931,
+"lon": 75.4373,
+"tz": "Asia/Yekaterinburg"
+}
+},
+"lunar": {
+"year": "庚辰",
+"month": "壬午",
+"day": "乙酉",
+"hour": "甲申"
+}
+},
+{
+"input": {
 "birthDate": "1961-09-06",
 "time": {
 "kind": "exact",
@@ -21630,7 +21462,7 @@
 "year": "壬辰",
 "month": "庚戌",
 "day": "辛酉",
-"hour": "庚寅"
+"hour": "己丑"
 }
 },
 {
@@ -21797,7 +21629,7 @@
 "lunar": {
 "year": "乙巳",
 "month": "戊寅",
-"day": "己酉",
+"day": "庚戌",
 "hour": "丙子"
 }
 },
@@ -22008,7 +21840,7 @@
 "year": "己亥",
 "month": "辛未",
 "day": "丁未",
-"hour": "癸卯"
+"hour": "甲辰"
 }
 },
 {
@@ -22323,7 +22155,7 @@
 "year": "癸未",
 "month": "癸亥",
 "day": "丁亥",
-"hour": "壬寅"
+"hour": "辛丑"
 }
 },
 {
@@ -22953,7 +22785,7 @@
 "year": "丙寅",
 "month": "庚寅",
 "day": "乙巳",
-"hour": "丙戌"
+"hour": "丁亥"
 }
 },
 {
@@ -23021,6 +22853,27 @@
 },
 {
 "input": {
+"birthDate": "1952-08-13",
+"time": {
+"kind": "exact",
+"hhmm": "01:01"
+},
+"place": {
+"label": "Pandi, PH",
+"lat": 14.865,
+"lon": 120.9572,
+"tz": "Asia/Manila"
+}
+},
+"lunar": {
+"year": "壬辰",
+"month": "戊申",
+"day": "辛卯",
+"hour": "己丑"
+}
+},
+{
+"input": {
 "birthDate": "2010-12-01",
 "time": {
 "kind": "exact",
@@ -23038,6 +22891,27 @@
 "month": "丁亥",
 "day": "乙酉",
 "hour": "庚辰"
+}
+},
+{
+"input": {
+"birthDate": "1940-08-26",
+"time": {
+"kind": "exact",
+"hhmm": "20:42"
+},
+"place": {
+"label": "Namur, BE",
+"lat": 50.4669,
+"lon": 4.8675,
+"tz": "Europe/Brussels"
+}
+},
+"lunar": {
+"year": "庚辰",
+"month": "甲申",
+"day": "辛丑",
+"hour": "戊戌"
 }
 },
 {
@@ -23164,27 +23038,6 @@
 "month": "丁丑",
 "day": "乙丑",
 "hour": "辛巳"
-}
-},
-{
-"input": {
-"birthDate": "1943-10-06",
-"time": {
-"kind": "exact",
-"hhmm": "15:58"
-},
-"place": {
-"label": "Pushkin, RU",
-"lat": 59.7142,
-"lon": 30.3964,
-"tz": "Europe/Moscow"
-}
-},
-"lunar": {
-"year": "癸未",
-"month": "辛酉",
-"day": "丁酉",
-"hour": "戊申"
 }
 },
 {
@@ -24002,7 +23855,7 @@
 "lunar": {
 "year": "丙午",
 "month": "己亥",
-"day": "丙申",
+"day": "乙未",
 "hour": "戊子"
 }
 },
@@ -24086,7 +23939,7 @@
 "lunar": {
 "year": "乙酉",
 "month": "癸未",
-"day": "己卯",
+"day": "庚辰",
 "hour": "丙子"
 }
 },
@@ -24191,7 +24044,7 @@
 "lunar": {
 "year": "乙亥",
 "month": "丁亥",
-"day": "辛酉",
+"day": "庚申",
 "hour": "戊子"
 }
 },
@@ -24402,7 +24255,7 @@
 "year": "辛酉",
 "month": "戊戌",
 "day": "丙午",
-"hour": "壬辰"
+"hour": "辛卯"
 }
 },
 {
@@ -24549,7 +24402,7 @@
 "year": "癸巳",
 "month": "乙卯",
 "day": "癸酉",
-"hour": "壬戌"
+"hour": "癸亥"
 }
 },
 {
@@ -24591,7 +24444,7 @@
 "year": "戊寅",
 "month": "乙丑",
 "day": "癸卯",
-"hour": "壬子"
+"hour": "癸丑"
 }
 },
 {
@@ -24717,7 +24570,7 @@
 "year": "壬寅",
 "month": "癸丑",
 "day": "庚申",
-"hour": "庚辰"
+"hour": "辛巳"
 }
 },
 {
@@ -25011,7 +24864,7 @@
 "year": "庚寅",
 "month": "丙戌",
 "day": "丁酉",
-"hour": "丁未"
+"hour": "丙午"
 }
 },
 {
@@ -25095,7 +24948,7 @@
 "year": "癸卯",
 "month": "癸亥",
 "day": "辛未",
-"hour": "辛卯"
+"hour": "庚寅"
 }
 },
 {
@@ -25159,6 +25012,27 @@
 "month": "丙申",
 "day": "戊申",
 "hour": "丙辰"
+}
+},
+{
+"input": {
+"birthDate": "2007-07-17",
+"time": {
+"kind": "exact",
+"hhmm": "13:08"
+},
+"place": {
+"label": "Middelburg, ZA",
+"lat": -25.7751,
+"lon": 29.4648,
+"tz": "Africa/Johannesburg"
+}
+},
+"lunar": {
+"year": "丁亥",
+"month": "丁未",
+"day": "壬子",
+"hour": "丁未"
 }
 },
 {
@@ -25709,6 +25583,27 @@
 },
 {
 "input": {
+"birthDate": "1920-07-03",
+"time": {
+"kind": "exact",
+"hhmm": "13:02"
+},
+"place": {
+"label": "Maiquetía, VE",
+"lat": 10.5945,
+"lon": -66.9562,
+"tz": "America/Caracas"
+}
+},
+"lunar": {
+"year": "庚申",
+"month": "壬午",
+"day": "壬戌",
+"hour": "丁未"
+}
+},
+{
+"input": {
 "birthDate": "1907-02-20",
 "time": {
 "kind": "exact",
@@ -25746,7 +25641,7 @@
 "year": "丙戌",
 "month": "辛丑",
 "day": "己酉",
-"hour": "庚午"
+"hour": "辛未"
 }
 },
 {
@@ -25914,7 +25809,7 @@
 "year": "丁酉",
 "month": "乙巳",
 "day": "丙申",
-"hour": "戊戌"
+"hour": "丁酉"
 }
 },
 {
@@ -26040,7 +25935,7 @@
 "year": "辛未",
 "month": "己亥",
 "day": "辛丑",
-"hour": "己亥"
+"hour": "戊戌"
 }
 },
 {
@@ -26062,6 +25957,27 @@
 "month": "壬申",
 "day": "丁酉",
 "hour": "戊申"
+}
+},
+{
+"input": {
+"birthDate": "1954-03-21",
+"time": {
+"kind": "exact",
+"hhmm": "01:47"
+},
+"place": {
+"label": "Kalol, IN",
+"lat": 23.2466,
+"lon": 72.4951,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "甲午",
+"month": "丁卯",
+"day": "丙子",
+"hour": "己丑"
 }
 },
 {
@@ -26145,7 +26061,7 @@
 "year": "壬子",
 "month": "庚戌",
 "day": "甲申",
-"hour": "庚午"
+"hour": "己巳"
 }
 },
 {
@@ -26460,7 +26376,7 @@
 "year": "己卯",
 "month": "癸酉",
 "day": "丁巳",
-"hour": "甲辰"
+"hour": "癸卯"
 }
 },
 {
@@ -27494,6 +27410,27 @@
 },
 {
 "input": {
+"birthDate": "1967-08-27",
+"time": {
+"kind": "exact",
+"hhmm": "05:24"
+},
+"place": {
+"label": "Ugrākheri, IN",
+"lat": 29.378,
+"lon": 77.0093,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "丁未",
+"month": "戊申",
+"day": "癸亥",
+"hour": "乙卯"
+}
+},
+{
+"input": {
 "birthDate": "1931-03-21",
 "time": {
 "kind": "exact",
@@ -27578,6 +27515,27 @@
 },
 {
 "input": {
+"birthDate": "1985-05-06",
+"time": {
+"kind": "exact",
+"hhmm": "03:19"
+},
+"place": {
+"label": "Obudu, NG",
+"lat": 6.6682,
+"lon": 9.1645,
+"tz": "Africa/Lagos"
+}
+},
+"lunar": {
+"year": "乙丑",
+"month": "辛巳",
+"day": "乙巳",
+"hour": "丁丑"
+}
+},
+{
+"input": {
 "birthDate": "1919-02-16",
 "time": {
 "kind": "exact",
@@ -27636,7 +27594,7 @@
 "year": "庚戌",
 "month": "丁亥",
 "day": "甲午",
-"hour": "庚午"
+"hour": "己巳"
 }
 },
 {
@@ -27788,27 +27746,6 @@
 },
 {
 "input": {
-"birthDate": "1906-08-17",
-"time": {
-"kind": "exact",
-"hhmm": "06:59"
-},
-"place": {
-"label": "Kireyevsk, RU",
-"lat": 53.9297,
-"lon": 37.9215,
-"tz": "Europe/Moscow"
-}
-},
-"lunar": {
-"year": "丙午",
-"month": "丙申",
-"day": "癸巳",
-"hour": "乙卯"
-}
-},
-{
-"input": {
 "birthDate": "1932-11-08",
 "time": {
 "kind": "exact",
@@ -27952,6 +27889,27 @@
 "month": "癸亥",
 "day": "乙亥",
 "hour": "甲申"
+}
+},
+{
+"input": {
+"birthDate": "1908-11-24",
+"time": {
+"kind": "exact",
+"hhmm": "20:58"
+},
+"place": {
+"label": "Goiatuba, BR",
+"lat": -18.0125,
+"lon": -49.3547,
+"tz": "America/Sao_Paulo"
+}
+},
+"lunar": {
+"year": "戊申",
+"month": "癸亥",
+"day": "癸未",
+"hour": "壬戌"
 }
 },
 {
@@ -28308,7 +28266,7 @@
 "year": "己卯",
 "month": "甲戌",
 "day": "己酉",
-"hour": "甲戌"
+"hour": "癸酉"
 }
 },
 {
@@ -28497,7 +28455,7 @@
 "year": "壬午",
 "month": "辛亥",
 "day": "丁亥",
-"hour": "壬子"
+"hour": "辛亥"
 }
 },
 {
@@ -28686,7 +28644,7 @@
 "year": "庚子",
 "month": "己丑",
 "day": "壬辰",
-"hour": "辛亥"
+"hour": "壬子"
 }
 },
 {
@@ -29069,27 +29027,6 @@
 },
 {
 "input": {
-"birthDate": "1994-11-17",
-"time": {
-"kind": "exact",
-"hhmm": "23:33"
-},
-"place": {
-"label": "Hoogezand, NL",
-"lat": 53.1617,
-"lon": 6.7611,
-"tz": "Europe/Amsterdam"
-}
-},
-"lunar": {
-"year": "甲戌",
-"month": "乙亥",
-"day": "丁未",
-"hour": "壬子"
-}
-},
-{
-"input": {
 "birthDate": "2016-04-22",
 "time": {
 "kind": "exact",
@@ -29316,7 +29253,7 @@
 "year": "丙辰",
 "month": "戊戌",
 "day": "癸未",
-"hour": "丙辰"
+"hour": "乙卯"
 }
 },
 {
@@ -29363,6 +29300,27 @@
 },
 {
 "input": {
+"birthDate": "1967-03-22",
+"time": {
+"kind": "exact",
+"hhmm": "23:42"
+},
+"place": {
+"label": "Gbadolite, CD",
+"lat": 4.279,
+"lon": 21.0028,
+"tz": "Africa/Kinshasa"
+}
+},
+"lunar": {
+"year": "丁未",
+"month": "癸卯",
+"day": "丙戌",
+"hour": "戊子"
+}
+},
+{
+"input": {
 "birthDate": "2021-06-24",
 "time": {
 "kind": "exact",
@@ -29405,27 +29363,6 @@
 },
 {
 "input": {
-"birthDate": "2009-12-23",
-"time": {
-"kind": "exact",
-"hhmm": "19:17"
-},
-"place": {
-"label": "Tchibanga, GA",
-"lat": -2.9332,
-"lon": 10.9818,
-"tz": "Africa/Libreville"
-}
-},
-"lunar": {
-"year": "己丑",
-"month": "丙子",
-"day": "壬寅",
-"hour": "庚戌"
-}
-},
-{
-"input": {
 "birthDate": "2014-10-21",
 "time": {
 "kind": "exact",
@@ -29442,7 +29379,7 @@
 "year": "甲午",
 "month": "甲戌",
 "day": "乙丑",
-"hour": "壬午"
+"hour": "辛巳"
 }
 },
 {
@@ -29930,6 +29867,27 @@
 },
 {
 "input": {
+"birthDate": "1988-09-16",
+"time": {
+"kind": "exact",
+"hhmm": "11:59"
+},
+"place": {
+"label": "Pengerang, MY",
+"lat": 1.3651,
+"lon": 104.1118,
+"tz": "Asia/Kuala_Lumpur"
+}
+},
+"lunar": {
+"year": "戊辰",
+"month": "辛酉",
+"day": "甲戌",
+"hour": "己巳"
+}
+},
+{
+"input": {
 "birthDate": "2012-04-07",
 "time": {
 "kind": "exact",
@@ -29968,27 +29926,6 @@
 "month": "丙申",
 "day": "丁丑",
 "hour": "辛亥"
-}
-},
-{
-"input": {
-"birthDate": "1970-06-08",
-"time": {
-"kind": "exact",
-"hhmm": "00:21"
-},
-"place": {
-"label": "Gokalpur, IN",
-"lat": 28.7029,
-"lon": 77.2896,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "庚戌",
-"month": "壬午",
-"day": "己未",
-"hour": "甲子"
 }
 },
 {
@@ -30282,7 +30219,7 @@
 "year": "庚子",
 "month": "癸未",
 "day": "丁未",
-"hour": "乙巳"
+"hour": "丙午"
 }
 },
 {
@@ -30492,7 +30429,7 @@
 "year": "庚子",
 "month": "己丑",
 "day": "丙申",
-"hour": "壬辰"
+"hour": "癸巳"
 }
 },
 {
@@ -31211,6 +31148,27 @@
 },
 {
 "input": {
+"birthDate": "1986-05-24",
+"time": {
+"kind": "exact",
+"hhmm": "23:04"
+},
+"place": {
+"label": "Sainte-Rose, GP",
+"lat": 16.3326,
+"lon": -61.6969,
+"tz": "America/Guadeloupe"
+}
+},
+"lunar": {
+"year": "丙寅",
+"month": "癸巳",
+"day": "戊辰",
+"hour": "癸亥"
+}
+},
+{
+"input": {
 "birthDate": "1998-09-01",
 "time": {
 "kind": "exact",
@@ -31290,7 +31248,7 @@
 "year": "丙申",
 "month": "乙未",
 "day": "壬辰",
-"hour": "丁未"
+"hour": "戊申"
 }
 },
 {
@@ -31883,6 +31841,27 @@
 },
 {
 "input": {
+"birthDate": "1955-03-02",
+"time": {
+"kind": "exact",
+"hhmm": "13:38"
+},
+"place": {
+"label": "Pallikal, IN",
+"lat": 11.1372,
+"lon": 75.9257,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "乙未",
+"month": "戊寅",
+"day": "壬戌",
+"hour": "丁未"
+}
+},
+{
+"input": {
 "birthDate": "1914-08-17",
 "time": {
 "kind": "exact",
@@ -32215,6 +32194,27 @@
 "month": "癸酉",
 "day": "壬辰",
 "hour": "壬寅"
+}
+},
+{
+"input": {
+"birthDate": "1996-01-12",
+"time": {
+"kind": "exact",
+"hhmm": "07:30"
+},
+"place": {
+"label": "Santana do Araguaia, BR",
+"lat": -9.335,
+"lon": -50.35,
+"tz": "America/Belem"
+}
+},
+"lunar": {
+"year": "乙亥",
+"month": "己丑",
+"day": "戊申",
+"hour": "丙辰"
 }
 },
 {
@@ -32912,6 +32912,27 @@
 },
 {
 "input": {
+"birthDate": "1969-10-04",
+"time": {
+"kind": "exact",
+"hhmm": "10:40"
+},
+"place": {
+"label": "Ishiki, JP",
+"lat": 34.8,
+"lon": 137.0167,
+"tz": "Asia/Tokyo"
+}
+},
+"lunar": {
+"year": "己酉",
+"month": "癸酉",
+"day": "壬子",
+"hour": "乙巳"
+}
+},
+{
+"input": {
 "birthDate": "1942-10-18",
 "time": {
 "kind": "exact",
@@ -33368,7 +33389,7 @@
 "lunar": {
 "year": "辛卯",
 "month": "己亥",
-"day": "壬辰",
+"day": "辛卯",
 "hour": "庚子"
 }
 },
@@ -33809,7 +33830,7 @@
 "lunar": {
 "year": "辛亥",
 "month": "丁酉",
-"day": "丙午",
+"day": "乙巳",
 "hour": "戊子"
 }
 },
@@ -33873,7 +33894,7 @@
 "year": "辛亥",
 "month": "辛丑",
 "day": "庚戌",
-"hour": "甲申"
+"hour": "乙酉"
 }
 },
 {
@@ -34529,6 +34550,27 @@
 },
 {
 "input": {
+"birthDate": "1967-05-03",
+"time": {
+"kind": "exact",
+"hhmm": "13:42"
+},
+"place": {
+"label": "Warwick, US",
+"lat": 41.7001,
+"lon": -71.4162,
+"tz": "America/New_York"
+}
+},
+"lunar": {
+"year": "丁未",
+"month": "甲辰",
+"day": "丁卯",
+"hour": "丙午"
+}
+},
+{
+"input": {
 "birthDate": "1906-03-10",
 "time": {
 "kind": "exact",
@@ -34545,7 +34587,7 @@
 "year": "丙午",
 "month": "辛卯",
 "day": "癸丑",
-"hour": "甲寅"
+"hour": "乙卯"
 }
 },
 {
@@ -34588,6 +34630,27 @@
 "month": "乙未",
 "day": "甲戌",
 "hour": "丁卯"
+}
+},
+{
+"input": {
+"birthDate": "1919-12-18",
+"time": {
+"kind": "exact",
+"hhmm": "04:51"
+},
+"place": {
+"label": "Restrepo, CO",
+"lat": 4.2583,
+"lon": -73.5614,
+"tz": "America/Bogota"
+}
+},
+"lunar": {
+"year": "己未",
+"month": "丙子",
+"day": "甲辰",
+"hour": "丙寅"
 }
 },
 {
@@ -34944,7 +35007,7 @@
 "year": "乙丑",
 "month": "癸未",
 "day": "戊午",
-"hour": "戊午"
+"hour": "己未"
 }
 },
 {
@@ -35175,7 +35238,7 @@
 "year": "己丑",
 "month": "乙亥",
 "day": "丁巳",
-"hour": "庚戌"
+"hour": "己酉"
 }
 },
 {
@@ -35532,7 +35595,7 @@
 "year": "庚午",
 "month": "辛巳",
 "day": "戊午",
-"hour": "丙辰"
+"hour": "乙卯"
 }
 },
 {
@@ -35595,7 +35658,7 @@
 "year": "戊申",
 "month": "丁巳",
 "day": "壬辰",
-"hour": "辛丑"
+"hour": "庚子"
 }
 },
 {
@@ -35637,7 +35700,7 @@
 "year": "丁巳",
 "month": "庚戌",
 "day": "丁卯",
-"hour": "己酉"
+"hour": "戊申"
 }
 },
 {
@@ -35910,7 +35973,7 @@
 "year": "己亥",
 "month": "乙亥",
 "day": "丙寅",
-"hour": "乙未"
+"hour": "甲午"
 }
 },
 {
@@ -36204,7 +36267,7 @@
 "year": "丙寅",
 "month": "戊戌",
 "day": "丙申",
-"hour": "庚寅"
+"hour": "己丑"
 }
 },
 {
@@ -36650,27 +36713,6 @@
 },
 {
 "input": {
-"birthDate": "2022-01-03",
-"time": {
-"kind": "exact",
-"hhmm": "18:52"
-},
-"place": {
-"label": "Ankazobe, MG",
-"lat": -18.3167,
-"lon": 47.1167,
-"tz": "Indian/Antananarivo"
-}
-},
-"lunar": {
-"year": "辛丑",
-"month": "庚子",
-"day": "丙辰",
-"hour": "丁酉"
-}
-},
-{
-"input": {
 "birthDate": "2009-09-08",
 "time": {
 "kind": "exact",
@@ -36771,28 +36813,7 @@
 "year": "戊戌",
 "month": "癸亥",
 "day": "戊午",
-"hour": "癸亥"
-}
-},
-{
-"input": {
-"birthDate": "1956-08-03",
-"time": {
-"kind": "exact",
-"hhmm": "07:33"
-},
-"place": {
-"label": "Püttlingen, DE",
-"lat": 49.2855,
-"lon": 6.8872,
-"tz": "Europe/Berlin"
-}
-},
-"lunar": {
-"year": "丙申",
-"month": "乙未",
-"day": "壬寅",
-"hour": "癸卯"
+"hour": "壬戌"
 }
 },
 {
@@ -36961,6 +36982,27 @@
 "month": "丙辰",
 "day": "己酉",
 "hour": "丙寅"
+}
+},
+{
+"input": {
+"birthDate": "2023-11-19",
+"time": {
+"kind": "exact",
+"hhmm": "19:17"
+},
+"place": {
+"label": "Uva, RU",
+"lat": 56.9908,
+"lon": 52.1852,
+"tz": "Europe/Samara"
+}
+},
+"lunar": {
+"year": "癸卯",
+"month": "癸亥",
+"day": "辛巳",
+"hour": "丁酉"
 }
 },
 {
@@ -37275,7 +37317,7 @@
 "year": "戊子",
 "month": "辛酉",
 "day": "丙寅",
-"hour": "乙未"
+"hour": "甲午"
 }
 },
 {
@@ -37296,7 +37338,7 @@
 "year": "戊辰",
 "month": "甲子",
 "day": "甲申",
-"hour": "戊辰"
+"hour": "丁卯"
 }
 },
 {
@@ -37322,27 +37364,6 @@
 },
 {
 "input": {
-"birthDate": "2017-07-12",
-"time": {
-"kind": "exact",
-"hhmm": "09:06"
-},
-"place": {
-"label": "São Paulo, BR",
-"lat": -23.5475,
-"lon": -46.6361,
-"tz": "America/Sao_Paulo"
-}
-},
-"lunar": {
-"year": "丁酉",
-"month": "丁未",
-"day": "庚子",
-"hour": "庚辰"
-}
-},
-{
-"input": {
 "birthDate": "1950-05-08",
 "time": {
 "kind": "exact",
@@ -37360,6 +37381,27 @@
 "month": "辛巳",
 "day": "癸卯",
 "hour": "乙卯"
+}
+},
+{
+"input": {
+"birthDate": "1973-01-23",
+"time": {
+"kind": "exact",
+"hhmm": "11:09"
+},
+"place": {
+"label": "Janesville, US",
+"lat": 42.6828,
+"lon": -89.0187,
+"tz": "America/Chicago"
+}
+},
+"lunar": {
+"year": "壬子",
+"month": "癸丑",
+"day": "己未",
+"hour": "庚午"
 }
 },
 {
@@ -37464,7 +37506,7 @@
 "year": "己酉",
 "month": "甲戌",
 "day": "癸卯",
-"hour": "壬戌"
+"hour": "辛酉"
 }
 },
 {
@@ -37700,27 +37742,6 @@
 },
 {
 "input": {
-"birthDate": "1955-03-27",
-"time": {
-"kind": "exact",
-"hhmm": "06:04"
-},
-"place": {
-"label": "Nioro du Rip, SN",
-"lat": 13.75,
-"lon": -15.8,
-"tz": "Africa/Dakar"
-}
-},
-"lunar": {
-"year": "乙未",
-"month": "己卯",
-"day": "丁亥",
-"hour": "壬寅"
-}
-},
-{
-"input": {
 "birthDate": "1921-12-01",
 "time": {
 "kind": "exact",
@@ -37737,7 +37758,7 @@
 "year": "辛酉",
 "month": "己亥",
 "day": "戊戌",
-"hour": "甲子"
+"hour": "癸亥"
 }
 },
 {
@@ -38367,7 +38388,7 @@
 "year": "乙巳",
 "month": "己丑",
 "day": "己巳",
-"hour": "乙亥"
+"hour": "丙子"
 }
 },
 {
@@ -38787,7 +38808,7 @@
 "year": "乙巳",
 "month": "戊寅",
 "day": "辛未",
-"hour": "癸巳"
+"hour": "甲午"
 }
 },
 {
@@ -38975,7 +38996,7 @@
 "lunar": {
 "year": "丙子",
 "month": "辛卯",
-"day": "辛丑",
+"day": "壬寅",
 "hour": "庚子"
 }
 },
@@ -38997,7 +39018,7 @@
 "year": "辛未",
 "month": "戊戌",
 "day": "壬戌",
-"hour": "壬子"
+"hour": "辛亥"
 }
 },
 {
@@ -39485,6 +39506,27 @@
 },
 {
 "input": {
+"birthDate": "1980-10-05",
+"time": {
+"kind": "exact",
+"hhmm": "22:24"
+},
+"place": {
+"label": "Madhyamgram, IN",
+"lat": 22.6894,
+"lon": 88.4459,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "庚申",
+"month": "乙酉",
+"day": "辛亥",
+"hour": "己亥"
+}
+},
+{
+"input": {
 "birthDate": "1929-12-10",
 "time": {
 "kind": "exact",
@@ -39523,27 +39565,6 @@
 "month": "戊辰",
 "day": "丁酉",
 "hour": "丁未"
-}
-},
-{
-"input": {
-"birthDate": "1973-11-23",
-"time": {
-"kind": "exact",
-"hhmm": "20:46"
-},
-"place": {
-"label": "Karuizawa, JP",
-"lat": 36.35,
-"lon": 138.6333,
-"tz": "Asia/Tokyo"
-}
-},
-"lunar": {
-"year": "癸丑",
-"month": "癸亥",
-"day": "癸亥",
-"hour": "癸亥"
 }
 },
 {
@@ -40488,7 +40509,7 @@
 "year": "乙亥",
 "month": "戊寅",
 "day": "戊寅",
-"hour": "丙辰"
+"hour": "丁巳"
 }
 },
 {
@@ -41412,7 +41433,7 @@
 "year": "辛酉",
 "month": "己亥",
 "day": "己卯",
-"hour": "壬申"
+"hour": "辛未"
 }
 },
 {
@@ -41433,7 +41454,7 @@
 "year": "甲戌",
 "month": "乙亥",
 "day": "乙未",
-"hour": "丁亥"
+"hour": "丙戌"
 }
 },
 {
@@ -41455,27 +41476,6 @@
 "month": "丁巳",
 "day": "癸未",
 "hour": "戊午"
-}
-},
-{
-"input": {
-"birthDate": "2006-04-26",
-"time": {
-"kind": "exact",
-"hhmm": "15:13"
-},
-"place": {
-"label": "Santo Antônio do Tauá, BR",
-"lat": -1.1519,
-"lon": -48.1294,
-"tz": "America/Belem"
-}
-},
-"lunar": {
-"year": "丙戌",
-"month": "壬辰",
-"day": "乙酉",
-"hour": "甲申"
 }
 },
 {
@@ -41748,7 +41748,7 @@
 "year": "戊辰",
 "month": "辛酉",
 "day": "癸未",
-"hour": "戊午"
+"hour": "丁巳"
 }
 },
 {
@@ -41790,7 +41790,7 @@
 "year": "己未",
 "month": "甲戌",
 "day": "戊寅",
-"hour": "丙辰"
+"hour": "乙卯"
 }
 },
 {
@@ -41853,7 +41853,7 @@
 "year": "己丑",
 "month": "丁卯",
 "day": "己未",
-"hour": "戊辰"
+"hour": "己巳"
 }
 },
 {
@@ -42168,7 +42168,7 @@
 "year": "戊午",
 "month": "辛酉",
 "day": "庚子",
-"hour": "癸未"
+"hour": "壬午"
 }
 },
 {
@@ -42467,27 +42467,6 @@
 },
 {
 "input": {
-"birthDate": "2025-01-20",
-"time": {
-"kind": "exact",
-"hhmm": "09:48"
-},
-"place": {
-"label": "Çubuk, TR",
-"lat": 40.2386,
-"lon": 33.0322,
-"tz": "Europe/Istanbul"
-}
-},
-"lunar": {
-"year": "甲辰",
-"month": "丁丑",
-"day": "己丑",
-"hour": "戊辰"
-}
-},
-{
-"input": {
 "birthDate": "1985-02-22",
 "time": {
 "kind": "exact",
@@ -42551,27 +42530,6 @@
 },
 {
 "input": {
-"birthDate": "2013-01-18",
-"time": {
-"kind": "exact",
-"hhmm": "09:18"
-},
-"place": {
-"label": "Din Daeng, TH",
-"lat": 13.7904,
-"lon": 100.5701,
-"tz": "Asia/Bangkok"
-}
-},
-"lunar": {
-"year": "壬辰",
-"month": "癸丑",
-"day": "甲申",
-"hour": "戊辰"
-}
-},
-{
-"input": {
 "birthDate": "2011-06-16",
 "time": {
 "kind": "exact",
@@ -42630,7 +42588,7 @@
 "year": "乙未",
 "month": "丁亥",
 "day": "癸卯",
-"hour": "癸丑"
+"hour": "壬子"
 }
 },
 {
@@ -43386,7 +43344,7 @@
 "year": "丁酉",
 "month": "己酉",
 "day": "甲子",
-"hour": "己巳"
+"hour": "戊辰"
 }
 },
 {
@@ -43533,7 +43491,7 @@
 "year": "壬辰",
 "month": "庚戌",
 "day": "甲午",
-"hour": "壬申"
+"hour": "辛未"
 }
 },
 {
@@ -43786,27 +43744,6 @@
 "month": "甲申",
 "day": "戊午",
 "hour": "丙辰"
-}
-},
-{
-"input": {
-"birthDate": "1973-11-07",
-"time": {
-"kind": "exact",
-"hhmm": "07:20"
-},
-"place": {
-"label": "Bludenz, AT",
-"lat": 47.1548,
-"lon": 9.8226,
-"tz": "Europe/Vienna"
-}
-},
-"lunar": {
-"year": "癸丑",
-"month": "壬戌",
-"day": "丁未",
-"hour": "甲辰"
 }
 },
 {
@@ -44246,7 +44183,7 @@
 "lunar": {
 "year": "辛未",
 "month": "己亥",
-"day": "戊辰",
+"day": "丁卯",
 "hour": "壬子"
 }
 },
@@ -44311,6 +44248,27 @@
 "month": "丁酉",
 "day": "甲戌",
 "hour": "庚午"
+}
+},
+{
+"input": {
+"birthDate": "1961-02-15",
+"time": {
+"kind": "exact",
+"hhmm": "05:22"
+},
+"place": {
+"label": "Yitang, CN",
+"lat": 34.2583,
+"lon": 117.8889,
+"tz": "Asia/Shanghai"
+}
+},
+"lunar": {
+"year": "辛丑",
+"month": "庚寅",
+"day": "己卯",
+"hour": "丁卯"
 }
 },
 {
@@ -44709,7 +44667,7 @@
 "year": "乙酉",
 "month": "癸未",
 "day": "甲申",
-"hour": "壬申"
+"hour": "癸酉"
 }
 },
 {
@@ -46347,7 +46305,7 @@
 "year": "癸卯",
 "month": "甲寅",
 "day": "戊戌",
-"hour": "壬戌"
+"hour": "癸亥"
 }
 },
 {
@@ -46814,27 +46772,6 @@
 },
 {
 "input": {
-"birthDate": "1940-02-16",
-"time": {
-"kind": "exact",
-"hhmm": "17:20"
-},
-"place": {
-"label": "La Spezia, IT",
-"lat": 44.103,
-"lon": 9.8238,
-"tz": "Europe/Rome"
-}
-},
-"lunar": {
-"year": "庚辰",
-"month": "戊寅",
-"day": "己丑",
-"hour": "壬申"
-}
-},
-{
-"input": {
 "birthDate": "2023-07-11",
 "time": {
 "kind": "exact",
@@ -47166,7 +47103,7 @@
 "year": "戊午",
 "month": "乙丑",
 "day": "戊子",
-"hour": "癸丑"
+"hour": "甲寅"
 }
 },
 {
@@ -47229,7 +47166,7 @@
 "year": "甲申",
 "month": "丁丑",
 "day": "丁酉",
-"hour": "戊申"
+"hour": "己酉"
 }
 },
 {
@@ -47523,7 +47460,7 @@
 "year": "乙巳",
 "month": "辛巳",
 "day": "庚午",
-"hour": "丁亥"
+"hour": "丙戌"
 }
 },
 {
@@ -47544,7 +47481,7 @@
 "year": "辛巳",
 "month": "辛卯",
 "day": "己卯",
-"hour": "己巳"
+"hour": "庚午"
 }
 },
 {
@@ -47608,6 +47545,27 @@
 "month": "丙辰",
 "day": "丁卯",
 "hour": "辛亥"
+}
+},
+{
+"input": {
+"birthDate": "1943-05-09",
+"time": {
+"kind": "exact",
+"hhmm": "16:39"
+},
+"place": {
+"label": "Lebbeke, BE",
+"lat": 51.0046,
+"lon": 4.1346,
+"tz": "Europe/Brussels"
+}
+},
+"lunar": {
+"year": "癸未",
+"month": "丁巳",
+"day": "丁卯",
+"hour": "丁未"
 }
 },
 {
@@ -47775,7 +47733,7 @@
 "year": "乙巳",
 "month": "丙戌",
 "day": "戊申",
-"hour": "庚申"
+"hour": "己未"
 }
 },
 {
@@ -47906,27 +47864,6 @@
 },
 {
 "input": {
-"birthDate": "1929-09-08",
-"time": {
-"kind": "exact",
-"hhmm": "18:59"
-},
-"place": {
-"label": "Anchorage, AK, US",
-"lat": 61.2181,
-"lon": -149.9003,
-"tz": "America/Anchorage"
-}
-},
-"lunar": {
-"year": "己巳",
-"month": "癸酉",
-"day": "丙辰",
-"hour": "戊戌"
-}
-},
-{
-"input": {
 "birthDate": "2011-03-18",
 "time": {
 "kind": "exact",
@@ -47944,6 +47881,27 @@
 "month": "辛卯",
 "day": "壬申",
 "hour": "壬寅"
+}
+},
+{
+"input": {
+"birthDate": "1985-12-08",
+"time": {
+"kind": "exact",
+"hhmm": "21:03"
+},
+"place": {
+"label": "Mingora, PK",
+"lat": 34.7795,
+"lon": 72.3627,
+"tz": "Asia/Karachi"
+}
+},
+"lunar": {
+"year": "乙丑",
+"month": "戊子",
+"day": "辛巳",
+"hour": "戊戌"
 }
 },
 {
@@ -48515,27 +48473,6 @@
 },
 {
 "input": {
-"birthDate": "2017-05-27",
-"time": {
-"kind": "exact",
-"hhmm": "02:46"
-},
-"place": {
-"label": "Muniz Freire, BR",
-"lat": -20.4642,
-"lon": -41.4131,
-"tz": "America/Sao_Paulo"
-}
-},
-"lunar": {
-"year": "丁酉",
-"month": "乙巳",
-"day": "甲寅",
-"hour": "丙寅"
-}
-},
-{
-"input": {
 "birthDate": "1988-10-11",
 "time": {
 "kind": "exact",
@@ -48741,7 +48678,7 @@
 "year": "乙未",
 "month": "丁亥",
 "day": "庚子",
-"hour": "戊寅"
+"hour": "丁丑"
 }
 },
 {
@@ -48909,7 +48846,7 @@
 "year": "庚子",
 "month": "癸未",
 "day": "戊辰",
-"hour": "壬戌"
+"hour": "癸亥"
 }
 },
 {
@@ -49140,7 +49077,7 @@
 "year": "癸丑",
 "month": "癸亥",
 "day": "甲午",
-"hour": "丙子"
+"hour": "乙亥"
 }
 },
 {
@@ -49880,27 +49817,6 @@
 },
 {
 "input": {
-"birthDate": "1972-12-11",
-"time": {
-"kind": "exact",
-"hhmm": "16:46"
-},
-"place": {
-"label": "Xai-Xai, MZ",
-"lat": -25.0519,
-"lon": 33.6442,
-"tz": "Africa/Maputo"
-}
-},
-"lunar": {
-"year": "壬子",
-"month": "壬子",
-"day": "丙子",
-"hour": "丁酉"
-}
-},
-{
-"input": {
 "birthDate": "1917-02-11",
 "time": {
 "kind": "exact",
@@ -50316,7 +50232,7 @@
 "year": "乙卯",
 "month": "己卯",
 "day": "戊戌",
-"hour": "甲寅"
+"hour": "乙卯"
 }
 },
 {
@@ -50358,7 +50274,7 @@
 "year": "己亥",
 "month": "乙亥",
 "day": "丙寅",
-"hour": "丙申"
+"hour": "乙未"
 }
 },
 {
@@ -50699,27 +50615,6 @@
 },
 {
 "input": {
-"birthDate": "1958-08-24",
-"time": {
-"kind": "exact",
-"hhmm": "00:19"
-},
-"place": {
-"label": "Bangkok Noi, TH",
-"lat": 13.7627,
-"lon": 100.478,
-"tz": "Asia/Bangkok"
-}
-},
-"lunar": {
-"year": "戊戌",
-"month": "庚申",
-"day": "壬申",
-"hour": "壬子"
-}
-},
-{
-"input": {
 "birthDate": "1963-07-15",
 "time": {
 "kind": "exact",
@@ -50737,27 +50632,6 @@
 "month": "己未",
 "day": "己未",
 "hour": "庚午"
-}
-},
-{
-"input": {
-"birthDate": "1909-08-07",
-"time": {
-"kind": "exact",
-"hhmm": "19:25"
-},
-"place": {
-"label": "Kokōtamangalam South, IN",
-"lat": 9.6795,
-"lon": 76.3589,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "己酉",
-"month": "辛未",
-"day": "己亥",
-"hour": "癸酉"
 }
 },
 {
@@ -50862,7 +50736,7 @@
 "year": "丙戌",
 "month": "庚寅",
 "day": "壬辰",
-"hour": "庚戌"
+"hour": "辛亥"
 }
 },
 {
@@ -51135,7 +51009,7 @@
 "year": "甲辰",
 "month": "丁卯",
 "day": "丁巳",
-"hour": "丙午"
+"hour": "丁未"
 }
 },
 {
@@ -52038,7 +51912,28 @@
 "year": "甲子",
 "month": "乙亥",
 "day": "辛酉",
-"hour": "壬辰"
+"hour": "辛卯"
+}
+},
+{
+"input": {
+"birthDate": "2003-11-06",
+"time": {
+"kind": "exact",
+"hhmm": "02:56"
+},
+"place": {
+"label": "Moreton, GB",
+"lat": 53.4,
+"lon": -3.1167,
+"tz": "Europe/London"
+}
+},
+"lunar": {
+"year": "癸未",
+"month": "壬戌",
+"day": "癸未",
+"hour": "癸丑"
 }
 },
 {
@@ -52169,6 +52064,27 @@
 },
 {
 "input": {
+"birthDate": "2018-05-23",
+"time": {
+"kind": "exact",
+"hhmm": "22:04"
+},
+"place": {
+"label": "Prenzlauer Berg, DE",
+"lat": 52.5388,
+"lon": 13.4244,
+"tz": "Europe/Berlin"
+}
+},
+"lunar": {
+"year": "戊戌",
+"month": "丁巳",
+"day": "乙卯",
+"hour": "丙戌"
+}
+},
+{
+"input": {
 "birthDate": "1918-04-28",
 "time": {
 "kind": "exact",
@@ -52248,7 +52164,7 @@
 "year": "甲申",
 "month": "丁丑",
 "day": "辛卯",
-"hour": "庚寅"
+"hour": "辛卯"
 }
 },
 {
@@ -52316,27 +52232,6 @@
 },
 {
 "input": {
-"birthDate": "1956-12-20",
-"time": {
-"kind": "exact",
-"hhmm": "17:14"
-},
-"place": {
-"label": "Doropo, CI",
-"lat": 9.8096,
-"lon": -3.3458,
-"tz": "Africa/Abidjan"
-}
-},
-"lunar": {
-"year": "丙申",
-"month": "庚子",
-"day": "辛酉",
-"hour": "丁酉"
-}
-},
-{
-"input": {
 "birthDate": "1933-12-11",
 "time": {
 "kind": "exact",
@@ -52375,27 +52270,6 @@
 "month": "癸未",
 "day": "己亥",
 "hour": "庚午"
-}
-},
-{
-"input": {
-"birthDate": "1962-07-16",
-"time": {
-"kind": "exact",
-"hhmm": "15:29"
-},
-"place": {
-"label": "Changsha, CN",
-"lat": 28.1987,
-"lon": 112.9709,
-"tz": "Asia/Shanghai"
-}
-},
-"lunar": {
-"year": "壬寅",
-"month": "丁未",
-"day": "乙卯",
-"hour": "癸未"
 }
 },
 {
@@ -52647,7 +52521,7 @@
 "year": "丙戌",
 "month": "丁酉",
 "day": "戊申",
-"hour": "丁巳"
+"hour": "丙辰"
 }
 },
 {
@@ -52732,27 +52606,6 @@
 "month": "壬寅",
 "day": "甲辰",
 "hour": "辛未"
-}
-},
-{
-"input": {
-"birthDate": "1987-10-03",
-"time": {
-"kind": "exact",
-"hhmm": "17:28"
-},
-"place": {
-"label": "Pathānkot, IN",
-"lat": 32.2748,
-"lon": 75.6529,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "丁卯",
-"month": "己酉",
-"day": "乙酉",
-"hour": "乙酉"
 }
 },
 {
@@ -52984,27 +52837,6 @@
 "month": "己亥",
 "day": "丁卯",
 "hour": "庚戌"
-}
-},
-{
-"input": {
-"birthDate": "2021-05-18",
-"time": {
-"kind": "exact",
-"hhmm": "13:35"
-},
-"place": {
-"label": "Dibate, ET",
-"lat": 10.65,
-"lon": 36.2167,
-"tz": "Africa/Addis_Ababa"
-}
-},
-"lunar": {
-"year": "辛丑",
-"month": "癸巳",
-"day": "丙寅",
-"hour": "乙未"
 }
 },
 {
@@ -53319,7 +53151,7 @@
 "year": "乙丑",
 "month": "丁亥",
 "day": "丁未",
-"hour": "戊申"
+"hour": "丁未"
 }
 },
 {
@@ -53597,23 +53429,23 @@
 },
 {
 "input": {
-"birthDate": "1985-01-09",
+"birthDate": "1975-01-24",
 "time": {
 "kind": "exact",
-"hhmm": "04:54"
+"hhmm": "19:18"
 },
 "place": {
-"label": "Diamantina, BR",
-"lat": -18.2469,
-"lon": -43.6034,
-"tz": "America/Sao_Paulo"
+"label": "Prenzlauer Berg, DE",
+"lat": 52.5388,
+"lon": 13.4244,
+"tz": "Europe/Berlin"
 }
 },
 "lunar": {
-"year": "甲子",
+"year": "甲寅",
 "month": "丁丑",
-"day": "戊申",
-"hour": "甲寅"
+"day": "庚午",
+"hour": "丙戌"
 }
 },
 {
@@ -54017,6 +53849,27 @@
 },
 {
 "input": {
+"birthDate": "1986-05-22",
+"time": {
+"kind": "exact",
+"hhmm": "06:25"
+},
+"place": {
+"label": "Areia Branca, BR",
+"lat": -10.7578,
+"lon": -37.3153,
+"tz": "America/Maceio"
+}
+},
+"lunar": {
+"year": "丙寅",
+"month": "癸巳",
+"day": "丙寅",
+"hour": "辛卯"
+}
+},
+{
+"input": {
 "birthDate": "1951-08-11",
 "time": {
 "kind": "exact",
@@ -54096,7 +53949,7 @@
 "year": "乙酉",
 "month": "丁亥",
 "day": "乙卯",
-"hour": "甲申"
+"hour": "癸未"
 }
 },
 {
@@ -54243,7 +54096,7 @@
 "year": "甲寅",
 "month": "癸酉",
 "day": "壬午",
-"hour": "辛亥"
+"hour": "庚戌"
 }
 },
 {
@@ -54264,7 +54117,7 @@
 "year": "丙戌",
 "month": "己亥",
 "day": "戊申",
-"hour": "癸亥"
+"hour": "壬戌"
 }
 },
 {
@@ -54454,27 +54307,6 @@
 "month": "戊午",
 "day": "癸巳",
 "hour": "甲寅"
-}
-},
-{
-"input": {
-"birthDate": "1906-07-11",
-"time": {
-"kind": "exact",
-"hhmm": "11:35"
-},
-"place": {
-"label": "Talegaon Dābhāde, IN",
-"lat": 18.735,
-"lon": 73.6756,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "丙午",
-"month": "乙未",
-"day": "丙辰",
-"hour": "癸巳"
 }
 },
 {
@@ -54878,27 +54710,6 @@
 },
 {
 "input": {
-"birthDate": "1927-09-06",
-"time": {
-"kind": "exact",
-"hhmm": "13:12"
-},
-"place": {
-"label": "Mūl, IN",
-"lat": 20.0699,
-"lon": 79.6783,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "丁卯",
-"month": "戊申",
-"day": "癸卯",
-"hour": "己未"
-}
-},
-{
-"input": {
 "birthDate": "1957-03-26",
 "time": {
 "kind": "exact",
@@ -55025,6 +54836,27 @@
 },
 {
 "input": {
+"birthDate": "1957-01-28",
+"time": {
+"kind": "exact",
+"hhmm": "01:10"
+},
+"place": {
+"label": "Saraipali, IN",
+"lat": 21.3153,
+"lon": 83.0063,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "丙申",
+"month": "辛丑",
+"day": "庚子",
+"hour": "丁丑"
+}
+},
+{
+"input": {
 "birthDate": "1922-08-19",
 "time": {
 "kind": "exact",
@@ -55067,27 +54899,6 @@
 },
 {
 "input": {
-"birthDate": "2013-08-05",
-"time": {
-"kind": "exact",
-"hhmm": "12:00"
-},
-"place": {
-"label": "Jackson, US",
-"lat": 32.2988,
-"lon": -90.1848,
-"tz": "America/Chicago"
-}
-},
-"lunar": {
-"year": "癸巳",
-"month": "己未",
-"day": "癸卯",
-"hour": "丁巳"
-}
-},
-{
-"input": {
 "birthDate": "1951-12-12",
 "time": {
 "kind": "exact",
@@ -55104,7 +54915,7 @@
 "year": "辛卯",
 "month": "庚子",
 "day": "丙戌",
-"hour": "癸巳"
+"hour": "壬辰"
 }
 },
 {
@@ -55860,7 +55671,7 @@
 "year": "丁未",
 "month": "己酉",
 "day": "癸未",
-"hour": "癸亥"
+"hour": "壬戌"
 }
 },
 {
@@ -56027,7 +55838,7 @@
 "lunar": {
 "year": "戊戌",
 "month": "癸亥",
-"day": "辛亥",
+"day": "庚戌",
 "hour": "戊子"
 }
 },
@@ -57125,6 +56936,27 @@
 },
 {
 "input": {
+"birthDate": "1905-03-15",
+"time": {
+"kind": "exact",
+"hhmm": "11:07"
+},
+"place": {
+"label": "Pengerang, MY",
+"lat": 1.3651,
+"lon": 104.1118,
+"tz": "Asia/Kuala_Lumpur"
+}
+},
+"lunar": {
+"year": "乙巳",
+"month": "己卯",
+"day": "癸丑",
+"hour": "戊午"
+}
+},
+{
+"input": {
 "birthDate": "1930-09-19",
 "time": {
 "kind": "exact",
@@ -57288,7 +57120,7 @@
 "year": "戊申",
 "month": "壬戌",
 "day": "甲寅",
-"hour": "丁卯"
+"hour": "丙寅"
 }
 },
 {
@@ -57813,7 +57645,7 @@
 "year": "己未",
 "month": "甲戌",
 "day": "甲子",
-"hour": "丙子"
+"hour": "乙亥"
 }
 },
 {
@@ -57855,7 +57687,7 @@
 "year": "庚申",
 "month": "戊寅",
 "day": "丙辰",
-"hour": "庚寅"
+"hour": "辛卯"
 }
 },
 {
@@ -57982,27 +57814,6 @@
 "month": "癸丑",
 "day": "壬子",
 "hour": "庚戌"
-}
-},
-{
-"input": {
-"birthDate": "2001-11-04",
-"time": {
-"kind": "exact",
-"hhmm": "09:43"
-},
-"place": {
-"label": "Vlaardingen, NL",
-"lat": 51.9125,
-"lon": 4.3417,
-"tz": "Europe/Amsterdam"
-}
-},
-"lunar": {
-"year": "辛巳",
-"month": "戊戌",
-"day": "辛未",
-"hour": "癸巳"
 }
 },
 {
@@ -58212,7 +58023,7 @@
 "year": "壬辰",
 "month": "辛亥",
 "day": "乙亥",
-"hour": "戊子"
+"hour": "丁亥"
 }
 },
 {
@@ -58233,7 +58044,7 @@
 "year": "庚子",
 "month": "丙戌",
 "day": "甲寅",
-"hour": "己巳"
+"hour": "戊辰"
 }
 },
 {
@@ -59099,27 +58910,6 @@
 },
 {
 "input": {
-"birthDate": "1988-09-07",
-"time": {
-"kind": "exact",
-"hhmm": "01:32"
-},
-"place": {
-"label": "Seoul, KR",
-"lat": 37.5665,
-"lon": 126.978,
-"tz": "Asia/Seoul"
-}
-},
-"lunar": {
-"year": "戊辰",
-"month": "庚申",
-"day": "乙丑",
-"hour": "丙子"
-}
-},
-{
-"input": {
 "birthDate": "1987-04-05",
 "time": {
 "kind": "exact",
@@ -59431,6 +59221,27 @@
 "month": "辛巳",
 "day": "戊戌",
 "hour": "癸亥"
+}
+},
+{
+"input": {
+"birthDate": "1917-10-28",
+"time": {
+"kind": "exact",
+"hhmm": "21:06"
+},
+"place": {
+"label": "Cheboksary, RU",
+"lat": 56.1322,
+"lon": 47.246,
+"tz": "Europe/Moscow"
+}
+},
+"lunar": {
+"year": "丁巳",
+"month": "庚戌",
+"day": "癸卯",
+"hour": "壬戌"
 }
 },
 {
@@ -59997,7 +59808,7 @@
 "year": "己卯",
 "month": "甲戌",
 "day": "乙酉",
-"hour": "戊寅"
+"hour": "丁丑"
 }
 },
 {
@@ -60040,27 +59851,6 @@
 "month": "己亥",
 "day": "己酉",
 "hour": "丁卯"
-}
-},
-{
-"input": {
-"birthDate": "1999-12-13",
-"time": {
-"kind": "exact",
-"hhmm": "09:03"
-},
-"place": {
-"label": "Penugonda, IN",
-"lat": 16.6536,
-"lon": 81.7455,
-"tz": "Asia/Kolkata"
-}
-},
-"lunar": {
-"year": "己卯",
-"month": "丙子",
-"day": "己亥",
-"hour": "己巳"
 }
 },
 {
@@ -60191,6 +59981,27 @@
 },
 {
 "input": {
+"birthDate": "1901-05-08",
+"time": {
+"kind": "exact",
+"hhmm": "22:43"
+},
+"place": {
+"label": "Westerly, US",
+"lat": 41.3776,
+"lon": -71.8273,
+"tz": "America/New_York"
+}
+},
+"lunar": {
+"year": "辛丑",
+"month": "癸巳",
+"day": "丙戌",
+"hour": "己亥"
+}
+},
+{
+"input": {
 "birthDate": "2010-04-05",
 "time": {
 "kind": "exact",
@@ -60312,7 +60123,7 @@
 "year": "甲午",
 "month": "辛未",
 "day": "癸未",
-"hour": "戊午"
+"hour": "己未"
 }
 },
 {
@@ -60527,6 +60338,27 @@
 },
 {
 "input": {
+"birthDate": "1940-07-02",
+"time": {
+"kind": "exact",
+"hhmm": "19:54"
+},
+"place": {
+"label": "Tipasa, DZ",
+"lat": 36.5897,
+"lon": 2.4489,
+"tz": "Africa/Algiers"
+}
+},
+"lunar": {
+"year": "庚辰",
+"month": "壬午",
+"day": "丙午",
+"hour": "戊戌"
+}
+},
+{
+"input": {
 "birthDate": "1905-12-25",
 "time": {
 "kind": "exact",
@@ -60627,7 +60459,7 @@
 "year": "甲午",
 "month": "乙亥",
 "day": "庚子",
-"hour": "戊寅"
+"hour": "丁丑"
 }
 },
 {
@@ -60691,27 +60523,6 @@
 "month": "癸巳",
 "day": "乙酉",
 "hour": "壬午"
-}
-},
-{
-"input": {
-"birthDate": "2020-02-07",
-"time": {
-"kind": "exact",
-"hhmm": "04:44"
-},
-"place": {
-"label": "Ubajara, BR",
-"lat": -3.8544,
-"lon": -40.9211,
-"tz": "America/Fortaleza"
-}
-},
-"lunar": {
-"year": "庚子",
-"month": "戊寅",
-"day": "庚辰",
-"hour": "戊寅"
 }
 },
 {
@@ -61046,7 +60857,7 @@
 "lunar": {
 "year": "癸卯",
 "month": "癸亥",
-"day": "己亥",
+"day": "戊戌",
 "hour": "甲子"
 }
 },
@@ -62480,6 +62291,27 @@
 },
 {
 "input": {
+"birthDate": "2012-04-01",
+"time": {
+"kind": "exact",
+"hhmm": "05:03"
+},
+"place": {
+"label": "Kaouéni, YT",
+"lat": -12.7712,
+"lon": 45.2242,
+"tz": "Indian/Mayotte"
+}
+},
+"lunar": {
+"year": "壬辰",
+"month": "癸卯",
+"day": "壬辰",
+"hour": "癸卯"
+}
+},
+{
+"input": {
 "birthDate": "2019-01-12",
 "time": {
 "kind": "exact",
@@ -62832,7 +62664,7 @@
 "year": "乙卯",
 "month": "戊寅",
 "day": "丁亥",
-"hour": "庚子"
+"hour": "辛丑"
 }
 },
 {
@@ -63001,6 +62833,174 @@
 "month": "丁丑",
 "day": "乙亥",
 "hour": "丁丑"
+}
+},
+{
+"input": {
+"birthDate": "1963-02-28",
+"time": {
+"kind": "exact",
+"hhmm": "19:26"
+},
+"place": {
+"label": "Lormi, IN",
+"lat": 22.2743,
+"lon": 81.7018,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "癸卯",
+"month": "甲寅",
+"day": "壬寅",
+"hour": "庚戌"
+}
+},
+{
+"input": {
+"birthDate": "1957-08-15",
+"time": {
+"kind": "exact",
+"hhmm": "20:22"
+},
+"place": {
+"label": "Ponmundam, IN",
+"lat": 10.9536,
+"lon": 75.9468,
+"tz": "Asia/Kolkata"
+}
+},
+"lunar": {
+"year": "丁酉",
+"month": "戊申",
+"day": "己未",
+"hour": "甲戌"
+}
+},
+{
+"input": {
+"birthDate": "1927-12-21",
+"time": {
+"kind": "exact",
+"hhmm": "02:10"
+},
+"place": {
+"label": "Hayes, GB",
+"lat": 51.5158,
+"lon": -0.4234,
+"tz": "Europe/London"
+}
+},
+"lunar": {
+"year": "丁卯",
+"month": "壬子",
+"day": "己丑",
+"hour": "乙丑"
+}
+},
+{
+"input": {
+"birthDate": "1988-06-19",
+"time": {
+"kind": "exact",
+"hhmm": "13:53"
+},
+"place": {
+"label": "Foggia, IT",
+"lat": 41.4585,
+"lon": 15.5519,
+"tz": "Europe/Rome"
+}
+},
+"lunar": {
+"year": "戊辰",
+"month": "戊午",
+"day": "乙巳",
+"hour": "壬午"
+}
+},
+{
+"input": {
+"birthDate": "1951-10-21",
+"time": {
+"kind": "exact",
+"hhmm": "09:14"
+},
+"place": {
+"label": "Esteio, BR",
+"lat": -29.8614,
+"lon": -51.1792,
+"tz": "America/Sao_Paulo"
+}
+},
+"lunar": {
+"year": "辛卯",
+"month": "戊戌",
+"day": "甲午",
+"hour": "戊辰"
+}
+},
+{
+"input": {
+"birthDate": "1980-04-25",
+"time": {
+"kind": "exact",
+"hhmm": "09:56"
+},
+"place": {
+"label": "Awgu, NG",
+"lat": 6.0728,
+"lon": 7.4774,
+"tz": "Africa/Lagos"
+}
+},
+"lunar": {
+"year": "庚申",
+"month": "庚辰",
+"day": "戊辰",
+"hour": "丁巳"
+}
+},
+{
+"input": {
+"birthDate": "1980-03-22",
+"time": {
+"kind": "exact",
+"hhmm": "12:21"
+},
+"place": {
+"label": "Monteros, AR",
+"lat": -27.1682,
+"lon": -65.4989,
+"tz": "America/Argentina/Tucuman"
+}
+},
+"lunar": {
+"year": "庚申",
+"month": "己卯",
+"day": "甲午",
+"hour": "己巳"
+}
+},
+{
+"input": {
+"birthDate": "1911-10-25",
+"time": {
+"kind": "exact",
+"hhmm": "00:16"
+},
+"place": {
+"label": "Jalostotitlán, MX",
+"lat": 21.1681,
+"lon": -102.461,
+"tz": "America/Mexico_City"
+}
+},
+"lunar": {
+"year": "辛亥",
+"month": "戊戌",
+"day": "戊辰",
+"hour": "壬子"
 }
 }
 ]

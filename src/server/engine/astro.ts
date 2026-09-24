@@ -1,4 +1,4 @@
-// Jie boundaries from the canonical table (D21) and equation of time (NOAA solar calculator / Meeus).
+// Jie boundaries from the canonical table (D21). equationOfTimeMinutes is kept for reference only: policy v2 (D28) does not apply it.
 import jieData from "../../../data/jie_1900_2050.json";
 
 interface JieRow { utc: string; lon: number }

@@ -1,5 +1,6 @@
 """Independent oracle for ENGINE_SPEC haeday-chart-v1. Shares only data/jie_1900_2050.json with the engine
-(after re-verifying it against Skyfield). Everything else (tz conversion, EoT, sexagenary math) is separate code."""
+(after re-verifying it against Skyfield). Everything else (tz conversion, solar time, sexagenary math) is separate code.
+Policy haeday-chart-v2: local mean solar time (longitude correction only, no equation of time; D28)."""
 from __future__ import annotations
 import bisect, json
 from datetime import date, datetime, timedelta, timezone
@@ -8,7 +9,6 @@ from zoneinfo import ZoneInfo, reset_tzpath
 # Use the pinned tzdata wheel on Linux as well as Windows, not the host OS database.
 reset_tzpath(())
 from sexagenary import BRANCHES, JIE_LON_TO_BRANCH, STEMS, day_index, ganzhi, hour_ganzhi, month_ganzhi, year_index
-from astro import eot_minutes
 
 UTC = timezone.utc
 _jie = json.load(open("data/jie_1900_2050.json", encoding="utf-8"))["jie"]
@@ -48,13 +48,12 @@ def wrap180(x: float) -> float:
     return 180.0 if r == -180 else r
 
 
-def true_solar(u: datetime, lon: float, tz: str):
+def solar_time(u: datetime, lon: float, tz: str):
     std = std_offset_minutes(u, tz)
     meridian = std / 4.0  # degrees (60 min per 15 degrees)
     lon_corr = wrap180(lon - meridian) * 4.0
-    eot = eot_minutes(u.replace(tzinfo=None))
-    ts = u.astimezone(UTC).replace(tzinfo=None) + timedelta(minutes=std + lon_corr + eot)
-    return ts, std, lon_corr, eot
+    ts = u.astimezone(UTC).replace(tzinfo=None) + timedelta(minutes=std + lon_corr)
+    return ts, std, lon_corr
 
 
 def year_month(u: datetime):
@@ -104,11 +103,11 @@ def warnings_for(u: datetime, ts: datetime, jb: datetime, ja: datetime, birth_ye
 
 
 def chart_at(u: datetime, place: dict, with_hour=True, day_boundary="midnight", birth_year=2000, approximate=False):
-    ts, std, lon_corr, eot = true_solar(u, place["lon"], place["tz"])
+    ts, std, lon_corr = solar_time(u, place["lon"], place["tz"])
     y, m, jb, ja = year_month(u)
     d, h = day_hour(ts, day_boundary, with_hour)
-    return {"utc": iso(u), "stdOffsetMinutes": round(std, 3), "lonCorrectionMin": round(lon_corr, 3), "eotMin": round(eot, 3),
-            "trueSolar": ts.strftime("%Y-%m-%dT%H:%M:%S"), "jieBefore": iso(jb), "jieAfter": iso(ja),
+    return {"utc": iso(u), "stdOffsetMinutes": round(std, 3), "lonCorrectionMin": round(lon_corr, 3),
+            "solarTime": ts.strftime("%Y-%m-%dT%H:%M:%S"), "jieBefore": iso(jb), "jieAfter": iso(ja),
             "pillars": {"year": y, "month": m, "day": d, "hour": h},
             "warnings": warnings_for(u, ts, jb, ja, birth_year, approximate, with_hour)}
 

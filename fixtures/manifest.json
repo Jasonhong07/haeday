@@ -1,5 +1,5 @@
 {
- "policyVersion": "haeday-chart-v1",
+ "policyVersion": "haeday-chart-v2",
  "places": {
   "seoul": {
    "label": "Seoul, KR",
@@ -474,6 +474,46 @@
     "hhmm": "12:00"
    },
    "place": "seoul"
+  },
+  {
+   "id": "F38",
+   "note": "v2 solar 22:58, 2 min before 子 hour",
+   "birthDate": "2000-01-15",
+   "time": {
+    "kind": "exact",
+    "hhmm": "22:49"
+   },
+   "place": "chicago"
+  },
+  {
+   "id": "F39",
+   "note": "v2 solar 23:02, 子 hour with next-day stem",
+   "birthDate": "2000-01-15",
+   "time": {
+    "kind": "exact",
+    "hhmm": "22:53"
+   },
+   "place": "chicago"
+  },
+  {
+   "id": "F40",
+   "note": "v2 solar 23:58, before solar midnight",
+   "birthDate": "2000-01-15",
+   "time": {
+    "kind": "exact",
+    "hhmm": "23:49"
+   },
+   "place": "chicago"
+  },
+  {
+   "id": "F41",
+   "note": "v2 solar 00:02 next day: longitude correction moves the day forward",
+   "birthDate": "2000-01-15",
+   "time": {
+    "kind": "exact",
+    "hhmm": "23:53"
+   },
+   "place": "chicago"
   }
  ]
 }

@@ -42,7 +42,7 @@ const MAX_DST_MINUTES = 180;
  * Offsets more than 3 h away are a different regime (date-line moves such as Samoa 2011, Kwajalein 1993)
  * and are ignored; a permanent change of standard time (Seoul 1954, 1961) is not mistaken for DST because
  * the offset does not come back on the future side.
- * Pillars do not depend on this value (see trueSolarAt); it feeds the audit fields.
+ * Pillars do not depend on this value (see solarTimeAt); it feeds the audit fields.
  */
 export function standardOffsetMinutes(utcMs: number, tz: string): number {
   const zone = zoneOf(tz);

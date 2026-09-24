@@ -5,8 +5,7 @@ import { computeChart, type ChartInput, type Pillars } from "../../src/server/en
 
 type Exp = Record<string, unknown> & { kind: string };
 interface Case { id: string; input: ChartInput & { place: ChartInput["place"] }; expected: Exp }
-const cases = (golden as unknown as { cases: Case[]; eotToleranceSeconds: number }).cases;
-const TOL_MIN = (golden as { eotToleranceSeconds: number }).eotToleranceSeconds / 60;
+const cases = (golden as unknown as { cases: Case[] }).cases;
 const gz = (p: Pillars) => ({ year: p.year.stem + p.year.branch, month: p.month.stem + p.month.branch, day: p.day.stem + p.day.branch, hour: p.hour ? p.hour.stem + p.hour.branch : null });
 const naive = (s: string) => Date.parse(s + "Z");
 
@@ -25,8 +24,8 @@ describe("engine matches the oracle on every fixture", () => {
         expect(a.utc).toBe(e.utc);
         expect(a.stdOffsetMinutes).toBe(e.stdOffsetMinutes);
         expect(Math.abs(a.lonCorrectionMin! - (e.lonCorrectionMin as number))).toBeLessThan(0.01);
-        expect(Math.abs(a.eotMin! - (e.eotMin as number))).toBeLessThanOrEqual(TOL_MIN);
-        expect(Math.abs(naive(a.trueSolar!) - naive(e.trueSolar as string)) / 60_000).toBeLessThanOrEqual(TOL_MIN + 1 / 60);
+        // Same formula on both sides; allow one second for rounding of LMT offsets.
+        expect(Math.abs(naive(a.solarTime!) - naive(e.solarTime as string))).toBeLessThanOrEqual(1000);
         expect(a.jieBefore).toBe(e.jieBefore);
         expect(a.jieAfter).toBe(e.jieAfter);
         expect(gz(res.chart.pillars)).toEqual(e.pillars);

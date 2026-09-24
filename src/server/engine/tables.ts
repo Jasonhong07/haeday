@@ -1,4 +1,4 @@
-// Sexagenary tables for haeday-chart-v1 (D24: own implementation). Reviewed by Jason before launch.
+// Sexagenary tables for haeday-chart (v1, v2) (D24: own implementation). Reviewed by Jason before launch.
 
 export type Element = "wood" | "fire" | "earth" | "metal" | "water";
 export type YinYang = "yin" | "yang";
