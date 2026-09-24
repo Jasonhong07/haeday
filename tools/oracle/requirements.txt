@@ -5,3 +5,4 @@ jplephem==2.24
 sgp4==2.27
 numpy==2.5.3
 tzdata==2026.4
+lunar_python==1.4.8  # third-party cross-check only (crosscheck_lunar.py)
