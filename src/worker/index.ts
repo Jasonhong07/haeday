@@ -8,6 +8,7 @@ import { getEnv } from "../server/env";
 import { RetryGeneration, generateReading, sweepDeadlines } from "../server/fulfillment/generate";
 import { sentryOptions } from "../server/observability/sentry";
 import { executeRefund, reconcileRefunds, syncOrderRefunds } from "../server/payments/refunds";
+import { reconcileOpenSessions, reconcileStripeSessions } from "../server/payments/reconcile";
 import { QUEUES, createBoss, ensureQueues } from "../server/queue/boss";
 import { runRetention } from "../server/retention";
 import { loadKeyring } from "../server/security/keyring";
@@ -66,6 +67,20 @@ async function main(): Promise<void> {
     });
     await boss.schedule(QUEUES.reconcileRefunds, "*/15 * * * *");
     await boss.work(QUEUES.reconcileRefunds, async () => { await reconcileRefunds({ db, payments }); });
+    // CC1b F12: missed or failed checkout webhooks. Same validation/transaction as the webhook (applyPaidSession).
+    if (env.STRIPE_PRICE_SAJU) {
+      const wh = { db, ring, boss, payments, paymentsMode: env.PAYMENTS_MODE, priceId: env.STRIPE_PRICE_SAJU };
+      await boss.schedule(QUEUES.reconcileOpen, "*/3 * * * *");
+      await boss.work(QUEUES.reconcileOpen, async () => {
+        const r = await reconcileOpenSessions(wh);
+        if (r.paid) Sentry.captureMessage(`Reconciliation unlocked ${r.paid} paid order(s) the webhook missed`, "warning");
+      });
+      await boss.schedule(QUEUES.reconcileSessions, "*/30 * * * *");
+      await boss.work(QUEUES.reconcileSessions, async () => {
+        const r = await reconcileStripeSessions(wh);
+        if (r.paid || r.issues) Sentry.captureMessage(`Session reconciliation: paid=${r.paid} issues=${r.issues}`, "warning");
+      });
+    }
     // CC1a: provider calls for committed refund claims, and provider re-reads triggered by refund webhooks.
     await boss.work<{ refundId: string }>(QUEUES.refundExecute, async ([job]) => {
       if (!job) return;

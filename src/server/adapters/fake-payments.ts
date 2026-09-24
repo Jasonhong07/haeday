@@ -1,10 +1,11 @@
 // In-memory PaymentAdapter for tests and the local dev checkout simulator. Never used in staging/production.
 import { randomUUID } from "node:crypto";
+import { PaymentProviderError } from "../payments/adapter";
 import type {
-  CheckoutDetails, CheckoutSessionRef, CheckoutSessionRequest, PaymentAdapter, PaymentEvent, PaymentRefundSummary, ProviderRefund, RefundResult, RefundStatus,
+  CheckoutDetails, CheckoutSessionRef, CheckoutSessionRequest, CompletedSessionRef, PaymentAdapter, PaymentEvent, PaymentRefundSummary, ProviderRefund, RefundResult, RefundStatus,
 } from "../payments/adapter";
 
-interface FakeSession { ref: CheckoutSessionRef; req: CheckoutSessionRequest; details: Partial<CheckoutDetails> }
+interface FakeSession { ref: CheckoutSessionRef; req: CheckoutSessionRequest; details: Partial<CheckoutDetails>; created: number }
 
 export class FakePaymentAdapter implements PaymentAdapter {
   readonly provider = "fake" as const;
@@ -20,15 +21,41 @@ export class FakePaymentAdapter implements PaymentAdapter {
   nextRefund: RefundStatus | (() => never) = "succeeded";
   livemode = false;
 
+  /** Clock for session creation and Stripe's "expires_at at least 30 min ahead" rule (unix seconds). */
+  nowUnix = (): number => Math.floor(Date.now() / 1000);
+  /** Next session create: "lost" = created at the provider but the response never arrives; "down" = never reached it. */
+  nextSession: "ok" | "lost" | "down" = "ok";
+
+  /** Tests may replace this to simulate an adapter change between deploys. */
+  buildCheckoutParams(req: CheckoutSessionRequest): Record<string, unknown> {
+    const { providerParams: _ignored, ...rest } = req;
+    return { ...rest, bodyVersion: 1 };
+  }
+
   async createCheckoutSession(req: CheckoutSessionRequest): Promise<CheckoutSessionRef> {
     this.calls.createSession++;
+    if (this.nextSession === "down") { this.nextSession = "ok"; throw new PaymentProviderError("transient", "StripeConnectionError"); }
     const existing = this.byIdempotency.get(req.idempotencyKey);
-    if (existing) return this.sessions.get(existing)!.ref;
+    if (existing) {
+      // Stripe replays only for identical parameters (idempotent requests contract).
+      const body = (r: CheckoutSessionRequest) => JSON.stringify(r.providerParams ?? this.buildCheckoutParams(r));
+      if (body(this.sessions.get(existing)!.req) !== body(req)) throw new PaymentProviderError("transient", "idempotency_mismatch");
+      return this.sessions.get(existing)!.ref;
+    }
+    if (req.expiresAt < this.nowUnix() + 30 * 60) throw new PaymentProviderError("rejected", "expires_at_too_soon");
     const id = `cs_test_${randomUUID().replace(/-/g, "")}`;
     const ref: CheckoutSessionRef = { id, url: `https://checkout.fake/${id}`, status: "open" };
-    this.sessions.set(id, { ref, req, details: {} });
+    this.sessions.set(id, { ref, req: { ...req }, details: {}, created: this.nowUnix() });
     this.byIdempotency.set(req.idempotencyKey, id);
+    if (this.nextSession === "lost") { this.nextSession = "ok"; throw new PaymentProviderError("transient", "StripeConnectionError"); }
     return ref;
+  }
+
+  async listCompletedSessions(sinceUnix: number, untilUnix: number): Promise<CompletedSessionRef[]> {
+    return [...this.sessions.entries()]
+      .filter(([, s]) => s.ref.status === "complete" && s.created >= sinceUnix && s.created < untilUnix)
+      .map(([id, s]) => ({ id, created: s.created, livemode: this.livemode, clientReferenceId: s.details.clientReferenceId ?? s.req.orderId, metadataOrderId: s.details.metadataOrderId ?? s.req.orderId }))
+      .sort((a, b) => a.created - b.created);
   }
 
   async getCheckoutSession(sessionId: string): Promise<CheckoutSessionRef> {
@@ -54,6 +81,7 @@ export class FakePaymentAdapter implements PaymentAdapter {
       currency: "usd", amountSubtotal: 399, amountTax: 0, amountTotal: 399,
       clientReferenceId: s.req.orderId, metadataOrderId: s.req.orderId,
       lineItems: [{ priceId: s.req.priceId, quantity: 1 }], paymentIntentId: null, customerEmail: null,
+      amountDiscount: 0, amountShipping: 0, promotionCodeId: null, created: s.created,
       ...s.details,
     };
   }

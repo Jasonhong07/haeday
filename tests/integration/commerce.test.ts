@@ -41,7 +41,7 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
   afterAll(async () => { await boss?.stop({ graceful: false }); await h?.pool.end(); });
   beforeEach(async () => {
     pay = new FakePaymentAdapter(); llm = new FakeLlm(); mail = new FakeEmail();
-    co = { db: h.db, ring, payments: pay, priceId: PRICE, origin: "https://haeday.test", automaticTax: false };
+    co = { db: h.db, ring, payments: pay, priceId: PRICE, origin: "https://haeday.test", automaticTax: false, approvedSnippetsOnly: false };
     wh = { db: h.db, ring, boss, payments: pay, paymentsMode: "test", priceId: PRICE };
     gen = { db: h.db, ring, boss, llm, payments: pay, approvedSnippetsOnly: false, dailyCap: 100 };
     resetSettingsCache(); await setSalesEnabled(h.db, true, "test");

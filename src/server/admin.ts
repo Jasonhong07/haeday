@@ -1,5 +1,5 @@
 // Owner dashboard data (D19). Money comes from orders/refunds, never from client analytics. UTC throughout.
-import { and, count, desc, eq, gte, inArray, lt, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, isNull, lt, ne, sql, sum } from "drizzle-orm";
 import type { PgBoss } from "pg-boss";
 import type { Db } from "./db/client";
 import { adminAudit, chartRevisions, disputes, orders, paymentIssues, refunds } from "./db/schema";
@@ -10,15 +10,22 @@ export async function dashboard(db: Db, days: number, now = new Date()) {
   const paidLike = ["paid", "refund_pending", "refunded", "partially_refunded"] as const;
   const [charts] = await db.select({ n: count() }).from(chartRevisions).where(gte(chartRevisions.createdAt, from));
   const [guestsWithChart] = await db.select({ n: sql<number>`count(distinct ${chartRevisions.guestId})::int` }).from(chartRevisions).where(gte(chartRevisions.createdAt, from));
-  const [paid] = await db.select({ n: count(), gross: sum(orders.totalCents), tax: sum(orders.taxCents) }).from(orders)
-    .where(and(inArray(orders.paymentStatus, [...paidLike]), gte(orders.paidAt, from)));
+  // F15: free (100% code) orders are entitlements, not sales: excluded from paid orders and revenue, counted apart.
+  // Money (gross/tax) counts every captured payment; the ORDER count leaves out payments that were never a sale
+  // (duplicates and validation-failure refunds, which never unlock: fulfillment "none").
+  const [paid] = await db.select({ gross: sum(orders.totalCents), tax: sum(orders.taxCents) }).from(orders)
+    .where(and(inArray(orders.paymentStatus, [...paidLike]), gte(orders.paidAt, from), gt(orders.totalCents, 0)));
+  const [sales] = await db.select({ n: count() }).from(orders)
+    .where(and(inArray(orders.paymentStatus, [...paidLike]), gte(orders.paidAt, from), gt(orders.totalCents, 0), isNull(orders.duplicateOfOrderId), ne(orders.fulfillmentStatus, "none")));
+  const [free] = await db.select({ n: count() }).from(orders)
+    .where(and(inArray(orders.paymentStatus, [...paidLike]), gte(orders.paidAt, from), eq(orders.totalCents, 0)));
   const [refunded] = await db.select({ n: count(), amount: sum(refunds.amountCents) }).from(refunds)
     .where(and(eq(refunds.status, "succeeded"), gte(refunds.updatedAt, from)));
   const [checkouts] = await db.select({ n: count() }).from(orders).where(gte(orders.createdAt, from));
   const gross = Number(paid?.gross ?? 0), tax = Number(paid?.tax ?? 0), ref = Number(refunded?.amount ?? 0);
   return {
     from, to: now, chartsCreated: charts?.n ?? 0, chartBrowsers: guestsWithChart?.n ?? 0, checkoutsStarted: checkouts?.n ?? 0,
-    paidOrders: paid?.n ?? 0, grossCents: gross, taxCents: tax, refundsCount: refunded?.n ?? 0, refundCents: ref, netCents: gross - tax - ref,
+    paidOrders: sales?.n ?? 0, freeOrders: free?.n ?? 0, grossCents: gross, taxCents: tax, refundsCount: refunded?.n ?? 0, refundCents: ref, netCents: gross - tax - ref,
   };
 }
 

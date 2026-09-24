@@ -38,7 +38,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <section className="card">
         <h2>Funnel and money</h2>
         <p>Browsers that made a chart (device-based): <b>{d.chartBrowsers}</b> · charts: {d.chartsCreated} · checkouts started: {d.checkoutsStarted}</p>
-        <p>Paid orders: <b>{d.paidOrders}</b> · conversion (paid ÷ chart browsers, activity-based): {conv}%</p>
+        <p>Paid orders: <b>{d.paidOrders}</b> · free (100% code): {d.freeOrders} · conversion (paid ÷ chart browsers, activity-based): {conv}%</p>
         <p>Gross {usd(d.grossCents)} · tax {usd(d.taxCents)} · refunds {usd(d.refundCents)} ({d.refundsCount}) · <b>net {usd(d.netCents)}</b></p>
         <p className="note">Landing visitors need PostHog (not connected yet).</p>
       </section>

@@ -28,6 +28,15 @@ export function apologyEmail(support: string) {
   return { subject, html, text };
 }
 
+/** Free (100% promotion code) order that could not be completed: nothing was charged, so no refund is mentioned. */
+export function apologyFreeEmail(support: string) {
+  const subject = "We couldn't complete your Haeday reading";
+  const html = wrap("We're sorry", `<p style="font-size:16px;line-height:1.6">We couldn't complete your reading this time. Your order was free, so nothing was charged.</p>
+<p style="font-size:16px;line-height:1.6">Reply to this email and we'll help you get your reading.</p>`, support);
+  const text = `We couldn't complete your Haeday reading this time. Your order was free, so nothing was charged.\n\nReply to this email or write to ${support} and we'll help you get your reading.`;
+  return { subject, html, text };
+}
+
 export function magicLinkEmail(link: string, support: string) {
   const subject = "Your Haeday sign-in link";
   const html = wrap("Sign in to Haeday", `<p style="font-size:16px;line-height:1.6">Use the button below to sign in. The link works once and expires in 15 minutes.</p>

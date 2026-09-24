@@ -1,8 +1,9 @@
 // Stripe implementation of PaymentAdapter. The only file that imports the Stripe SDK.
 import Stripe from "stripe";
 import type {
-  CheckoutDetails, CheckoutSessionRef, CheckoutSessionRequest, PaymentAdapter, PaymentEvent, PaymentRefundSummary, RefundResult, RefundStatus,
+  CheckoutDetails, CheckoutSessionRef, CheckoutSessionRequest, CompletedSessionRef, PaymentAdapter, PaymentEvent, PaymentRefundSummary, RefundResult, RefundStatus,
 } from "../payments/adapter";
+import { PaymentProviderError } from "../payments/adapter";
 
 const refundStatus = (s: string | null | undefined): RefundStatus =>
   s === "succeeded" || s === "failed" || s === "canceled" || s === "requires_action" ? s : "pending";
@@ -22,8 +23,8 @@ export class StripePaymentAdapter implements PaymentAdapter {
     return { id: s.id, url: s.url ?? null, status: (s.status ?? "open") as CheckoutSessionRef["status"] };
   }
 
-  async createCheckoutSession(req: CheckoutSessionRequest): Promise<CheckoutSessionRef> {
-    const s = await this.stripe.checkout.sessions.create({
+  buildCheckoutParams(req: CheckoutSessionRequest): Record<string, unknown> {
+    const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       line_items: [{ price: req.priceId, quantity: 1 }],
       success_url: req.successUrl,
@@ -34,9 +35,21 @@ export class StripePaymentAdapter implements PaymentAdapter {
       // Card + wallets only (no delayed methods at launch, ARCHITECTURE §4.2): Apple Pay / Google Pay ride on "card".
       payment_method_types: ["card"],
       automatic_tax: { enabled: req.automaticTax },
-      expires_at: Math.floor(Date.now() / 1000) + 60 * 60, // shortest window Stripe allows is 30 min; 60 keeps retries simple
-    }, { idempotencyKey: req.idempotencyKey });
-    return this.ref(s);
+      allow_promotion_codes: req.allowPromotionCodes,
+      expires_at: req.expiresAt,
+    };
+    return params as unknown as Record<string, unknown>;
+  }
+
+  async createCheckoutSession(req: CheckoutSessionRequest): Promise<CheckoutSessionRef> {
+    // F4: the frozen body is replayed verbatim, so a deploy that changes this adapter cannot alter a retry.
+    const body = (req.providerParams ?? this.buildCheckoutParams(req)) as unknown as Stripe.Checkout.SessionCreateParams;
+    try {
+      const s = await this.stripe.checkout.sessions.create(body, { idempotencyKey: req.idempotencyKey });
+      return this.ref(s);
+    } catch (err) {
+      throw classify(err);
+    }
   }
 
   async getCheckoutSession(sessionId: string): Promise<CheckoutSessionRef> {
@@ -59,7 +72,21 @@ export class StripePaymentAdapter implements PaymentAdapter {
       lineItems: (s.line_items?.data ?? []).map((li) => ({ priceId: li.price?.id ?? null, quantity: li.quantity ?? 0 })),
       paymentIntentId: piId(s.payment_intent),
       customerEmail: s.customer_details?.email ?? null,
+      amountDiscount: s.total_details?.amount_discount ?? 0,
+      amountShipping: s.total_details?.amount_shipping ?? 0,
+      promotionCodeId: piId(s.discounts?.[0]?.promotion_code ?? null),
+      created: s.created,
     };
+  }
+
+  async listCompletedSessions(sinceUnix: number, untilUnix: number): Promise<CompletedSessionRef[]> {
+    const LIMIT = 10_000;
+    const all = await this.stripe.checkout.sessions.list({ created: { gte: sinceUnix, lt: untilUnix }, status: "complete", limit: 100 }).autoPagingToArray({ limit: LIMIT });
+    // Stripe lists newest first: a full page set means older sessions were cut off. Never advance past that.
+    if (all.length >= LIMIT) throw new Error("session list truncated");
+    return all
+      .map((x) => ({ id: x.id, created: x.created, livemode: x.livemode, clientReferenceId: x.client_reference_id, metadataOrderId: x.metadata?.orderId ?? null }))
+      .sort((a, b) => a.created - b.created);
   }
 
   async expireCheckoutSession(sessionId: string): Promise<void> {
@@ -121,4 +148,14 @@ export class StripePaymentAdapter implements PaymentAdapter {
       default: return { ...base, type: "ignored", providerType: e.type };
     }
   }
+}
+
+/** Invalid-request errors never executed (Stripe saves no idempotent result for them); everything else is unknown. */
+function classify(err: unknown): PaymentProviderError {
+  const e = err as { type?: string; code?: string } | null;
+  // 409 "another request with this key is in progress" (e.g. a double click): outcome unknown, not a mismatch.
+  if (e?.code === "idempotency_key_in_use") return new PaymentProviderError("transient", "key_in_use");
+  if (e?.type === "StripeInvalidRequestError") return new PaymentProviderError("rejected", e.code ?? "invalid_request");
+  if (e?.type === "StripeIdempotencyError") return new PaymentProviderError("transient", "idempotency_mismatch");
+  return new PaymentProviderError("transient", e?.type ?? "unknown");
 }

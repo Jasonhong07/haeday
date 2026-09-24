@@ -9,9 +9,9 @@ import { QUEUES, enqueueInTx } from "../queue/boss";
 import { decryptPrivate, encryptPrivate, type Keyring } from "../security/encryption";
 import { aad } from "../security/keyring";
 import { EmailError, type EmailAdapter } from "../adapters/email";
-import { apologyEmail, deliveryEmail } from "./templates";
+import { apologyEmail, apologyFreeEmail, deliveryEmail } from "./templates";
 
-export type EmailKind = "delivery" | "apology";
+export type EmailKind = "delivery" | "apology" | "apology_free";
 export const MAX_EMAIL_ATTEMPTS = 6;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -40,6 +40,8 @@ export async function sendQueuedEmail(deps: SendDeps, dedupeKey: string): Promis
     const reading = row.orderId ? await deps.db.query.readings.findFirst({ where: eq(readings.orderId, row.orderId), columns: { id: true } }) : undefined;
     if (!reading) { await deps.db.update(emailOutbox).set({ status: "failed", lastError: "no_reading" }).where(eq(emailOutbox.id, row.id)); return "failed"; }
     content = deliveryEmail(`${deps.origin}/r/${reading.id}`, deps.supportEmail);
+  } else if (row.kind === "apology_free") {
+    content = apologyFreeEmail(deps.supportEmail);
   } else {
     content = apologyEmail(deps.supportEmail);
   }

@@ -6,6 +6,7 @@ import { loadChart } from "@/server/charts/service";
 import { paymentAdapter } from "@/server/deps";
 import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { serverContext } from "@/server/http";
+import { buildFacts, contentReady } from "@/server/fulfillment/prompt";
 import { isSalesEnabled } from "@/server/settings";
 import { currentViewer } from "@/server/viewer";
 import { CONSENT_TEXT } from "@/server/payments/sku";
@@ -20,7 +21,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ chart
   const viewer = await currentViewer(ctx.db);
   const chart = await loadChart(ctx.db, ctx.ring, chartId, viewer.guestId);
   if (!chart || chart.response.kind !== "computed") notFound();
-  const open = Boolean(paymentAdapter(ctx.env)) && paymentsConfigured(ctx.env) && llmConfigured(ctx.env) && (await isSalesEnabled(ctx.db));
+  const open = Boolean(paymentAdapter(ctx.env)) && paymentsConfigured(ctx.env) && llmConfigured(ctx.env)
+    && contentReady(buildFacts(chart.response.chart), ctx.env.APP_ENV === "production") && (await isSalesEnabled(ctx.db));
   return (
     <main className="app">
       <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday</Link></header>

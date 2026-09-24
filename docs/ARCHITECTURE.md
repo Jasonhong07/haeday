@@ -28,7 +28,7 @@ Enums:
 - fulfillment_status: `none | queued | generating | delivered | failed`
 - dispute status lives in `disputes`, not in payment_status.
 
-Allowed payment transitions: open→paid (checkout.session.completed with payment_status=paid, or async_payment_succeeded) · open→expired · paid→refund_pending→refunded/partially_refunded · refund_pending→paid (refund failed/canceled). A late `completed` never moves refund_pending/refunded back to paid.
+Allowed payment transitions: open→paid (checkout.session.completed with payment_status=paid, or async_payment_succeeded) · open→expired · paid→refund_pending→refunded/partially_refunded · refund_pending→paid (refund failed/canceled). A late `completed` never moves refund_pending/refunded back to paid. expired→paid only for a completed session linked to that order (D51); a payment for a reading already owned is a duplicate (refunded, never unlocked). Payments that never unlocked (fulfillment `none`) do not hold the one-active-order slot.
 
 ## 3. SKU table (server)
 `saju_reading`: 399 USD cents, Stripe Price ID from env. No add-ons at launch (D07).

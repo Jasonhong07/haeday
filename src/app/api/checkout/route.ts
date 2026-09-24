@@ -25,6 +25,7 @@ export async function POST(request: Request): Promise<Response> {
   const r = await startCheckout({
     db: ctx.db, ring: ctx.ring, payments, priceId: ctx.env.STRIPE_PRICE_SAJU!,
     origin: new URL(ctx.env.APP_ORIGIN).origin, automaticTax: ctx.env.STRIPE_AUTOMATIC_TAX,
+    approvedSnippetsOnly: ctx.env.APP_ENV === "production", allowPromotionCodes: true,
   }, guest.id, body.data.chartRevisionId, true);
   if (r.ok) return json({ url: r.url });
   const status = r.error === "not_found" ? 404 : r.error === "provider_error" ? 502 : 409;

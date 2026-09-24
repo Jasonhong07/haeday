@@ -69,8 +69,8 @@ export function buildFacts(chart: Chart): ReadingFacts {
   };
 }
 
-/** Deterministic snippet choice from the facts. approvedOnly = production. */
-export function selectSnippets(facts: ReadingFacts, approvedOnly: boolean): Snippet[] {
+/** Every snippet this chart's reading needs, deterministic from the facts (F7: the full set, before filtering). */
+export function requiredSnippets(facts: ReadingFacts): Snippet[] {
   const out: Snippet[] = [TONE, ...(DAY_MASTER_SNIPPETS[facts.dayMaster.stem] ?? [])];
   for (const [el, n] of Object.entries(facts.visibleElements) as Array<[keyof typeof ELEMENT_SNIPPETS, number]>) {
     if (n >= 3) out.push(ELEMENT_SNIPPETS[el].high);
@@ -80,6 +80,23 @@ export function selectSnippets(facts: ReadingFacts, approvedOnly: boolean): Snip
   out.push(YEAR_2027_GENERAL);
   const y = YEAR_2027_BY_DM[facts.dayMaster.stem];
   if (y) out.push(y);
+  return out;
+}
+
+/**
+ * F7 / D37: can this chart's reading be sold? In production every required snippet must be approved by Jason,
+ * the day-master set and the day-master 2027 entry must exist, and ids must be unique. Staging may use drafts.
+ */
+export function contentReady(facts: ReadingFacts, approvedOnly: boolean): boolean {
+  const req = requiredSnippets(facts);
+  const structural = (DAY_MASTER_SNIPPETS[facts.dayMaster.stem]?.length ?? 0) > 0 && Boolean(YEAR_2027_BY_DM[facts.dayMaster.stem])
+    && req.every((s) => s && s.id && s.text) && new Set(req.map((s) => s.id)).size === req.length;
+  return structural && (!approvedOnly || req.every((s) => s.approvedBy === "jason"));
+}
+
+/** Deterministic snippet choice from the facts. approvedOnly = production. */
+export function selectSnippets(facts: ReadingFacts, approvedOnly: boolean): Snippet[] {
+  const out = requiredSnippets(facts);
   return approvedOnly ? out.filter((s) => s.approvedBy === "jason") : out;
 }
 
@@ -94,7 +111,7 @@ Rules:
 - Total length of all sections together: ${WORDS.min}–${WORDS.max} words. Plain text only: no markdown, no HTML, no emoji.
 - disclaimer must be exactly: "${DISCLAIMER}"`;
 
-export function buildUserMessage(facts: ReadingFacts, snippets: Snippet[]): string {
+export function buildUserMessage(facts: ReadingFacts, snippets: Array<Pick<Snippet, "id" | "text">>): string {
   return JSON.stringify({ facts, snippets: snippets.map((s) => ({ id: s.id, text: s.text })) }, null, 1);
 }
 

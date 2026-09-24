@@ -14,7 +14,7 @@ import { decryptPrivate, encryptPrivate, type Keyring } from "../security/encryp
 import { aad } from "../security/keyring";
 import type { Chart, ChartResponse } from "../engine";
 import { checkReading } from "./checks";
-import { PROMPT_VERSION, READING_JSON_SCHEMA, SYSTEM_PROMPT, buildFacts, buildUserMessage, selectSnippets } from "./prompt";
+import { PROMPT_VERSION, READING_JSON_SCHEMA, SYSTEM_PROMPT, buildFacts, buildUserMessage, contentReady, selectSnippets } from "./prompt";
 
 export const MAX_ATTEMPTS = 3;
 export const LLM_TIMEOUT_MS = 60_000;
@@ -68,7 +68,18 @@ export async function generateReading(deps: GenerateDeps, orderId: string): Prom
   if (response.kind !== "computed") return fail("snapshot_not_computed");
   const chart: Chart = response.chart;
   const facts = buildFacts(chart);
-  const snippets = selectSnippets(facts, deps.approvedSnippetsOnly);
+  // F7: use exactly the content frozen at checkout (what the customer paid for). Older orders without it fall
+  // back to the deployed library, but only when that library passes the same gate as checkout.
+  let snippets: Array<{ id: string; text: string }>;
+  let snippetsVersion: string | null = null;
+  if (snapshot.content && snapshot.content.snippets.length > 0) {
+    // Defence in depth: production never generates from frozen drafts, even if checkout was misconfigured.
+    if (deps.approvedSnippetsOnly && !snapshot.content.snippets.every((s) => s.approvedBy === "jason")) return fail("content_not_approved");
+    snippets = snapshot.content.snippets; snippetsVersion = snapshot.content.snippetsVersion;
+  } else {
+    if (!contentReady(facts, deps.approvedSnippetsOnly)) return fail("content_not_ready");
+    snippets = selectSnippets(facts, deps.approvedSnippetsOnly);
+  }
   if (snippets.length === 0) return fail("no_approved_snippets");
 
   let raw: unknown; let modelId: string;
@@ -95,7 +106,7 @@ export async function generateReading(deps: GenerateDeps, orderId: string): Prom
     await tx.insert(readings).values({
       id: readingId, orderId,
       contentEnc: encryptPrivate(checked.reading, aad("readings", readingId, "content"), deps.ring),
-      usedSnippetIds: checked.reading.usedSnippetIds, promptVersion: PROMPT_VERSION, modelId, policyVersion: chart.policyVersion, deliveredAt: done,
+      usedSnippetIds: checked.reading.usedSnippetIds, promptVersion: PROMPT_VERSION, modelId, policyVersion: chart.policyVersion, libraryVersion: snippetsVersion, deliveredAt: done,
     });
     await tx.update(generationAttempts).set({ status: "succeeded", finishedAt: done })
       .where(and(eq(generationAttempts.orderId, orderId), eq(generationAttempts.fencingToken, token)));
@@ -123,8 +134,10 @@ export async function failAndRefund(
     if (guard.deadlineBefore && !(order.fulfillmentDeadlineAt && order.fulfillmentDeadlineAt < guard.deadlineBefore)) return null;
     await tx.update(orders).set({ fulfillmentStatus: "failed", currentFencingToken: null, updatedAt: now }).where(eq(orders.id, orderId));
     const refund = await claimRefundInTx(tx, deps.boss, { orderId, reason: "service_failure", requestedBy: guard.deadlineBefore ? "deadline_cron" : "worker", now, livemode: deps.payments.livemode });
-    if (order.deliveryEmailEnc && refund.ok) {
-      await queueEmailInTx(tx, deps.boss, deps.ring, { kind: "apology", orderId, to: decryptPrivate<string>(order.deliveryEmailEnc, aad("orders", orderId, "delivery_email"), deps.ring) });
+    // Free (100% code) orders have nothing to refund: a different apology that promises no refund.
+    const free = (order.totalCents ?? 0) === 0 && !order.stripePaymentIntentId;
+    if (order.deliveryEmailEnc && (refund.ok || free)) {
+      await queueEmailInTx(tx, deps.boss, deps.ring, { kind: free ? "apology_free" : "apology", orderId, to: decryptPrivate<string>(order.deliveryEmailEnc, aad("orders", orderId, "delivery_email"), deps.ring) });
     }
     return { refundId: refund.ok ? refund.refundId : null, error: refund.ok ? null : refund.error };
   });

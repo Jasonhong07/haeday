@@ -39,7 +39,7 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
   afterAll(async () => { await boss?.stop({ graceful: false }); await h?.pool.end(); });
   beforeEach(async () => {
     pay = new FakePaymentAdapter();
-    co = { db: h.db, ring, payments: pay, priceId: PRICE, origin: "https://haeday.test", automaticTax: false };
+    co = { db: h.db, ring, payments: pay, priceId: PRICE, origin: "https://haeday.test", automaticTax: false, approvedSnippetsOnly: false };
     wh = { db: h.db, ring, boss, payments: pay, paymentsMode: "test", priceId: PRICE };
     resetSettingsCache(); await setSalesEnabled(h.db, true, "test");
   });
@@ -153,13 +153,15 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
   });
 
   // E: content gate before checkout
-  it.fails("E: checkout is refused when the chart's reading has no approved content", async () => {
+  it("E: in production, checkout is refused when the chart's reading has no approved content (no order, no session)", async () => {
     const { guestId, chartId } = await newChart();
     const chart = (await loadChart(h.db, ring, chartId, guestId))!;
     if (chart.response.kind !== "computed") throw new Error("setup");
     expect(selectSnippets(buildFacts(chart.response.chart), true)).toHaveLength(0); // today: nothing approved
-    const r = await startCheckout(co, guestId, chartId, true);
-    expect(r.ok).toBe(false);
+    const r = await startCheckout({ ...co, approvedSnippetsOnly: true }, guestId, chartId, true);
+    expect(r).toEqual({ ok: false, error: "content_not_ready" });
+    expect(pay.calls.createSession).toBe(0);
+    expect(await h.db.select().from(orders).where(eq(orders.chartRevisionId, chartId))).toHaveLength(0);
   });
 
   // F: admin retry must enqueue inside the same transaction

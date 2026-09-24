@@ -79,12 +79,17 @@ export const orders = pgTable("orders", {
   paidAt: ts("paid_at"),
   fulfillmentDeadlineAt: ts("fulfillment_deadline_at"),
   utm: jsonb("utm"),
+  discountCents: integer("discount_cents"),        // F15: from the provider session (total_details.amount_discount)
+  promotionCodeId: text("promotion_code_id"),      // Stripe promotion_code id (not the typed code)
+  duplicateOfOrderId: uuid("duplicate_of_order_id"), // D51: a late payment for something already owned (refunded)
   piiDeletedAt: ts("pii_deleted_at"),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("orders_one_active_per_revision").on(t.guestId, t.chartRevisionId, t.sku)
-    .where(sql`${t.paymentStatus} in ('open', 'paid', 'refund_pending', 'partially_refunded')`),
+    // Payments that never unlocked (D34 validation refunds, D51 duplicates: fulfillment "none") are not a purchase
+    // of this reading, so they never block the customer from buying it.
+    .where(sql`${t.paymentStatus} in ('open', 'paid', 'refund_pending', 'partially_refunded') and ${t.duplicateOfOrderId} is null and (${t.paymentStatus} = 'open' or ${t.fulfillmentStatus} <> 'none')`),
   index("orders_delivery_email_lookup_idx").on(t.deliveryEmailLookup),
   index("orders_customer_idx").on(t.customerId),
   index("orders_payment_intent_idx").on(t.stripePaymentIntentId),
@@ -123,6 +128,7 @@ export const readings = pgTable("readings", {
   promptVersion: text("prompt_version").notNull(),
   modelId: text("model_id").notNull(),
   policyVersion: text("policy_version").notNull(),
+  libraryVersion: text("library_version"),         // F7: content version actually used (frozen at checkout)
   deliveredAt: ts("delivered_at").notNull().defaultNow(),
   piiDeletedAt: ts("pii_deleted_at"),
 });
@@ -167,6 +173,22 @@ export const refunds = pgTable("refunds", {
     .where(sql`${t.source} = 'service' and ${t.status} in ('requested', 'pending', 'requires_action', 'unknown', 'succeeded')`),
   index("refunds_order_idx").on(t.orderId),
 ]);
+
+/**
+ * F4: the exact provider request for an order's Checkout Session, frozen when the order is created. Every retry
+ * with the same idempotency key sends these same parameters, even after a redeploy or a settings change.
+ * No secrets are stored here.
+ */
+export const checkoutAttempts = pgTable("checkout_attempts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().unique().references(() => orders.id),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  request: jsonb("request").notNull(),
+  status: text("status").notNull().default("pending"), // pending | linked | abandoned
+  sessionId: text("session_id"),
+  createdAt: createdAt(),
+  lastTriedAt: ts("last_tried_at"),
+});
 
 /**
  * Per-order refund sync lease (CC1a F3). Provider state is fetched outside any transaction and saved only while

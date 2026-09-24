@@ -30,7 +30,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
   afterAll(async () => { await boss?.stop({ graceful: false }); await h?.pool.end(); });
   beforeEach(async () => {
     pay = new FakePaymentAdapter();
-    co = { db: h.db, ring, payments: pay, priceId: PRICE, origin: "https://haeday.test", automaticTax: false };
+    co = { db: h.db, ring, payments: pay, priceId: PRICE, origin: "https://haeday.test", automaticTax: false, approvedSnippetsOnly: false };
     wh = { db: h.db, ring, boss, payments: pay, paymentsMode: "test", priceId: PRICE };
     resetSettingsCache(); await setSalesEnabled(h.db, true, "test");
   });

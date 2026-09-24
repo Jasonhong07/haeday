@@ -41,8 +41,14 @@ describe.skipIf(!hasDb)("schema constraints", () => {
   });
 
   it("keeps a refund_pending order in the active slot so it can return to paid", async () => {
-    await h.db.update(orders).set({ paymentStatus: "refund_pending" }).where(sql`${orders.paymentStatus} = 'open'`);
+    // A sold order (unlocked: fulfillment past "none") being refunded still owns the slot.
+    await h.db.update(orders).set({ paymentStatus: "refund_pending", fulfillmentStatus: "delivered" }).where(sql`${orders.paymentStatus} = 'open'`);
     await expect(h.db.insert(orders).values(order())).rejects.toThrow();
+  });
+
+  it("a payment that never unlocked (fulfillment none: D34/D51 refunds) does not block a new purchase", async () => {
+    await h.db.update(orders).set({ fulfillmentStatus: "none" }).where(sql`${orders.paymentStatus} = 'refund_pending'`);
+    await expect(h.db.insert(orders).values(order())).resolves.toBeTruthy();
   });
 
   it("rejects non-positive prices", async () => {

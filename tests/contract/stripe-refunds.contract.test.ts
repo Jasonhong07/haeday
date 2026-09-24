@@ -46,4 +46,26 @@ describe.skipIf(!enabled)("Stripe test-mode refund contract (CC1a)", () => {
     expect(r2.id).toBe(r1.id);
     await expect(adapter.createRefund({ paymentIntentId: pi, amountCents: 101, idempotencyKey: k, orderId: "o", refundRowId: "row" })).rejects.toThrow();
   });
+
+  it("CC1b: frozen checkout body replays the same session; a different body under the same key is an idempotency error", async () => {
+    const price = process.env.STRIPE_CONTRACT_PRICE; // a $3.99 test-mode price id
+    if (!price) return;
+    const req = {
+      orderId: `00000000-0000-4000-8000-${String(Date.now()).padStart(12, "0").slice(-12)}`, chartRevisionId: "c", priceId: price,
+      successUrl: "https://example.com/s", cancelUrl: "https://example.com/c", idempotencyKey: `contract-checkout:${Date.now()}`,
+      automaticTax: false, allowPromotionCodes: true, expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    };
+    const frozen = { ...req, providerParams: adapter.buildCheckoutParams(req) };
+    const a = await adapter.createCheckoutSession(frozen);
+    const b = await adapter.createCheckoutSession(frozen);
+    expect(b.id).toBe(a.id);
+    await expect(adapter.createCheckoutSession({ ...frozen, providerParams: { ...frozen.providerParams, allow_promotion_codes: false } }))
+      .rejects.toMatchObject({ code: "idempotency_mismatch" });
+    // A stale expiry is rejected before execution (our "rejected ⇒ never created" inference).
+    await expect(adapter.createCheckoutSession({ ...req, idempotencyKey: `${req.idempotencyKey}:stale`, expiresAt: Math.floor(Date.now() / 1000) + 60 }))
+      .rejects.toMatchObject({ kind: "rejected" });
+    const d = await adapter.getCheckoutDetails(a.id);
+    expect(d).toMatchObject({ amountDiscount: 0, amountShipping: 0, clientReferenceId: req.orderId, metadataOrderId: req.orderId });
+    await adapter.expireCheckoutSession(a.id);
+  });
 });

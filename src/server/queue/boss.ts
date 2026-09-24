@@ -9,6 +9,8 @@ export const QUEUES = {
   sendEmail: "email.send",
   deadlines: "cron.deadlines",
   reconcileRefunds: "cron.reconcile-refunds",
+  reconcileOpen: "cron.reconcile-open",         // F12: our open orders' sessions, every 3 min
+  reconcileSessions: "cron.reconcile-sessions", // F12: Stripe's completed sessions from a cursor, every 30 min
   refundExecute: "refund.execute", // one provider call attempt per refund row (singletonKey = refund id)
   refundSync: "refund.sync",       // re-read provider refunds for one order (singletonKey = order id)
   retention: "cron.retention",
@@ -42,6 +44,8 @@ const POLICIES: Record<QueueName, "standard" | "exclusive"> = {
   [QUEUES.sendEmail]: "exclusive",
   [QUEUES.deadlines]: "standard",
   [QUEUES.reconcileRefunds]: "standard",
+  [QUEUES.reconcileOpen]: "standard",
+  [QUEUES.reconcileSessions]: "standard",
   [QUEUES.refundExecute]: "exclusive",
   [QUEUES.refundSync]: "exclusive",
   [QUEUES.retention]: "standard",
@@ -55,6 +59,8 @@ const RETRY: Record<QueueName, { retryLimit: number; retryDelay: number; retryBa
   [QUEUES.deadlines]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 120 },
   [QUEUES.reconcileRefunds]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 600 },
   [QUEUES.retention]: { retryLimit: 1, retryDelay: 600, retryBackoff: false, expireInSeconds: 900 },
+  [QUEUES.reconcileOpen]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 170 },
+  [QUEUES.reconcileSessions]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 1500 },
   [QUEUES.refundExecute]: { retryLimit: 5, retryDelay: 30, retryBackoff: true, expireInSeconds: 120 },
   [QUEUES.refundSync]: { retryLimit: 5, retryDelay: 30, retryBackoff: true, expireInSeconds: 120 },
 };

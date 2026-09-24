@@ -10,6 +10,7 @@ import { formatClock, type Pillar, type Pillars } from "@/server/engine";
 import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { findGuest, GUEST_COOKIE } from "@/server/guest";
 import { serverContext } from "@/server/http";
+import { buildFacts, contentReady } from "@/server/fulfillment/prompt";
 import { isSalesEnabled } from "@/server/settings";
 import { QuestionCard, ShareButton, type ShareData } from "./ChartClient";
 
@@ -67,7 +68,9 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
   const chart = await loadChart(ctx.db, ctx.ring, id, guest?.id ?? null);
   if (!chart) notFound();
   const r = chart.response;
-  const salesOpen = r.kind === "computed" && paymentsConfigured(ctx.env) && llmConfigured(ctx.env) && (await isSalesEnabled(ctx.db));
+  // D37: a chart whose reading still needs unapproved content is shown as "opening soon", never sold.
+  const salesOpen = r.kind === "computed" && contentReady(buildFacts(r.chart), ctx.env.APP_ENV === "production")
+    && paymentsConfigured(ctx.env) && llmConfigured(ctx.env) && (await isSalesEnabled(ctx.db));
 
   let body: React.ReactNode;
   if (r.kind === "needs_fold_choice") {

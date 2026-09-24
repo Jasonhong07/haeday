@@ -11,7 +11,10 @@ export type IssueKind =
   | "refund_failed"               // provider refund ended failed/canceled; the customer is still owed money
   | "refund_unknown_stale"        // provider outcome unknown past the idempotency window; no blind retry
   | "refund_blocked_dispute"      // open dispute: automatic refunds stop
-  | "refund_amount_mismatch";     // provider charge total disagrees with the refund list
+  | "refund_amount_mismatch"      // provider charge total disagrees with the refund list
+  | "checkout_idempotency_mismatch" // a checkout key already ran with a different body (F4)
+  | "reconcile_session_failed"    // a completed session could not be processed by reconciliation (F12)
+  | "reconcile_list_failed";      // the provider session list failed or was truncated; the cursor did not move
 
 export async function openIssue(db: Db | Tx, i: { kind: IssueKind; objectId: string; livemode: boolean; orderId?: string | null; nextAction: string }): Promise<void> {
   await db.insert(paymentIssues).values({
