@@ -9,3 +9,6 @@ test-results/
 .venv/
 __pycache__/
 next-env.d.ts
+
+# raw GeoNames dump (processed into data/cities.json)
+data/cities15000.txt
