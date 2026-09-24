@@ -17,11 +17,14 @@ export async function findGuest(db: Db, token: string | undefined): Promise<{ id
 }
 
 /** Guest for this cookie, creating one (and a new token) when missing or unknown. */
-export async function ensureGuest(db: Db, token: string | undefined): Promise<{ id: string; newToken?: string }> {
+export async function ensureGuest(db: Db, token: string | undefined, attribution: { visitorId: string | null; channel: string | null } = { visitorId: null, channel: null }): Promise<{ id: string; newToken?: string }> {
   const existing = await findGuest(db, token);
   if (existing) return existing;
   const fresh = randomBytes(32).toString("base64url");
-  const [row] = await db.insert(guests).values({ cookieHash: hashGuestToken(fresh) }).returning({ id: guests.id });
+  // D40/L4: only our random visitor id and a channel label from our own list (no URL, no query, no person data).
+  const [row] = await db.insert(guests).values({
+    cookieHash: hashGuestToken(fresh), visitorId: attribution.visitorId, firstUtm: attribution.channel ? { c: attribution.channel } : null,
+  }).returning({ id: guests.id });
   return { id: row!.id, newToken: fresh };
 }
 

@@ -29,9 +29,22 @@ export const settings = pgTable("settings", {
 export const guests = pgTable("guests", {
   id: uuid("id").primaryKey().defaultRandom(),
   cookieHash: text("cookie_hash").notNull().unique(),
-  firstUtm: jsonb("first_utm"),
+  firstUtm: jsonb("first_utm"),        // L4: { c: campaign id from our own list | "other", r: referrer host } only
+  visitorId: text("visitor_id"),       // D40: anonymous first-party visit id (random, no personal data) for cohorts
   createdAt: createdAt(),
 });
+
+/**
+ * D40 funnel, first party (L5). Only allowlisted event names; no URLs, query strings, emails or birth data.
+ * visitor_id is a random per-browser id set by us, never derived from a person.
+ */
+export const funnelEvents = pgTable("funnel_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),         // visit | form_started
+  visitorId: text("visitor_id").notNull(),
+  channel: text("channel"),             // campaign id from our own list, "search", "social", "other", or null (direct)
+  createdAt: createdAt(),
+}, (t) => [index("funnel_events_name_created_idx").on(t.name, t.createdAt), uniqueIndex("funnel_events_once_per_day").on(t.visitorId, t.name, sql`((created_at at time zone 'UTC')::date)`)]);
 
 export const customers = pgTable("customers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -54,6 +67,7 @@ export const chartRevisions = pgTable("chart_revisions", {
   createdAt: createdAt(),
   deleteAfter: ts("delete_after").notNull(),
   piiDeletedAt: ts("pii_deleted_at"),
+  firstViewedAt: ts("first_viewed_at"),  // D40 step 4: free chart viewed
 }, (t) => [index("chart_revisions_guest_idx").on(t.guestId), index("chart_revisions_delete_after_idx").on(t.deleteAfter)]);
 
 export const orders = pgTable("orders", {
@@ -140,6 +154,7 @@ export const readings = pgTable("readings", {
   modelId: text("model_id").notNull(),
   policyVersion: text("policy_version").notNull(),
   libraryVersion: text("library_version"),         // F7: content version actually used (frozen at checkout)
+  firstViewedAt: ts("first_viewed_at"),            // D40 step 8: reading opened
   deliveredAt: ts("delivered_at").notNull().defaultNow(),
   piiDeletedAt: ts("pii_deleted_at"),
 });

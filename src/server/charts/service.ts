@@ -1,7 +1,7 @@
 // Chart revisions (ARCHITECTURE §4.1, D16/D17): compute with the engine, store encrypted, immutable.
 // An edit or an answered question creates a new revision in the same chart group; old revisions never change.
 import { randomUUID } from "node:crypto";
-import { and, count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client";
 import { chartRevisions, orders } from "../db/schema";
@@ -113,6 +113,11 @@ export async function loadChart(db: Db, ring: Keyring, id: string, guestId: stri
     where: and(eq(orders.chartRevisionId, id), eq(orders.guestId, guestId), eq(orders.paymentStatus, "paid")), columns: { id: true },
   });
   return { id, chartGroupId: row.chartGroupId, input, response, createdAt: row.createdAt, ownedOrderId: paid?.id ?? null };
+}
+
+/** D40 step 4: the owner saw this free chart (first time only). */
+export async function markChartViewed(db: Db, id: string, now = new Date()): Promise<void> {
+  await db.update(chartRevisions).set({ firstViewedAt: now }).where(and(eq(chartRevisions.id, id), isNull(chartRevisions.firstViewedAt)));
 }
 
 /** Answering a fold or time-window question creates a new revision; the answered one stays as it was. */

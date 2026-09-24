@@ -1,6 +1,6 @@
 // POST /api/checkout {chartRevisionId, consent} → Stripe Checkout URL (ARCHITECTURE §4.2).
 import { z } from "zod";
-import { paymentAdapter } from "@/server/deps";
+import { dailyCap, paymentAdapter, priceId } from "@/server/deps";
 import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { findGuest, GUEST_COOKIE } from "@/server/guest";
 import { json, readCookie, sameOrigin, serverContext } from "@/server/http";
@@ -23,9 +23,9 @@ export async function POST(request: Request): Promise<Response> {
   const guest = await findGuest(ctx.db, readCookie(request, GUEST_COOKIE));
   if (!guest) return json({ error: "not_found" }, 404);
   const r = await startCheckout({
-    db: ctx.db, ring: ctx.ring, payments, priceId: ctx.env.STRIPE_PRICE_SAJU!,
+    db: ctx.db, ring: ctx.ring, payments, priceId: priceId(ctx.env)!,
     origin: new URL(ctx.env.APP_ORIGIN).origin, automaticTax: ctx.env.STRIPE_AUTOMATIC_TAX,
-    approvedSnippetsOnly: ctx.env.APP_ENV === "production", allowPromotionCodes: true, dailyCap: ctx.env.LLM_DAILY_CAP,
+    approvedSnippetsOnly: ctx.env.APP_ENV === "production", allowPromotionCodes: true, dailyCap: dailyCap(ctx.env),
   }, guest.id, body.data.chartRevisionId, true, "saju_reading", body.data.promise);
   if (r.ok) return json({ url: r.url });
   const status = r.error === "not_found" ? 404 : r.error === "provider_error" ? 502 : 409;

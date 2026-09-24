@@ -74,3 +74,7 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 - `TEST_DATABASE_URL=…/haeday_test pnpm check` → typecheck OK, lint OK, **281 passed**, 3 skipped (Stripe contract, no key). `pnpm build` OK.
 - Mutation checks: per-day admission lock → DL03; email budget row lock → EM01; retry release marker → AR5.
 - Independent review: Claude sub-agent (read-only) ×1; 1 major + 5 minor fixed, 1 recorded (test clock). ChatGPT review: **NOT RUN**. Real Anthropic usage fields and Resend limits: **NOT RUN** (keys/domain pending).
+
+# CC2 launch protection · 2026-09-24 · on top of CC1c
+- Details: `review/CHANGES_CC2.md`. `pnpm check` → **289 passed**, 3 skipped. `pnpm e2e` (CSP **enforced**, iPhone 13) → **13/13**, incl. full chart → pay → reading flow with dev-only fakes. `pnpm build` OK, no Google font references.
+- NOT RUN: staging CSP report-only soak, production-with-test-keys smoke, DB restore drill, ChatGPT review.

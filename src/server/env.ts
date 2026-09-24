@@ -26,6 +26,10 @@ const schema = z.object({
   SUPPORT_EMAIL: z.preprocess((v) => v === "" ? undefined : v, z.email().optional()),
   ADMIN_EMAILS: z.string().default("").transform(v => v.split(",").map(s => s.trim().toLowerCase()).filter(Boolean)).pipe(z.array(z.email())),
   POSTHOG_KEY: optionalText,
+  // L1: report-only until staging shows no unexpected violations, then "enforce" (read by src/proxy.ts).
+  CSP_MODE: z.enum(["report-only", "enforce", "off"]).default("report-only"),
+  // L6: in-memory payment + LLM stand-ins for local end-to-end tests. Refused outside APP_ENV=dev (see below).
+  DEV_FAKE_PROVIDERS: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   SENTRY_DSN: optionalUrl,
   FLAGS: z.string().default("{}").transform((value, ctx) => {
     try {
@@ -49,6 +53,8 @@ const schema = z.object({
     if (!env.SESSION_SECRET) issue("SESSION_SECRET");
     if (!env.APP_ORIGIN.startsWith("https://")) issue("APP_ORIGIN");
   }
+  // L6: fakes can never be switched on in staging/production, in live mode, or next to real Stripe keys.
+  if (env.DEV_FAKE_PROVIDERS && (env.APP_ENV !== "dev" || env.PAYMENTS_MODE !== "test" || env.STRIPE_SECRET_KEY || env.LLM_API_KEY)) issue("DEV_FAKE_PROVIDERS");
   if (env.STRIPE_SECRET_KEY && !env.STRIPE_SECRET_KEY.startsWith(env.PAYMENTS_MODE === "live" ? "sk_live_" : "sk_test_")) issue("STRIPE_SECRET_KEY");
 });
 export type Env = z.infer<typeof schema>;
@@ -66,11 +72,14 @@ export function parseEnv(input: Record<string, string | undefined>): Env {
 }
 export function getEnv(): Env { return parseEnv(process.env); }
 
+/** L6: local end-to-end fakes (validated above to be dev-only). */
+export const devFakes = (env: Env): boolean => env.DEV_FAKE_PROVIDERS && env.APP_ENV === "dev" && env.PAYMENTS_MODE === "test" && !env.STRIPE_SECRET_KEY;
+
 /** A paid reading can only be sold when it can also be written (fail closed, D10). */
 export function llmConfigured(env: Env): boolean {
-  return Boolean(env.LLM_API_KEY && env.LLM_MODEL && env.LLM_DAILY_CAP > 0);
+  return devFakes(env) || Boolean(env.LLM_API_KEY && env.LLM_MODEL && env.LLM_DAILY_CAP > 0);
 }
 
 export function paymentsConfigured(env: Env): boolean {
-  return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_SAJU);
+  return devFakes(env) || Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_SAJU);
 }

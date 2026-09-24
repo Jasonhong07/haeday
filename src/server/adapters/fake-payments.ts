@@ -20,6 +20,8 @@ export class FakePaymentAdapter implements PaymentAdapter {
   /** Next refund outcome, or a function that throws to simulate a network error. */
   nextRefund: RefundStatus | (() => never) = "succeeded";
   livemode = false;
+  /** Base of the "checkout page" URL (tests: an unreachable host; dev E2E: our own /dev/pay page). */
+  constructor(private readonly checkoutBase = "https://checkout.fake/") { }
 
   /** Clock for session creation and Stripe's "expires_at at least 30 min ahead" rule (unix seconds). */
   nowUnix = (): number => Math.floor(Date.now() / 1000);
@@ -44,7 +46,7 @@ export class FakePaymentAdapter implements PaymentAdapter {
     }
     if (req.expiresAt < this.nowUnix() + 30 * 60) throw new PaymentProviderError("rejected", "expires_at_too_soon");
     const id = `cs_test_${randomUUID().replace(/-/g, "")}`;
-    const ref: CheckoutSessionRef = { id, url: `https://checkout.fake/${id}`, status: "open" };
+    const ref: CheckoutSessionRef = { id, url: `${this.checkoutBase}${id}`, status: "open" };
     this.sessions.set(id, { ref, req: { ...req }, details: {}, created: this.nowUnix() });
     this.byIdempotency.set(req.idempotencyKey, id);
     if (this.nextSession === "lost") { this.nextSession = "ok"; throw new PaymentProviderError("transient", "StripeConnectionError"); }

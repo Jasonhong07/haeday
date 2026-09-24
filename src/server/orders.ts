@@ -1,5 +1,5 @@
 // Read models for customer pages. Access: the guest who created the order (and, in M6, the verified customer).
-import { and, eq, or, type SQL } from "drizzle-orm";
+import { and, eq, or, type SQL, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "./db/client";
 import { orders, readings } from "./db/schema";
@@ -40,6 +40,8 @@ export async function loadReadingView(db: Db, ring: Keyring, readingId: string, 
     .where(and(eq(readings.id, readingId), access));
   if (!row || !row.r.contentEnc) return null;
   const reading = decryptPrivate<Reading>(row.r.contentEnc, aad("readings", readingId, "content"), ring);
+  // D40 step 8: first time the owner opened it.
+  if (!row.r.firstViewedAt) await db.update(readings).set({ firstViewedAt: new Date() }).where(and(eq(readings.id, readingId), isNull(readings.firstViewedAt)));
   const snapshot = row.o.snapshotEnc ? decryptPrivate<OrderSnapshot>(row.o.snapshotEnc, aad("orders", row.o.id, "snapshot"), ring) : null;
   const response = snapshot?.response as { kind: string; chart?: { disclosure: string | null; dayMaster: { stem: string }; pillars: Record<string, { stem: string; branch: string; stemEn: string; branchEn: string; stemElement: string; branchElement: string } | null> } } | undefined;
   return {

@@ -2,6 +2,7 @@
 // Input screen (PRD §3): date, time mode, city autocomplete. Posts to /api/charts and opens the chart.
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
+import { sendEvent } from "../Beacon";
 
 type Mode = "exact" | "approximate" | "unknown";
 interface Suggestion { placeId: string; label: string }
@@ -18,6 +19,7 @@ const ERRORS: Record<string, string> = {
 export function SajuForm({ initial, today }: { initial?: SajuInitial; today: string }) {
   const router = useRouter();
   const ids = { date: useId(), time: useId(), city: useId(), list: useId(), cityHelp: useId(), timeHelp: useId() };
+  const started = useRef(false); // D40 step 2, once per page view
   const [birthDate, setBirthDate] = useState(initial?.birthDate ?? "");
   const [mode, setMode] = useState<Mode>(initial?.mode ?? "exact");
   const [hhmm, setHhmm] = useState(initial?.hhmm ?? "");
@@ -75,7 +77,7 @@ export function SajuForm({ initial, today }: { initial?: SajuInitial; today: str
     : mode === "unknown" ? "We'll read your chart from your birth date. No hour pillar." : "Local time on your birth certificate, if you have it.";
 
   return (
-    <form onSubmit={submit} noValidate>
+    <form onSubmit={submit} noValidate onFocus={() => { if (!started.current) { started.current = true; sendEvent("form_started"); } }}>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="field">
         <label htmlFor={ids.date}>Birth date</label>

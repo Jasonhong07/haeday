@@ -106,3 +106,52 @@ export async function retryOrder(db: Db, boss: PgBoss, orderId: string, actorId:
 export async function audit(db: Db, actorId: string, action: string, target: string | null) {
   await db.insert(adminAudit).values({ actorCustomerId: actorId, action, target });
 }
+
+/**
+ * D40 funnel (8 steps). Two views: activity in the period (how many times each step happened) and the cohort of
+ * browsers whose FIRST visit fell in the period (how far those same browsers got, any time later). "Browsers" are
+ * our random first-party visitor ids, not people. Money steps come from orders only (sales exclude free orders,
+ * duplicates and never-unlocked payments).
+ */
+export async function funnel(db: Db, days: number, now = new Date()) {
+  const from = new Date(now.getTime() - days * 86_400_000);
+  const one = async (q: ReturnType<typeof sql>) => Number(((await db.execute(q)).rows[0] as { n: number | string } | undefined)?.n ?? 0);
+  const sale = sql`o.payment_status in ('paid','refund_pending','refunded','partially_refunded') and o.total_cents > 0 and o.duplicate_of_order_id is null and o.fulfillment_status <> 'none'`;
+  const activity = {
+    visit: await one(sql`select count(*)::int n from funnel_events where name = 'visit' and created_at >= ${from}`),
+    formStarted: await one(sql`select count(*)::int n from funnel_events where name = 'form_started' and created_at >= ${from}`),
+    chartCreated: await one(sql`select count(distinct chart_group_id)::int n from chart_revisions where created_at >= ${from}`),
+    chartViewed: await one(sql`select count(*)::int n from chart_revisions where first_viewed_at >= ${from}`),
+    checkoutStarted: await one(sql`select count(*)::int n from orders where created_at >= ${from}`),
+    paid: await one(sql`select count(*)::int n from orders o where o.paid_at >= ${from} and ${sale}`),
+    delivered: await one(sql`select count(*)::int n from readings where delivered_at >= ${from}`),
+    opened: await one(sql`select count(*)::int n from readings where first_viewed_at >= ${from}`),
+  };
+  const cohortSql = (step: ReturnType<typeof sql>) => sql`
+    with c as (select visitor_id from funnel_events where name = 'visit' group by visitor_id having min(created_at) >= ${from})
+    select count(distinct c.visitor_id)::int n from c ${step}`;
+  const g = sql`join guests g on g.visitor_id = c.visitor_id`;
+  const cohort = {
+    visit: await one(cohortSql(sql``)),
+    formStarted: await one(cohortSql(sql`join funnel_events f on f.visitor_id = c.visitor_id and f.name = 'form_started'`)),
+    chartCreated: await one(cohortSql(sql`${g} join chart_revisions cr on cr.guest_id = g.id`)),
+    chartViewed: await one(cohortSql(sql`${g} join chart_revisions cr on cr.guest_id = g.id and cr.first_viewed_at is not null`)),
+    checkoutStarted: await one(cohortSql(sql`${g} join orders o on o.guest_id = g.id`)),
+    paid: await one(cohortSql(sql`${g} join orders o on o.guest_id = g.id and ${sale}`)),
+    delivered: await one(cohortSql(sql`${g} join orders o on o.guest_id = g.id join readings r on r.order_id = o.id`)),
+    opened: await one(cohortSql(sql`${g} join orders o on o.guest_id = g.id join readings r on r.order_id = o.id and r.first_viewed_at is not null`)),
+  };
+  const byChannel = (await db.execute(sql`
+    with first as (
+      select distinct on (visitor_id) visitor_id, coalesce(channel, 'direct') channel from funnel_events
+      where name = 'visit' order by visitor_id, created_at),
+    c as (select f.* from first f where f.visitor_id in (select visitor_id from funnel_events where name = 'visit' group by visitor_id having min(created_at) >= ${from}))
+    select c.channel, count(distinct c.visitor_id)::int visitors,
+      count(distinct case when ${sale} then c.visitor_id end)::int buyers
+    from c left join guests g on g.visitor_id = c.visitor_id left join orders o on o.guest_id = g.id
+    group by c.channel order by visitors desc`)).rows as Array<{ channel: string; visitors: number; buyers: number }>;
+  const paidAll = await one(sql`select count(*)::int n from orders o where o.paid_at >= ${from} and ${sale}`);
+  const refundedN = await one(sql`select count(*)::int n from orders o where o.paid_at >= ${from} and ${sale} and o.payment_status in ('refunded','refund_pending','partially_refunded')`);
+  const failedN = await one(sql`select count(*)::int n from orders o where o.paid_at >= ${from} and ${sale} and o.fulfillment_status = 'failed'`);
+  return { from, activity, cohort, byChannel, refundRate: paidAll ? refundedN / paidAll : 0, failureRate: paidAll ? failedN / paidAll : 0 };
+}

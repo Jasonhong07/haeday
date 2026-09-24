@@ -12,7 +12,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["pg", "pg-boss"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // L3: private pages are never cached by browsers or proxies (ownership checks are the real protection).
+    const privateNoStore = [{ key: "Cache-Control", value: "private, no-store, max-age=0" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      ...["/chart/:path*", "/order/:path*", "/r/:path*", "/refund/:path*", "/checkout/:path*", "/admin/:path*", "/admin", "/login/:path*", "/login", "/my"].map((source) => ({ source, headers: privateNoStore })),
+    ];
   },
 };
 

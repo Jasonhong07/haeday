@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dashboard, openIssues, undelivered } from "@/server/admin";
+import { dashboard, funnel, openIssues, undelivered } from "@/server/admin";
 import { isAdmin } from "@/server/auth";
 import { serverContext } from "@/server/http";
 import { isSalesEnabled, resetSettingsCache } from "@/server/settings";
@@ -13,6 +13,9 @@ import { currentViewer } from "@/server/viewer";
 export const metadata: Metadata = { title: "Admin · Haeday", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
+
+const STEPS = [["visit", "Visit"], ["formStarted", "Form started"], ["chartCreated", "Chart created"], ["chartViewed", "Free chart viewed"], ["checkoutStarted", "Checkout started"], ["paid", "Paid (sales)"], ["delivered", "Reading delivered"], ["opened", "Reading opened"]] as const;
+const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "–");
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ days?: string; retry?: string }> }) {
   const ctx = serverContext();
@@ -26,6 +29,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   };
   const retryMsg = sp.retry ? RETRY_MSG[sp.retry] : undefined;
   resetSettingsCache();
+  const f = await funnel(ctx.db, days);
   const [d, stuck, issues, sales, emailsToday, heartbeat] = await Promise.all([
     dashboard(ctx.db, days), undelivered(ctx.db), openIssues(ctx.db), isSalesEnabled(ctx.db), sentToday(ctx.db),
     ctx.db.query.settings.findFirst({ where: (s, { eq }) => eq(s.key, "worker_heartbeat") }),
@@ -62,6 +66,16 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
             <form method="post" action={`/api/admin/orders/${o.id}/refund`}><button className="btn btn-ghost" style={{ minHeight: 40, width: "auto", padding: "0 14px" }}>Refund</button></form>
           </div>
         ))}
+      </section>
+      <section className="card">
+        <h2>Funnel (D40)</h2>
+        <p className="note">Activity = how often each step happened in the period. Cohort = browsers whose first visit was in the period, and how far they got. Browsers are anonymous first-party ids, not people.</p>
+        <table style={{ width: "100%", fontSize: 14 }}><thead><tr><th align="left">Step</th><th align="right">Activity</th><th align="right">Cohort</th><th align="right">From previous</th></tr></thead>
+          <tbody>{STEPS.map(([k, label], i) => (
+            <tr key={k}><td>{label}</td><td align="right">{f.activity[k]}</td><td align="right">{f.cohort[k]}</td><td align="right">{i ? pct(f.cohort[k], f.cohort[STEPS[i - 1]![0]]) : ""}</td></tr>
+          ))}</tbody></table>
+        <p className="note">Refund rate {pct(f.refundRate, 1)} · generation failure rate {pct(f.failureRate, 1)}</p>
+        <p className="note">By first channel: {f.byChannel.map((c) => `${c.channel} ${c.visitors} → ${c.buyers} buyers (${pct(c.buyers, c.visitors)})`).join(" · ") || "no visits yet"}</p>
       </section>
       <section className="card">
         <h2>Refunds pending: {issues.pendingRefunds.length} · Disputes open: {issues.openDisputes.length}</h2>

@@ -13,6 +13,7 @@ import { executeRefund, reconcileRefunds, syncOrderRefunds } from "../server/pay
 import { reconcileOpenSessions, reconcileStripeSessions } from "../server/payments/reconcile";
 import { QUEUES, createBoss, ensureQueues } from "../server/queue/boss";
 import { runRetention } from "../server/retention";
+import { purgeOldEvents } from "../server/analytics";
 import { loadKeyring } from "../server/security/keyring";
 
 function errorCode(err: unknown): string {
@@ -125,6 +126,7 @@ async function main(): Promise<void> {
   await boss.schedule(QUEUES.retention, "17 9 * * *"); // daily 09:17 UTC
   await boss.work(QUEUES.retention, async () => {
     const r = await runRetention(db);
+    await purgeOldEvents(db); // D40 first-party funnel events: kept 400 days
     console.log(`[worker] retention ${JSON.stringify(r)}`);
   });
 

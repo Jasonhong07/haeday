@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DAY_MASTERS, ELEMENT_LABEL, OFFER_ITEMS } from "@/content/library";
 import { formatDate, formatTime } from "@/lib/format";
-import { loadChart, type LoadedChart } from "@/server/charts/service";
+import { markChartViewed, loadChart, type LoadedChart } from "@/server/charts/service";
 import { formatClock, type Pillar, type Pillars } from "@/server/engine";
 import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { findGuest, GUEST_COOKIE } from "@/server/guest";
@@ -67,6 +67,7 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
   const guest = await findGuest(ctx.db, (await cookies()).get(GUEST_COOKIE)?.value);
   const chart = await loadChart(ctx.db, ctx.ring, id, guest?.id ?? null);
   if (!chart) notFound();
+  await markChartViewed(ctx.db, chart.id);
   const r = chart.response;
   // D37: a chart whose reading still needs unapproved content is shown as "opening soon", never sold.
   const salesOpen = r.kind === "computed" && contentReady(buildFacts(r.chart), ctx.env.APP_ENV === "production")
@@ -120,7 +121,15 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
           <p className="note">Out of {c.denominator} characters{c.denominator === 6 ? " (no hour pillar)" : ""}. A simple count, not a measure of strength.</p>
         </section>
         {c.disclosure && <p className="disclosure">{c.disclosure}</p>}
-        {r.warnings.filter((w) => w !== "approximateTime" || c.timeBasis === "approximate").map((w) => <p key={w} className="note">{WARNING_TEXT[w]}</p>)}
+        {r.warnings.filter((w) => w !== "approximateTime" || c.timeBasis === "approximate").map((w) => {
+          // R9: say WHAT could change, not only that something could (display only; the chart itself is unchanged).
+          const alt = r.alternatives.find((a) => a.reason === w);
+          const diff = alt ? (["year", "month", "day", "hour"] as const).filter((k) => {
+            const a = alt.pillars[k]; const b = c.pillars[k];
+            return a && b && (a.stem !== b.stem || a.branch !== b.branch);
+          }).map((k) => `${k} pillar would be ${alt.pillars[k]!.stem}${alt.pillars[k]!.branch}`) : [];
+          return <p key={w} className="note">{WARNING_TEXT[w]}{diff.length ? ` If so, your ${diff.join(" and ")}.` : ""}</p>;
+        })}
       </>
     );
     return <Shell chart={chart} salesOpen={salesOpen} share={share}>{body}</Shell>;

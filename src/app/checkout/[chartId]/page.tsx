@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadChart } from "@/server/charts/service";
-import { paymentAdapter } from "@/server/deps";
+import { dailyCap, paymentAdapter } from "@/server/deps";
 import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { serverContext } from "@/server/http";
 import { buildFacts, contentReady } from "@/server/fulfillment/prompt";
@@ -25,7 +25,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ chart
   const open = Boolean(paymentAdapter(ctx.env)) && paymentsConfigured(ctx.env) && llmConfigured(ctx.env)
     && contentReady(buildFacts(chart.response.chart), ctx.env.APP_ENV === "production") && (await isSalesEnabled(ctx.db));
   // D35/D47/D52: the delivery promise is decided on the server and shown BEFORE payment.
-  const capacity = open ? (await capacityState(ctx.db, ctx.env.LLM_DAILY_CAP)).state : "minutes";
+  const capacity = open ? (await capacityState(ctx.db, dailyCap(ctx.env))).state : "minutes";
   const delayed = capacity === "24h";
   return (
     <main className="app">

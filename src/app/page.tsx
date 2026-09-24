@@ -1,7 +1,9 @@
+import { VisitBeacon } from "./Beacon";
 import Link from "next/link";
 export default function Home() {
   return (
     <main>
+      <VisitBeacon />
       <header className="brand"><span aria-hidden="true" className="moon">☾</span> Haeday</header>
       <section aria-labelledby="welcome">
         <p className="eyebrow">KOREAN SAJU · A MOMENT FOR REFLECTION</p>
