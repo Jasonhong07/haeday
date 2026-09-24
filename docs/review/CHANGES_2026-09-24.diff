@@ -1,0 +1,1898 @@
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000..46526f6
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1,3 @@
++* text=auto eol=lf
++*.png binary
++*.jpg binary
+diff --git a/docs/ENGINE_SPEC.md b/docs/ENGINE_SPEC.md
+index 987a5a0..54b5a04 100644
+--- a/docs/ENGINE_SPEC.md
++++ b/docs/ENGINE_SPEC.md
+@@ -30,19 +30,19 @@ type ChartInput = {
+    - Round-trip check: converting the UTC back must give the same wall time and offset.
+    - The historical offset already contains DST. Never subtract DST again.
+ 3. **Year and month pillars** from the UTC birth instant compared with the canonical jie (節) table (§5). Month stem via 五虎遁 from the year stem of the same solar year.
+-4. **True solar time, anchored to the civil date:**
++4. **Local mean solar time (지역시), anchored to the civil date** (policy `haeday-chart-v2`, D28; v1 also added the equation of time):
+    - `standardClock = UTC + standardOffset` (standard offset at that date, DST excluded).
+    - `lonCorrectionMin = wrap180(lon − meridian) × 4` where wrap180 maps to (−180°, 180°]. This keeps date-line places anchored to their civil date.
+-   - `trueSolar = standardClock + lonCorrectionMin + EoT(UTC)` as a full datetime (date may roll forward/back).
+-   - EoT: NOAA solar calculator (Meeus) formulation, minutes. Record `eotMethod: "noaa-meeus"` (D26).
+-5. **Day pillar** from the trueSolar date via the 60-day cycle. Anchor: 1900-01-31 is 甲辰 (verify against at least two independent published 만세력 references and record them in DECISIONS before M1 is done). Boundary policy `dayBoundary: "midnight"`: 23:00–23:59 trueSolar keeps the current day pillar.
+-6. **Hour pillar**: branch from trueSolar (子 23:00–00:59, 丑 01:00–02:59, ...). Stem via 五鼠遁 from the day stem; for 23:00–23:59 use the NEXT day's stem.
++   - `solarTime = standardClock + lonCorrectionMin` as a full datetime (date may roll forward/back). No equation of time (D28). Record `solarMethod: "local-mean-time"`.
++   - Implementation (D29): computed as `UTC + offset + wrap180(lon − offset/4) × 4` with the offset actually in use, which is identical whenever both forms stay within ±12 h and needs no DST guess.
++5. **Day pillar** from the solarTime date via the 60-day cycle. Anchor: 1900-01-31 is 甲辰 (verify against at least two independent published 만세력 references and record them in DECISIONS before M1 is done). Boundary policy `dayBoundary: "midnight"`: 23:00–23:59 solarTime keeps the current day pillar.
++6. **Hour pillar**: branch from solarTime (子 23:00–00:59, 丑 01:00–02:59, ...). Stem via 五鼠遁 from the day stem; for 23:00–23:59 use the NEXT day's stem.
+ 7. **Derived facts**, always recomputed from the final pillars of that candidate:
+    - `dayMaster` {stem, element, yinYang}
+    - `visibleElements`: counts over visible characters, denominator 8 (or 6 when hour is null). Label in UI: "visible element count", not a strength analysis.
+    - `tenGods`: for each position except the day stem: stems use the stem relation table; branches use their main hidden stem (본기) table. Both tables live in `server/engine/tables.ts` and are reviewed by Jason.
+    - Pillar carries `stemElement` and `branchElement` separately.
+-8. **Warnings** (never block sales, D06): `hourBoundary` (trueSolar within ±5 min of an hour-branch edge), `dayBoundary` (±5 min of 00:00 trueSolar), `termBoundary` (UTC within ±30 min of a jie instant), `pre1970Tz`, `approximateTime`. For each warning, compute the alternative candidate and include it.
++8. **Warnings** (never block sales, D06): `hourBoundary` (solarTime within ±5 min of an hour-branch edge), `dayBoundary` (±5 min of 00:00 solarTime), `termBoundary` (UTC within ±30 min of a jie instant), `pre1970Tz`, `approximateTime`. For each warning, compute the alternative candidate and include it.
+ 
+ ## 3. Output (discriminated union)
+ ```ts
+@@ -60,7 +60,7 @@ type Chart = {
+   timeBasis: "exact" | "approximate" | "unknown";
+   disclosure: string | null;      // exact customer-facing sentence when a default was applied
+   policyVersion: "haeday-chart-v1"; coverageVersion: string;
+-  audit: Audit;                    // input wall time, tz, tzdataVersion, utc (or interval list), offset, lonCorrectionMin, eotMin, trueSolar, jieBefore, jieAfter
++  audit: Audit;                    // input wall time, tz, tzdataVersion, utc (or interval list), offset, lonCorrectionMin, solarTime, jieBefore, jieAfter
+ };
+ ```
+ Checkout never trusts client flags. It re-reads the stored chart revision (ARCHITECTURE §orders snapshot).
+@@ -78,7 +78,7 @@ Checkout never trusts client flags. It re-reads the stored chart revision (ARCHI
+ 
+ ## 5. Canonical jie table and oracle
+ - `data/jie_1900_2050.json` (D21): UTC instants (second precision) of the 12 jie (Sun apparent ecliptic longitude 315°, 345°, 15°, …, step 30°), generated ONCE by the Python oracle with Skyfield + DE421 (`skyfield-data`), file name and hash recorded, time scale converted TT→UTC. Both engine and oracle read this file for year/month boundaries, so boundaries never disagree.
+-- Engine and oracle compute EoT independently (NOAA vs Skyfield). Tolerance: |ΔEoT| ≤ 30 s. If a trueSolar value is within tolerance of an hour or day boundary, the fixture must assert the warning, not a single answer.
++- Engine and oracle compute the solar clock independently (Luxon vs Python zoneinfo); they must agree within 1 s.
+ - `pnpm oracle:verify` (CI, read-only) and `pnpm oracle:update` (manual, produces a diff for Jason to approve). CI never rewrites expected values.
+ - The day-cycle anchor is a published fact, not something copied from our own code.
+ 
+@@ -88,7 +88,7 @@ Minimum 30 cases:
+ - F05–F06 DST fold/gap at the timezone layer (2024 dates allowed here; this is a low-level test)
+ - F07–F08 DST fold/gap in the supported product range (e.g. New York 1995-10-29 01:30 fold, 1995-04-02 02:30 gap)
+ - F09–F10 date rollover by solar correction (Anchorage summer after midnight, a far-west-in-zone city early morning)
+-- F11–F14 trueSolar at 22:58, 23:02, 23:58, 00:02 (hour and day boundaries)
++- F11–F14 (1992 DST date) and F38–F41 (2000-01-15, no DST): solarTime at 22:58, 23:02, 23:58, 00:02 (hour and day boundaries under policy v2)
+ - F15–F20 立春 and one mid-year jie: 1 min before, exact minute, 1 min after (from the canonical table)
+ - F21–F23 unknown time: day split by solar correction, DST date, jie date (month and year split)
+ - F24–F25 historical: Seoul 1955-06 (UTC+8:30), Seoul 1987-07 (Korean DST)
+diff --git a/src/app/api/charts/[id]/answer/route.ts b/src/app/api/charts/[id]/answer/route.ts
+new file mode 100644
+index 0000000..f94684a
+--- /dev/null
++++ b/src/app/api/charts/[id]/answer/route.ts
+@@ -0,0 +1,21 @@
++// POST /api/charts/[id]/answer {foldChoice | boundaryChoice} → new revision in the same chart group.
++import { answerQuestion, AnswerRequest } from "@/server/charts/service";
++import { findGuest, GUEST_COOKIE } from "@/server/guest";
++import { json, readCookie, sameOrigin, serverContext } from "@/server/http";
++
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
++  const ctx = serverContext();
++  if (!sameOrigin(request, ctx.env)) return json({ error: "forbidden" }, 403);
++  const body = AnswerRequest.safeParse(await request.json().catch(() => null));
++  if (!body.success) return json({ error: "bad_request" }, 400);
++  const guest = await findGuest(ctx.db, readCookie(request, GUEST_COOKIE));
++  if (!guest) return json({ error: "not_found" }, 404);
++  const result = await answerQuestion(ctx.db, ctx.ring, (await params).id, guest.id, body.data);
++  if (result.ok) return json({ id: result.id }, 201);
++  if (result.error === "invalid_input") return json({ error: "invalid_input", reason: result.reason }, 422);
++  if (result.error === "rate_limited") return json({ error: "rate_limited" }, 429);
++  return json({ error: "not_found" }, 404);
++}
+diff --git a/src/app/api/charts/route.ts b/src/app/api/charts/route.ts
+new file mode 100644
+index 0000000..4404fe0
+--- /dev/null
++++ b/src/app/api/charts/route.ts
+@@ -0,0 +1,23 @@
++// POST /api/charts → compute + store an encrypted chart revision for this guest (ARCHITECTURE §4.1).
++// Returns only the revision id; the page renders the free fields server-side.
++import { createChart, ChartRequest } from "@/server/charts/service";
++import { ensureGuest, GUEST_COOKIE, guestCookie } from "@/server/guest";
++import { isSecureOrigin, json, readCookie, sameOrigin, serverContext } from "@/server/http";
++
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++export async function POST(request: Request): Promise<Response> {
++  const ctx = serverContext();
++  if (!sameOrigin(request, ctx.env)) return json({ error: "forbidden" }, 403);
++  const body = ChartRequest.safeParse(await request.json().catch(() => null));
++  if (!body.success) return json({ error: "bad_request" }, 400);
++
++  const guest = await ensureGuest(ctx.db, readCookie(request, GUEST_COOKIE));
++  const extra: Record<string, string> = guest.newToken ? { "Set-Cookie": guestCookie(guest.newToken, isSecureOrigin(ctx.env)) } : {};
++  const result = await createChart(ctx.db, ctx.ring, guest.id, body.data);
++  if (result.ok) return json({ id: result.id }, 201, extra);
++  if (result.error === "invalid_input") return json({ error: "invalid_input", reason: result.reason }, 422, extra);
++  if (result.error === "rate_limited") return json({ error: "rate_limited" }, 429, extra);
++  return json({ error: "not_found" }, 404, extra);
++}
+diff --git a/src/app/api/health/live/route.ts b/src/app/api/health/live/route.ts
+index 9328886..3c77abc 100644
+--- a/src/app/api/health/live/route.ts
++++ b/src/app/api/health/live/route.ts
+@@ -1,4 +1,4 @@
+-export const dynamic = "force-dynamic";
+-export function GET() {
+-  return Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } });
+-}
++export const dynamic = "force-dynamic";
++export function GET() {
++  return Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } });
++}
+diff --git a/src/app/chart/[id]/ChartClient.tsx b/src/app/chart/[id]/ChartClient.tsx
+new file mode 100644
+index 0000000..0b8068f
+--- /dev/null
++++ b/src/app/chart/[id]/ChartClient.tsx
+@@ -0,0 +1,93 @@
++"use client";
++// Interactive parts of the free chart: question answers (new revision) and the share image (PRD §4, §8).
++import { useRouter } from "next/navigation";
++import { useRef, useState } from "react";
++
++interface Choice { label: string; body: { foldChoice: "earlier" | "later" } | { boundaryChoice: number } }
++
++export function QuestionCard({ chartId, title, choices, allowUnknown }: { chartId: string; title: string; choices: Choice[]; allowUnknown: boolean }) {
++  const router = useRouter();
++  const [hidden, setHidden] = useState(false);
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState(false);
++  if (hidden) return null;
++  async function answer(body: Choice["body"]) {
++    setBusy(true); setError(false);
++    const res = await fetch(`/api/charts/${chartId}/answer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
++    const json = (await res?.json().catch(() => null)) as { id?: string } | null;
++    if (res?.status === 201 && json?.id) { router.push(`/chart/${json.id}`); return; }
++    setBusy(false); setError(true);
++  }
++  return (
++    <section className="card" aria-labelledby="q-title">
++      <h2 id="q-title">{title}</h2>
++      {error && <p className="error" role="alert">That didn&apos;t work. Please try again.</p>}
++      <div className="btn-row">
++        {choices.map((c) => <button key={c.label} type="button" className="btn btn-ghost" disabled={busy} onClick={() => answer(c.body)}>{c.label}</button>)}
++        {allowUnknown && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setHidden(true)}>I don&apos;t know</button>}
++      </div>
++    </section>
++  );
++}
++
++export interface ShareData { dayMasterHanja: string; dayMasterName: string; image: string; tiles: Array<{ pos: string; stem: string; branch: string; stemColor: string; branchColor: string } | null> }
++
++const W = 1080, H = 1920;
++
++async function drawShare(d: ShareData): Promise<string> {
++  await document.fonts?.ready;
++  const c = document.createElement("canvas"); c.width = W; c.height = H;
++  const g = c.getContext("2d")!;
++  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#12132A"); bg.addColorStop(1, "#1C1E3A");
++  g.fillStyle = bg; g.fillRect(0, 0, W, H);
++  const m = document.createElement("canvas"); m.width = 300; m.height = 300;
++  const mg = m.getContext("2d")!;
++  mg.fillStyle = "#D9B26A"; mg.beginPath(); mg.arc(150, 150, 120, 0, Math.PI * 2); mg.fill();
++  mg.globalCompositeOperation = "destination-out"; mg.beginPath(); mg.arc(205, 120, 110, 0, Math.PI * 2); mg.fill();
++  g.drawImage(m, W / 2 - 150, 180);
++  g.textAlign = "center"; g.fillStyle = "#A7A3BE"; g.font = "600 34px 'Plus Jakarta Sans', sans-serif";
++  g.fillText("MY DAY MASTER", W / 2, 580);
++  g.fillStyle = "#D9B26A"; g.font = "500 230px 'Noto Serif KR', serif"; g.fillText(d.dayMasterHanja, W / 2, 830);
++  g.fillStyle = "#F2ECE0"; g.font = "400 76px Fraunces, Georgia, serif"; g.fillText(d.dayMasterName, W / 2, 960);
++  g.fillStyle = "#A7A3BE"; g.font = "italic 400 46px Fraunces, Georgia, serif"; g.fillText(d.image, W / 2, 1030);
++  const tw = 200, gap = 26, x0 = (W - (tw * 4 + gap * 3)) / 2, y0 = 1150;
++  d.tiles.forEach((t, i) => {
++    const x = x0 + i * (tw + gap);
++    g.fillStyle = "#A7A3BE"; g.font = "600 26px 'Plus Jakarta Sans', sans-serif"; g.fillText((t?.pos ?? "Hour").toUpperCase(), x + tw / 2, y0 - 20);
++    if (!t) { g.strokeStyle = "#2E3160"; g.lineWidth = 3; g.setLineDash([12, 10]); g.strokeRect(x, y0, tw, 400); g.setLineDash([]); g.fillText("UNKNOWN", x + tw / 2, y0 + 210); return; }
++    for (const [j, ch, col] of [[0, t.stem, t.stemColor], [1, t.branch, t.branchColor]] as const) {
++      g.fillStyle = col; g.beginPath(); g.roundRect(x, y0 + j * 205, tw, 195, 22); g.fill();
++      g.fillStyle = "#12132A"; g.font = "500 120px 'Noto Serif KR', serif"; g.fillText(ch, x + tw / 2, y0 + j * 205 + 140);
++    }
++  });
++  g.fillStyle = "#D9B26A"; g.font = "400 54px Fraunces, Georgia, serif"; g.fillText("haeday.com", W / 2, 1760);
++  g.fillStyle = "#A7A3BE"; g.font = "400 30px 'Plus Jakarta Sans', sans-serif"; g.fillText("Korean saju · for reflection", W / 2, 1820);
++  return c.toDataURL("image/png");
++}
++
++export function ShareButton({ data }: { data: ShareData }) {
++  const dialog = useRef<HTMLDialogElement>(null);
++  const [src, setSrc] = useState<string | null>(null);
++  async function preview() { setSrc(await drawShare(data)); dialog.current?.showModal(); }
++  async function share() {
++    if (!src) return;
++    const blob = await (await fetch(src)).blob();
++    const file = new File([blob], "haeday-day-master.png", { type: "image/png" });
++    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file] }).catch(() => undefined);
++  }
++  return (
++    <>
++      <button type="button" className="btn btn-ghost" onClick={preview}>Share my Day Master</button>
++      <dialog ref={dialog} className="sheet" aria-label="Share image preview">
++        {/* eslint-disable-next-line @next/next/no-img-element -- local data: URL preview, nothing to optimize */}
++        {src && <img src={src} alt={`Share image: Day Master ${data.dayMasterHanja} ${data.dayMasterName} and four pillars. No birth date, time or place.`} />}
++        <p className="note">Shows your Day Master and pillars only. No birth date, time or place.</p>
++        <div className="btn-row">
++          <a className="btn btn-primary" href={src ?? "#"} download="haeday-day-master.png">Save image</a>
++          <button type="button" className="btn btn-ghost" onClick={share}>Share…</button>
++          <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>Close</button>
++        </div>
++      </dialog>
++    </>
++  );
++}
+diff --git a/src/app/chart/[id]/page.tsx b/src/app/chart/[id]/page.tsx
+new file mode 100644
+index 0000000..c9c47a4
+--- /dev/null
++++ b/src/app/chart/[id]/page.tsx
+@@ -0,0 +1,151 @@
++// Free chart (PRD §4). Server-rendered for the owning guest only; everything else is a 404.
++import type { Metadata } from "next";
++import { cookies } from "next/headers";
++import Link from "next/link";
++import { notFound } from "next/navigation";
++import { DAY_MASTERS, ELEMENT_LABEL, OFFER_ITEMS } from "@/content/library";
++import { formatDate, formatTime } from "@/lib/format";
++import { loadChart, type LoadedChart } from "@/server/charts/service";
++import { formatClock, type Pillar, type Pillars } from "@/server/engine";
++import { paymentsConfigured } from "@/server/env";
++import { findGuest, GUEST_COOKIE } from "@/server/guest";
++import { serverContext } from "@/server/http";
++import { isSalesEnabled } from "@/server/settings";
++import { QuestionCard, ShareButton, type ShareData } from "./ChartClient";
++
++export const metadata: Metadata = { title: "Your birth chart · Haeday", robots: { index: false, follow: false } };
++export const dynamic = "force-dynamic";
++
++const EL_HEX = { wood: "#5FA97A", fire: "#E0685A", earth: "#D9B26A", metal: "#C9CCD6", water: "#6FA0D8" } as const;
++const POSITIONS = [["hour", "Hour"], ["day", "Day"], ["month", "Month"], ["year", "Year"]] as const; // traditional right-to-left order, read as a row
++
++function Glyphs({ p }: { p: Pillar }) {
++  return (
++    <>
++      <div className={`glyph el-${p.stemElement}`} aria-hidden="true">{p.stem}<small>{p.stemEn}</small></div>
++      <div className={`glyph el-${p.branchElement}`} aria-hidden="true">{p.branch}<small>{p.branchEn}</small></div>
++    </>
++  );
++}
++
++function PillarTiles({ pillars }: { pillars: Pillars }) {
++  return (
++    <div className="pillars" role="list" aria-label="Your four pillars">
++      {POSITIONS.map(([key, label]) => {
++        const p = pillars[key];
++        return (
++          <div className="pillar" role="listitem" key={key}>
++            <span className="pos">{label}</span>
++            {p ? <><Glyphs p={p} /><span className="visually-hidden">{`${label} pillar: ${p.stem}${p.branch}, ${p.stemEn} · ${p.branchEn}`}</span></>
++              : <div className="glyph unknown">Hour unknown</div>}
++          </div>
++        );
++      })}
++    </div>
++  );
++}
++
++function detailsLine(c: LoadedChart): string {
++  const t = c.input.time;
++  const time = t.kind === "unknown" ? "time unknown" : t.kind === "approximate" ? `about ${formatTime(t.hhmm)}` : formatTime(t.hhmm);
++  const fold = c.input.foldChoice ? ` (the ${c.input.foldChoice === "earlier" ? "first" : "second"} one)` : "";
++  return `${formatDate(c.input.birthDate)}, ${time}${fold}, ${c.input.placeLabel}`;
++}
++
++const WARNING_TEXT: Record<string, string> = {
++  hourBoundary: "Your birth time is close to the change of an hour pillar, so a few minutes' difference would change it.",
++  dayBoundary: "Your birth time is close to midnight in solar time, so a few minutes' difference would change your day pillar.",
++  termBoundary: "You were born within half an hour of a solar-term change, so your month (and maybe year) pillar sits right on a boundary.",
++  pre1970Tz: "Time-zone records before 1970 are less certain, so treat the hour with a little caution.",
++  approximateTime: "Your time is approximate, so the hour pillar is our best estimate.",
++};
++
++export default async function ChartPage({ params }: { params: Promise<{ id: string }> }) {
++  const { id } = await params;
++  const ctx = serverContext();
++  const guest = await findGuest(ctx.db, (await cookies()).get(GUEST_COOKIE)?.value);
++  const chart = await loadChart(ctx.db, ctx.ring, id, guest?.id ?? null);
++  if (!chart) notFound();
++  const r = chart.response;
++  const salesOpen = r.kind === "computed" && paymentsConfigured(ctx.env) && (await isSalesEnabled(ctx.db));
++
++  let body: React.ReactNode;
++  if (r.kind === "needs_fold_choice") {
++    const t = "hhmm" in chart.input.time ? formatTime(chart.input.time.hhmm) : "";
++    body = <QuestionCard chartId={id} allowUnknown={false} title={`Clocks fell back that night, so ${t} happened twice. Which one?`}
++      choices={[{ label: `The first ${t}`, body: { foldChoice: "earlier" } }, { label: `The second ${t}`, body: { foldChoice: "later" } }]} />;
++  } else {
++    const c = r.chart;
++    const dm = DAY_MASTERS[c.dayMaster.stem]!;
++    const q = r.questions[0];
++    const askWindow = q?.askCustomer && chart.input.boundaryChoice === undefined;
++    const share: ShareData = {
++      dayMasterHanja: dm.stem, dayMasterName: dm.name, image: dm.image,
++      tiles: POSITIONS.map(([key, label]) => {
++        const p = c.pillars[key];
++        return p ? { pos: label, stem: p.stem, branch: p.branch, stemColor: EL_HEX[p.stemElement], branchColor: EL_HEX[p.branchElement] } : null;
++      }),
++    };
++    body = (
++      <>
++        {askWindow && q && (
++          <QuestionCard chartId={id} allowUnknown title="Your chart changes during that day. When were you born?"
++            choices={q.windows.map((w) => ({ label: `Between ${formatClock(w.from)} and ${formatClock(w.to)}`, body: { boundaryChoice: w.index } }))} />
++        )}
++        <PillarTiles pillars={c.pillars} />
++        <section className="card" aria-labelledby="dm">
++          <span className="dm-hanja" aria-hidden="true">{dm.stem}</span>
++          <p className="eyebrow">YOUR DAY MASTER</p>
++          <h2 id="dm">{dm.name} · {dm.image}</h2>
++          <p style={{ margin: 0 }}>{dm.line}</p>
++        </section>
++        <section className="card" aria-labelledby="el">
++          <h2 id="el">Your visible elements</h2>
++          <div className="bars">
++            {(Object.keys(ELEMENT_LABEL) as Array<keyof typeof ELEMENT_LABEL>).map((e) => {
++              const n = c.visibleElements[e];
++              return (
++                <div className="bar" key={e}>
++                  <span>{ELEMENT_LABEL[e].en}</span>
++                  <span className="track" aria-hidden="true"><span className={`fill el-${e}`} style={{ width: `${(n / c.denominator) * 100}%`, display: "block" }} /></span>
++                  <span aria-hidden="true">{n}</span>
++                  <span className="visually-hidden">{`${ELEMENT_LABEL[e].en}: ${n} out of ${c.denominator}`}</span>
++                </div>
++              );
++            })}
++          </div>
++          <p className="note">Out of {c.denominator} characters{c.denominator === 6 ? " (no hour pillar)" : ""}. A simple count, not a measure of strength.</p>
++        </section>
++        {c.disclosure && <p className="disclosure">{c.disclosure}</p>}
++        {r.warnings.filter((w) => w !== "approximateTime" || c.timeBasis === "approximate").map((w) => <p key={w} className="note">{WARNING_TEXT[w]}</p>)}
++      </>
++    );
++    return <Shell chart={chart} salesOpen={salesOpen} share={share}>{body}</Shell>;
++  }
++  return <Shell chart={chart} salesOpen={false}>{body}</Shell>;
++}
++
++function Shell({ chart, salesOpen, share, children }: { chart: LoadedChart; salesOpen: boolean; share?: ShareData; children: React.ReactNode }) {
++  return (
++    <main className="app">
++      <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday</Link></header>
++      <h1>Your birth chart</h1>
++      {children}
++      <section className="card" aria-label="Your details">
++        <p style={{ margin: 0 }}>Your details: {detailsLine(chart)}. Solar time adjusted. <Link href={`/saju?edit=${chart.id}`}>Edit</Link></p>
++      </section>
++      {chart.response.kind === "computed" && (
++        <section className="card offer" aria-labelledby="offer">
++          <h2 id="offer">Your full reading includes</h2>
++          <ul>{OFFER_ITEMS.map((i) => <li key={i}>{i}</li>)}</ul>
++          {chart.ownedOrderId ? <Link className="btn btn-primary" href={`/order/${chart.ownedOrderId}`}>You already own this reading → Open</Link>
++            : salesOpen ? <Link className="btn btn-primary" href={`/checkout/${chart.id}`}>Unlock my reading · $3.99</Link>
++            : <button className="btn btn-primary" type="button" disabled>Unlock my reading · $3.99</button>}
++          <p className="fine">{salesOpen || chart.ownedOrderId ? "One-time payment · No subscription · AI-assisted" : "Full readings open soon · One-time payment · No subscription"}</p>
++        </section>
++      )}
++      {share && <ShareButton data={share} />}
++      <p className="fine">AI-assisted · For entertainment and reflection · Not advice · <Link href="/method">How we calculate</Link></p>
++    </main>
++  );
++}
+diff --git a/src/app/globals.css b/src/app/globals.css
+index 19ffdd0..05b90c7 100644
+--- a/src/app/globals.css
++++ b/src/app/globals.css
+@@ -1,18 +1,72 @@
+-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+-:root { color-scheme: dark; --night:#12132A; --dusk:#1C1E3A; --line:#2E3160; --gold:#D9B26A; --mist:#A7A3BE; --text:#F2ECE0; }
+-* { box-sizing:border-box; }
+-body { margin:0; background:var(--night); color:var(--text); font-family:"Plus Jakarta Sans",sans-serif; font-size:16px; line-height:1.6; }
+-main { min-height:100svh; max-width:1080px; margin:auto; padding:28px clamp(20px,6vw,72px); display:flex; flex-direction:column; }
+-.brand { display:flex; align-items:center; gap:12px; font-family:Fraunces,Georgia,serif; font-size:28px; }
+-.moon { color:var(--gold); font-size:40px; line-height:1; }
+-section { margin:auto 0; padding:72px 0; max-width:720px; }
+-.eyebrow { color:var(--gold); letter-spacing:.15em; font-size:11px; font-weight:600; }
+-h1 { font-family:Fraunces,Georgia,serif; font-weight:400; font-size:clamp(42px,7vw,76px); line-height:1.12; letter-spacing:-.035em; margin:24px 0; }
+-h1 em { color:var(--gold); font-weight:400; }
+-.intro { color:var(--mist); max-width:440px; margin:0 0 40px; }
+-.notice { display:flex; gap:12px; padding:20px; border:1px solid var(--line); border-radius:16px; background:var(--dusk); max-width:510px; }
+-.notice strong { font-size:14px; font-weight:500; }
+-.notice p { color:var(--mist); font-size:13px; margin:6px 0 0; }
+-.dot { flex-shrink:0; width:7px; height:7px; margin-top:8px; border-radius:50%; background:var(--gold); }
+-footer { color:var(--mist); font-size:12px; padding:20px 0; border-top:1px solid var(--line); }
+-@media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto; } }
++@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;1,400&family=Noto+Serif+KR:wght@500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
++:root { color-scheme: dark; --night:#12132A; --dusk:#1C1E3A; --line:#2E3160; --gold:#D9B26A; --mist:#A7A3BE; --text:#F2ECE0; }
++* { box-sizing:border-box; }
++body { margin:0; background:var(--night); color:var(--text); font-family:"Plus Jakarta Sans",sans-serif; font-size:16px; line-height:1.6; }
++main { min-height:100svh; max-width:1080px; margin:auto; padding:28px clamp(20px,6vw,72px); display:flex; flex-direction:column; }
++.brand { display:flex; align-items:center; gap:12px; font-family:Fraunces,Georgia,serif; font-size:28px; }
++.moon { color:var(--gold); font-size:40px; line-height:1; }
++section { margin:auto 0; padding:72px 0; max-width:720px; }
++.eyebrow { color:var(--gold); letter-spacing:.15em; font-size:11px; font-weight:600; }
++h1 { font-family:Fraunces,Georgia,serif; font-weight:400; font-size:clamp(42px,7vw,76px); line-height:1.12; letter-spacing:-.035em; margin:24px 0; }
++h1 em { color:var(--gold); font-weight:400; }
++.intro { color:var(--mist); max-width:440px; margin:0 0 40px; }
++.notice { display:flex; gap:12px; padding:20px; border:1px solid var(--line); border-radius:16px; background:var(--dusk); max-width:510px; }
++.notice strong { font-size:14px; font-weight:500; }
++.notice p { color:var(--mist); font-size:13px; margin:6px 0 0; }
++.dot { flex-shrink:0; width:7px; height:7px; margin-top:8px; border-radius:50%; background:var(--gold); }
++footer { color:var(--mist); font-size:12px; padding:20px 0; border-top:1px solid var(--line); }
++@media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto; } }
++
++a { color:var(--gold); text-underline-offset:4px; }
++a:focus-visible { outline:2px solid var(--gold); outline-offset:4px; }
++
++/* ---------- M2: design tokens (PRD §10) ---------- */
++:root { --hanji:#F3EBDD; --ink:#1E1B16; --gold-on-hanji:#7E5F1C; --wood:#5FA97A; --fire:#E0685A; --earth:#D9B26A; --metal:#C9CCD6; --water:#6FA0D8;
++  --r1:12px; --r2:16px; --r3:22px; --serif:Fraunces,Georgia,serif; --hanja:"Noto Serif KR","Noto Serif CJK KR","Songti SC",serif; }
++.app { max-width:560px; padding:20px 16px 40px; }
++.app .brand { font-size:22px; margin-bottom:8px; }
++.app .brand a { color:var(--text); text-decoration:none; }
++.app h1 { font-size:clamp(30px,8vw,40px); margin:16px 0 8px; }
++.lede { color:var(--mist); margin:0 0 24px; }
++.card { background:var(--dusk); border:1px solid var(--line); border-radius:var(--r2); padding:20px; margin:0 0 16px; }
++.card h2 { font-family:var(--serif); font-weight:400; font-size:22px; margin:0 0 8px; }
++.field { display:flex; flex-direction:column; gap:8px; margin:0 0 20px; position:relative; }
++.field > label, .field > .label { font-weight:600; font-size:14px; }
++.help { color:var(--mist); font-size:13px; margin:0; }
++.input { height:52px; border-radius:var(--r1); border:1px solid var(--line); background:#0E0F22; color:var(--text); font:inherit; padding:0 14px; width:100%; }
++.input::-webkit-calendar-picker-indicator { filter:invert(.85); }
++.input:focus-visible, .seg button:focus-visible, .btn:focus-visible, .option:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
++.seg { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; background:#0E0F22; border:1px solid var(--line); border-radius:var(--r1); padding:4px; }
++.seg button { min-height:44px; border:0; border-radius:9px; background:transparent; color:var(--mist); font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
++.seg button[aria-checked="true"] { background:var(--gold); color:var(--night); }
++.listbox { position:absolute; top:100%; left:0; right:0; z-index:5; margin:4px 0 0; padding:4px; list-style:none; background:var(--dusk); border:1px solid var(--line); border-radius:var(--r1); max-height:280px; overflow:auto; }
++.option { padding:12px; border-radius:8px; cursor:pointer; min-height:44px; }
++.option[aria-selected="true"], .option:hover { background:var(--line); }
++.btn { display:flex; align-items:center; justify-content:center; width:100%; min-height:56px; border-radius:var(--r2); border:0; font:inherit; font-weight:600; font-size:16px; cursor:pointer; text-decoration:none; }
++.btn-primary { background:var(--gold); color:var(--night); }
++.btn-primary[disabled] { opacity:.55; cursor:not-allowed; }
++.btn-ghost { background:transparent; color:var(--text); border:1px solid var(--line); min-height:48px; }
++.btn-row { display:grid; gap:8px; }
++.error { color:#FFB4A8; background:#3A1D24; border:1px solid #6B2E36; border-radius:var(--r1); padding:12px 14px; font-size:14px; margin:0 0 16px; }
++.pillars { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:0 0 16px; }
++.pillar { display:flex; flex-direction:column; gap:4px; text-align:center; }
++.pillar .pos { color:var(--mist); font-size:11px; letter-spacing:.12em; text-transform:uppercase; }
++.glyph { border-radius:var(--r1); color:#12132A; font-family:var(--hanja); font-size:clamp(30px,9vw,40px); line-height:1; padding:12px 0 8px; }
++.glyph small { display:block; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; font-weight:600; margin-top:6px; letter-spacing:.02em; }
++.glyph.unknown { background:#0E0F22; color:var(--mist); border:1px dashed var(--line); font-family:inherit; font-size:12px; padding:18px 4px; }
++.el-wood { background:var(--wood); } .el-fire { background:var(--fire); } .el-earth { background:var(--earth); } .el-metal { background:var(--metal); } .el-water { background:var(--water); }
++.dm-hanja { font-family:var(--hanja); color:var(--gold); font-size:44px; line-height:1; float:right; margin-left:12px; }
++.bars { display:grid; gap:10px; margin:12px 0 4px; }
++.bar { display:grid; grid-template-columns:64px 1fr 28px; align-items:center; gap:10px; font-size:14px; }
++.bar .track { height:10px; background:#0E0F22; border-radius:6px; overflow:hidden; }
++.bar .fill { height:100%; border-radius:6px; }
++.note { color:var(--mist); font-size:13px; }
++.disclosure { border-left:3px solid var(--gold); padding:8px 12px; color:var(--text); font-size:14px; background:#16183A; border-radius:0 var(--r1) var(--r1) 0; margin:0 0 16px; }
++.offer ul { margin:8px 0 16px; padding:0 0 0 18px; color:var(--text); }
++.offer li { margin:4px 0; }
++.fine { color:var(--mist); font-size:12px; text-align:center; margin:10px 0 0; }
++dialog.sheet { border:1px solid var(--line); border-radius:var(--r3); background:var(--dusk); color:var(--text); padding:16px; max-width:420px; width:calc(100% - 32px); }
++dialog.sheet::backdrop { background:rgba(8,9,20,.7); }
++dialog.sheet img { width:100%; border-radius:var(--r1); display:block; margin:0 0 12px; }
++.visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
++@media (prefers-reduced-motion: no-preference) { .fill { transition:width .6s ease; } }
+diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+index 0bad2ad..1125551 100644
+--- a/src/app/layout.tsx
++++ b/src/app/layout.tsx
+@@ -1,12 +1,12 @@
+-import type { Metadata } from "next";
+-import "./globals.css";
+-
+-export const metadata: Metadata = {
+-  title: "Haeday — Find your heyday, by moonlight.",
+-  description: "A thoughtful introduction to Korean saju.",
+-  robots: { index: false, follow: false },
+-};
+-
+-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+-  return <html lang="en"><body>{children}</body></html>;
+-}
++import type { Metadata } from "next";
++import "./globals.css";
++
++export const metadata: Metadata = {
++  title: "Haeday — Find your heyday, by moonlight.",
++  description: "A thoughtful introduction to Korean saju.",
++  robots: { index: false, follow: false },
++};
++
++export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
++  return <html lang="en"><body>{children}</body></html>;
++}
+diff --git a/src/app/method/page.tsx b/src/app/method/page.tsx
+new file mode 100644
+index 0000000..a1032c2
+--- /dev/null
++++ b/src/app/method/page.tsx
+@@ -0,0 +1,22 @@
++import type { Metadata } from "next";
++import Link from "next/link";
++import { PLACES_ATTRIBUTION } from "@/server/places";
++export const metadata: Metadata = { title: "How we calculate your chart · Haeday" };
++export default function MethodPage() {
++  return <main><header className="brand"><Link href="/">☾ Haeday</Link></header>
++    <article style={{maxWidth:720,padding:"40px 0"}}>
++      <p className="eyebrow">OUR METHOD</p><h1>Tradition, with clear assumptions.</h1>
++      <p>Saju describes four pairs of characters associated with a birth year, month, day and hour. Haeday uses these as a starting point for reflection, not as a prediction or professional advice.</p>
++      <h2>Your local birth time</h2><p>We interpret the time in your selected city using historical IANA time-zone rules. If a clock change made a time occur twice, we ask which occurrence you mean. If it did not occur, we ask you to check your input.</p>
++      <h2>The year and month</h2><p>These change at the twelve solar-term boundaries called jie. We compare the birth instant in UTC with a table calculated using Skyfield and the JPL DE421 ephemeris. A birth exactly at a boundary belongs to the new period.</p>
++      <h2>The day and hour</h2><p>We adjust your birth time for the longitude of your birthplace (local mean solar time), the same convention used by the most popular Korean saju calculators. This can move a birth to the previous or next calendar day. Our day changes at midnight in this adjusted time. From 11 PM to midnight, the day stays the same while the hour stem uses the next day.</p>
++      <h2>When you do not know the time</h2><p>We examine every valid minute of your local birth date and leave the hour pillar empty. When year or month pillars change during that day, we ask about the time window. If you do not know, we use the window covering the most valid minutes and disclose alternatives before payment. This default is not a probability estimate.</p>
++      <h2>What the element bars mean</h2><p>They count the visible elements in six or eight characters. They do not measure your personality, health, elemental strength or a scientific trait.</p>
++      <h2>Why another calculator may differ</h2><p>Calculators can use different time-zone histories, longitude correction, equation-of-time adjustments or day boundaries. Near a boundary, even a few minutes can change a pillar. Historical dates before 1970 and approximate birth times carry additional uncertainty.</p>
++      <h2>Places and sources</h2><p>{PLACES_ATTRIBUTION} The place list uses city coordinates, not a precise birth address. A nearby city may have different solar time or even different time-zone rules.</p>
++      <ul><li><a href="https://www.geonames.org/">GeoNames city data</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></li>
++      <li><a href="https://www.iana.org/time-zones">IANA Time Zone Database</a></li>
++      <li><a href="https://rhodesmill.org/skyfield/">Skyfield astronomy library</a></li></ul>
++      <p>Calculation policy: haeday-chart-v2. Haeday is in preparation; this page describes the intended calculation method. Paid readings are not open.</p>
++    </article></main>;
++}
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index ccb7c35..8ed8bab 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -1,17 +1,19 @@
+-export default function Home() {
+-  return (
+-    <main>
+-      <header className="brand"><span aria-hidden="true" className="moon">☾</span> Haeday</header>
+-      <section aria-labelledby="welcome">
+-        <p className="eyebrow">KOREAN SAJU · A MOMENT FOR REFLECTION</p>
+-        <h1 id="welcome">Find your heyday,<br /><em>by moonlight.</em></h1>
+-        <p className="intro">A little perspective on your nature, your connections, and the year ahead.</p>
+-        <div className="notice" role="status">
+-          <span className="dot" aria-hidden="true" />
+-          <div><strong>Something thoughtful is taking shape.</strong><p>Haeday is in preparation. Readings will be available soon.</p></div>
+-        </div>
+-      </section>
+-      <footer>Rooted in Korean tradition. Made for reflection.</footer>
+-    </main>
+-  );
+-}
++import Link from "next/link";
++export default function Home() {
++  return (
++    <main>
++      <header className="brand"><span aria-hidden="true" className="moon">☾</span> Haeday</header>
++      <section aria-labelledby="welcome">
++        <p className="eyebrow">KOREAN SAJU · A MOMENT FOR REFLECTION</p>
++        <h1 id="welcome">Find your heyday,<br /><em>by moonlight.</em></h1>
++        <p className="intro">Your Korean birth chart (saju) shows your nature and your timing. Free chart in under a minute. Full reading $3.99, never a subscription.</p>
++        <Link className="btn btn-primary" href="/saju" style={{ maxWidth: 420 }}>See my birth chart · Free</Link>
++        <div className="notice" role="status" style={{ marginTop: 20 }}>
++          <span className="dot" aria-hidden="true" />
++          <div><strong>Full readings open soon.</strong><p>The free chart is ready now. Paid readings are not yet available.</p></div>
++        </div>
++      </section>
++      <footer>AI-assisted · For entertainment and reflection · Not advice · <Link href="/method">How we calculate</Link></footer>
++    </main>
++  );
++}
+diff --git a/src/app/saju/SajuForm.tsx b/src/app/saju/SajuForm.tsx
+new file mode 100644
+index 0000000..7a9e750
+--- /dev/null
++++ b/src/app/saju/SajuForm.tsx
+@@ -0,0 +1,117 @@
++"use client";
++// Input screen (PRD §3): date, time mode, city autocomplete. Posts to /api/charts and opens the chart.
++import { useRouter } from "next/navigation";
++import { useId, useRef, useState } from "react";
++
++type Mode = "exact" | "approximate" | "unknown";
++interface Suggestion { placeId: string; label: string }
++export interface SajuInitial { birthDate: string; mode: Mode; hhmm: string; placeId: string; placeLabel: string; chartGroupId?: string }
++
++const ERRORS: Record<string, string> = {
++  nonexistent_local_time: "That time didn't exist on this date because clocks sprang forward. Please check your birth time.",
++  date_out_of_range: "Please choose a date between January 1, 1900 and today.",
++  unknown_place: "Please pick your birth city from the list.",
++  bad_format: "Please check the date and time.",
++  rate_limited: "You've made a lot of charts in the last hour. Please try again a little later.",
++};
++
++export function SajuForm({ initial, today }: { initial?: SajuInitial; today: string }) {
++  const router = useRouter();
++  const ids = { date: useId(), time: useId(), city: useId(), list: useId(), cityHelp: useId(), timeHelp: useId() };
++  const [birthDate, setBirthDate] = useState(initial?.birthDate ?? "");
++  const [mode, setMode] = useState<Mode>(initial?.mode ?? "exact");
++  const [hhmm, setHhmm] = useState(initial?.hhmm ?? "");
++  const [query, setQuery] = useState(initial?.placeLabel ?? "");
++  const [place, setPlace] = useState<Suggestion | null>(initial ? { placeId: initial.placeId, label: initial.placeLabel } : null);
++  const [options, setOptions] = useState<Suggestion[]>([]);
++  const [open, setOpen] = useState(false);
++  const [active, setActive] = useState(-1);
++  const [error, setError] = useState<string | null>(null);
++  const [busy, setBusy] = useState(false);
++  const seq = useRef(0);
++
++  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
++  function search(text: string) {
++    clearTimeout(timer.current);
++    const q = text.trim();
++    const mine = ++seq.current;
++    if (q.length < 2) { setOptions([]); setOpen(false); return; }
++    timer.current = setTimeout(async () => {
++      const res = await fetch(`/api/places?q=${encodeURIComponent(q)}`).catch(() => null);
++      if (!res?.ok || mine !== seq.current) return;
++      const body = (await res.json()) as { results: Suggestion[] };
++      setOptions(body.results); setOpen(true); setActive(body.results.length ? 0 : -1);
++    }, 150);
++  }
++
++  function choose(s: Suggestion) { seq.current++; setPlace(s); setQuery(s.label); setOpen(false); setOptions([]); }
++
++  function onCityKey(e: React.KeyboardEvent<HTMLInputElement>) {
++    if (!open || options.length === 0) return;
++    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, options.length - 1)); }
++    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
++    else if (e.key === "Enter" && active >= 0) { e.preventDefault(); choose(options[active]!); }
++    else if (e.key === "Escape") setOpen(false);
++  }
++
++  async function submit(e: React.FormEvent) {
++    e.preventDefault();
++    setError(null);
++    if (!birthDate) return setError("Please enter your birth date.");
++    if (mode !== "unknown" && !hhmm) return setError("Please enter your birth time, or choose \"I don't know\".");
++    if (!place) return setError(ERRORS.unknown_place!);
++    setBusy(true);
++    const res = await fetch("/api/charts", {
++      method: "POST", headers: { "Content-Type": "application/json" },
++      body: JSON.stringify({ birthDate, time: mode === "unknown" ? { kind: "unknown" } : { kind: mode, hhmm }, placeId: place.placeId, ...(initial?.chartGroupId ? { chartGroupId: initial.chartGroupId } : {}) }),
++    }).catch(() => null);
++    const body = (await res?.json().catch(() => null)) as { id?: string; error?: string; reason?: string } | null;
++    if (res?.status === 201 && body?.id) { router.push(`/chart/${body.id}`); return; }
++    setBusy(false);
++    setError(ERRORS[body?.reason ?? body?.error ?? ""] ?? "Something went wrong. Please try again.");
++  }
++
++  const helper = mode === "approximate" ? "Your best guess is fine. We'll note it's approximate."
++    : mode === "unknown" ? "We'll read your chart from your birth date. No hour pillar." : "Local time on your birth certificate, if you have it.";
++
++  return (
++    <form onSubmit={submit} noValidate>
++      {error && <p className="error" role="alert">{error}</p>}
++      <div className="field">
++        <label htmlFor={ids.date}>Birth date</label>
++        <input id={ids.date} className="input" type="date" min="1900-01-01" max={today} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required />
++      </div>
++      <div className="field">
++        <span className="label" id={`${ids.time}-l`}>Birth time</span>
++        <div className="seg" role="radiogroup" aria-labelledby={`${ids.time}-l`}>
++          {([["exact", "I know it"], ["approximate", "Roughly"], ["unknown", "I don't know"]] as const).map(([m, label]) => (
++            <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)}>{label}</button>
++          ))}
++        </div>
++        {mode !== "unknown" && (
++          <input id={ids.time} aria-label={mode === "approximate" ? "Approximate birth time" : "Birth time"} aria-describedby={ids.timeHelp}
++            className="input" type="time" value={hhmm} onChange={(e) => setHhmm(e.target.value)} />
++        )}
++        <p className="help" id={ids.timeHelp}>{helper}</p>
++      </div>
++      <div className="field">
++        <label htmlFor={ids.city}>Birth city</label>
++        <input id={ids.city} className="input" type="text" autoComplete="off" spellCheck={false} placeholder="Start typing, e.g. Chicago"
++          role="combobox" aria-autocomplete="list" aria-expanded={open && options.length > 0} aria-controls={ids.list}
++          aria-activedescendant={open && active >= 0 ? `${ids.list}-${active}` : undefined} aria-describedby={ids.cityHelp}
++          value={query} onKeyDown={onCityKey} onBlur={() => setTimeout(() => setOpen(false), 150)}
++          onChange={(e) => { setQuery(e.target.value); setPlace(null); search(e.target.value); }} />
++        {open && options.length > 0 && (
++          <ul className="listbox" role="listbox" id={ids.list}>
++            {options.map((o, i) => (
++              <li key={o.placeId} id={`${ids.list}-${i}`} role="option" aria-selected={i === active} className="option"
++                onMouseDown={(e) => { e.preventDefault(); choose(o); }}>{o.label}</li>
++            ))}
++          </ul>
++        )}
++        <p className="help" id={ids.cityHelp}>Used only to adjust for your birthplace&apos;s solar time.</p>
++      </div>
++      <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? "Reading the stars…" : "See my birth chart · Free"}</button>
++    </form>
++  );
++}
+diff --git a/src/app/saju/page.tsx b/src/app/saju/page.tsx
+new file mode 100644
+index 0000000..443b2af
+--- /dev/null
++++ b/src/app/saju/page.tsx
+@@ -0,0 +1,34 @@
++import type { Metadata } from "next";
++import { cookies } from "next/headers";
++import Link from "next/link";
++import { loadChart } from "@/server/charts/service";
++import { findGuest, GUEST_COOKIE } from "@/server/guest";
++import { serverContext } from "@/server/http";
++import { SajuForm, type SajuInitial } from "./SajuForm";
++
++export const metadata: Metadata = { title: "Your birth chart · Haeday", robots: { index: false, follow: false } };
++export const dynamic = "force-dynamic";
++
++export default async function SajuPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
++  const { edit } = await searchParams;
++  let initial: SajuInitial | undefined;
++  if (edit) {
++    // Editing prefills the owner's own input and saves a new revision in the same chart group.
++    const ctx = serverContext();
++    const guest = await findGuest(ctx.db, (await cookies()).get(GUEST_COOKIE)?.value);
++    const chart = await loadChart(ctx.db, ctx.ring, edit, guest?.id ?? null);
++    if (chart) {
++      const t = chart.input.time;
++      initial = { birthDate: chart.input.birthDate, mode: t.kind, hhmm: "hhmm" in t ? t.hhmm : "", placeId: chart.input.placeId, placeLabel: chart.input.placeLabel, chartGroupId: chart.chartGroupId };
++    }
++  }
++  return (
++    <main className="app">
++      <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday</Link></header>
++      <h1>{initial ? "Edit your details" : "Your birth chart"}</h1>
++      <p className="lede">Three details, about a minute. Your free chart shows your four pillars and your Day Master.</p>
++      <SajuForm initial={initial} today={new Date().toISOString().slice(0, 10)} />
++      <p className="fine">AI-assisted · For entertainment and reflection · Not advice · <Link href="/method">How we calculate</Link></p>
++    </main>
++  );
++}
+diff --git a/src/content/library.ts b/src/content/library.ts
+new file mode 100644
+index 0000000..0b8bcfc
+--- /dev/null
++++ b/src/content/library.ts
+@@ -0,0 +1,30 @@
++// Free-chart copy from the content library (PRD §9). DRAFT: written by Claude, not yet approved by Jason.
++// Paid readings may only use approved entries; the free chart shows these drafts until approval replaces them.
++export const LIBRARY_VERSION = "draft-1";
++export const LIBRARY_APPROVED = false;
++
++export interface DayMasterEntry { stem: string; name: string; image: string; line: string }
++
++/** Keyed by heavenly stem (the day master). */
++export const DAY_MASTERS: Record<string, DayMasterEntry> = {
++  甲: { stem: "甲", name: "Yang Wood", image: "The tall tree", line: "You grow toward the light in a straight line: principled, steady, and quietly protective of the people who shelter under your branches." },
++  乙: { stem: "乙", name: "Yin Wood", image: "The climbing vine", line: "You find a way through: adaptable, sociable, and far more resilient than you look, turning every obstacle into something to grow along." },
++  丙: { stem: "丙", name: "Yang Fire", image: "The sun", line: "You warm a room simply by entering it: generous, open, and happiest when your energy lights up the people around you." },
++  丁: { stem: "丁", name: "Yin Fire", image: "The candle", line: "You glow close up: perceptive, devoted, and able to bring warmth and clarity to one person or one idea at a time." },
++  戊: { stem: "戊", name: "Yang Earth", image: "The mountain", line: "You are the solid ground others lean on: dependable, patient, and hard to move once you have decided what matters." },
++  己: { stem: "己", name: "Yin Earth", image: "The garden soil", line: "You nurture what is planted near you: practical, caring, and skilled at turning small beginnings into something that lasts." },
++  庚: { stem: "庚", name: "Yang Metal", image: "The sword", line: "You cut to what matters: decisive, loyal, and at your best when there is something worth defending." },
++  辛: { stem: "辛", name: "Yin Metal", image: "The jewel", line: "You notice what others miss: refined, sensitive, and quietly exacting about beauty, fairness, and detail." },
++  壬: { stem: "壬", name: "Yang Water", image: "The ocean", line: "You move with big currents: curious, far-seeing, and restless when life becomes too small or too still." },
++  癸: { stem: "癸", name: "Yin Water", image: "The rain", line: "You reach everywhere quietly: intuitive, imaginative, and able to soften hard ground for the people you care about." },
++};
++
++export const ELEMENT_LABEL: Record<"wood" | "fire" | "earth" | "metal" | "water", { en: string; hanja: string }> = {
++  wood: { en: "Wood", hanja: "木" }, fire: { en: "Fire", hanja: "火" }, earth: { en: "Earth", hanja: "土" },
++  metal: { en: "Metal", hanja: "金" }, water: { en: "Water", hanja: "水" },
++};
++
++export const OFFER_ITEMS = [
++  "Your Day Master in depth", "Your elements in balance", "Love and relationships",
++  "Work and money mindset", "Your 2027 energy", "One question to reflect on",
++];
+diff --git a/src/lib/format.ts b/src/lib/format.ts
+new file mode 100644
+index 0000000..5bcef7f
+--- /dev/null
++++ b/src/lib/format.ts
+@@ -0,0 +1,19 @@
++// Display formatting shared by server and client components (US English).
++const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
++
++/** "1985-03-20" → "March 20, 1985" (no time-zone conversion: it is a civil date). */
++export function formatDate(iso: string): string {
++  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
++  return `${MONTHS[m - 1]} ${d}, ${y}`;
++}
++
++/** "14:15" → "2:15 PM" */
++export function formatTime(hhmm: string): string {
++  const [h, m] = hhmm.split(":").map(Number) as [number, number];
++  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
++}
++
++/** "2024-02-04T03:26:00Z" (a UTC instant) shown as the local wall clock it corresponds to. */
++export function formatInstantLocal(isoUtc: string, tz: string): string {
++  return new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(isoUtc));
++}
+diff --git a/src/server/charts/service.ts b/src/server/charts/service.ts
+new file mode 100644
+index 0000000..665c3f6
+--- /dev/null
++++ b/src/server/charts/service.ts
+@@ -0,0 +1,132 @@
++// Chart revisions (ARCHITECTURE §4.1, D16/D17): compute with the engine, store encrypted, immutable.
++// An edit or an answered question creates a new revision in the same chart group; old revisions never change.
++import { randomUUID } from "node:crypto";
++import { and, count, eq, gt } from "drizzle-orm";
++import { z } from "zod";
++import type { Db } from "../db/client";
++import { chartRevisions, orders } from "../db/schema";
++import { computeChart, COVERAGE_VERSION, POLICY_VERSION, type ChartResponse } from "../engine";
++import { runtimeTzdataVersion } from "../engine/time";
++import { decryptPrivate, encryptPrivate, type Keyring } from "../security/encryption";
++import { aad } from "../security/keyring";
++import { resolvePlace } from "../places";
++import { LIBRARY_VERSION } from "@/content/library";
++
++export const RETENTION_UNPAID_DAYS = 30;
++export const CHARTS_PER_HOUR = 30; // ARCHITECTURE §6
++
++const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
++export const ChartRequest = z.object({
++  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
++  time: z.discriminatedUnion("kind", [
++    z.object({ kind: z.enum(["exact", "approximate"]), hhmm: HHMM }),
++    z.object({ kind: z.literal("unknown") }),
++  ]),
++  placeId: z.string().max(20),
++  chartGroupId: z.uuid().optional(),
++}).strict();
++export type ChartRequest = z.infer<typeof ChartRequest>;
++
++export const AnswerRequest = z.union([
++  z.object({ foldChoice: z.enum(["earlier", "later"]) }).strict(),
++  z.object({ boundaryChoice: z.number().int().min(0).max(10) }).strict(),
++]);
++export type AnswerRequest = z.infer<typeof AnswerRequest>;
++
++/** What we keep about the customer's input (encrypted). */
++export interface StoredInput {
++  birthDate: string;
++  time: ChartRequest["time"];
++  placeId: string;
++  placeLabel: string;
++  foldChoice?: "earlier" | "later";
++  boundaryChoice?: number;
++}
++
++export type CreateResult =
++  | { ok: true; id: string; chartGroupId: string }
++  | { ok: false; error: "invalid_input"; reason: "nonexistent_local_time" | "date_out_of_range" | "unknown_place" | "bad_format" }
++  | { ok: false; error: "rate_limited" | "not_found" };
++
++export interface LoadedChart {
++  id: string;
++  chartGroupId: string;
++  input: StoredInput;
++  response: Exclude<ChartResponse, { kind: "invalid_input" }>;
++  createdAt: Date;
++  ownedOrderId: string | null;
++}
++
++async function storeRevision(db: Db, ring: Keyring, guestId: string, chartGroupId: string, input: StoredInput, now: Date): Promise<CreateResult> {
++  const place = resolvePlace(input.placeId);
++  if (!place) return { ok: false, error: "invalid_input", reason: "unknown_place" };
++  const response = computeChart({
++    birthDate: input.birthDate, time: input.time, place,
++    foldChoice: input.foldChoice, boundaryChoice: input.boundaryChoice,
++    today: now.toISOString().slice(0, 10),
++  });
++  if (response.kind === "invalid_input") return { ok: false, error: "invalid_input", reason: response.reason };
++
++  const id = randomUUID();
++  await db.insert(chartRevisions).values({
++    id, chartGroupId, guestId,
++    inputEnc: encryptPrivate(input, aad("chart_revisions", id, "input"), ring),
++    responseEnc: encryptPrivate(response, aad("chart_revisions", id, "response"), ring),
++    policyVersion: POLICY_VERSION, coverageVersion: COVERAGE_VERSION,
++    tzdataVersion: runtimeTzdataVersion(), libraryVersion: LIBRARY_VERSION,
++    deleteAfter: new Date(now.getTime() + RETENTION_UNPAID_DAYS * 86_400_000),
++  });
++  return { ok: true, id, chartGroupId };
++}
++
++async function withinRateLimit(db: Db, guestId: string, now: Date): Promise<boolean> {
++  const [row] = await db.select({ n: count() }).from(chartRevisions)
++    .where(and(eq(chartRevisions.guestId, guestId), gt(chartRevisions.createdAt, new Date(now.getTime() - 3_600_000))));
++  return (row?.n ?? 0) < CHARTS_PER_HOUR;
++}
++
++/** New chart (or an edit when chartGroupId belongs to this guest). */
++export async function createChart(db: Db, ring: Keyring, guestId: string, req: ChartRequest, now = new Date()): Promise<CreateResult> {
++  if (!(await withinRateLimit(db, guestId, now))) return { ok: false, error: "rate_limited" };
++  let group: string = randomUUID();
++  if (req.chartGroupId) {
++    const owned = await db.query.chartRevisions.findFirst({
++      where: and(eq(chartRevisions.chartGroupId, req.chartGroupId), eq(chartRevisions.guestId, guestId)), columns: { id: true },
++    });
++    if (!owned) return { ok: false, error: "not_found" };
++    group = req.chartGroupId;
++  }
++  const place = resolvePlace(req.placeId);
++  if (!place) return { ok: false, error: "invalid_input", reason: "unknown_place" };
++  return storeRevision(db, ring, guestId, group, { birthDate: req.birthDate, time: req.time, placeId: req.placeId, placeLabel: place.label }, now);
++}
++
++/** Loads a revision only for its owner. Anything else looks like "not found". */
++export async function loadChart(db: Db, ring: Keyring, id: string, guestId: string | null): Promise<LoadedChart | null> {
++  if (!guestId || !z.uuid().safeParse(id).success) return null;
++  const row = await db.query.chartRevisions.findFirst({ where: and(eq(chartRevisions.id, id), eq(chartRevisions.guestId, guestId)) });
++  if (!row || !row.inputEnc || !row.responseEnc) return null;
++  const input = decryptPrivate<StoredInput>(row.inputEnc, aad("chart_revisions", id, "input"), ring);
++  const response = decryptPrivate<LoadedChart["response"]>(row.responseEnc, aad("chart_revisions", id, "response"), ring);
++  const paid = await db.query.orders.findFirst({
++    where: and(eq(orders.chartRevisionId, id), eq(orders.guestId, guestId), eq(orders.paymentStatus, "paid")), columns: { id: true },
++  });
++  return { id, chartGroupId: row.chartGroupId, input, response, createdAt: row.createdAt, ownedOrderId: paid?.id ?? null };
++}
++
++/** Answering a fold or time-window question creates a new revision; the answered one stays as it was. */
++export async function answerQuestion(db: Db, ring: Keyring, id: string, guestId: string, answer: AnswerRequest, now = new Date()): Promise<CreateResult> {
++  const current = await loadChart(db, ring, id, guestId);
++  if (!current) return { ok: false, error: "not_found" };
++  if (!(await withinRateLimit(db, guestId, now))) return { ok: false, error: "rate_limited" };
++  const next: StoredInput = { ...current.input };
++  if ("foldChoice" in answer) {
++    if (current.response.kind !== "needs_fold_choice") return { ok: false, error: "invalid_input", reason: "bad_format" };
++    next.foldChoice = answer.foldChoice;
++  } else {
++    const q = current.response.kind === "computed" ? current.response.questions[0] : undefined;
++    if (!q || !q.windows.some((w) => w.index === answer.boundaryChoice)) return { ok: false, error: "invalid_input", reason: "bad_format" };
++    next.boundaryChoice = answer.boundaryChoice;
++  }
++  return storeRevision(db, ring, guestId, current.chartGroupId, next, now);
++}
+diff --git a/src/server/engine/astro.ts b/src/server/engine/astro.ts
+index 4da5d8f..b844328 100644
+--- a/src/server/engine/astro.ts
++++ b/src/server/engine/astro.ts
+@@ -1,4 +1,4 @@
+-// Jie boundaries from the canonical table (D21) and equation of time (NOAA solar calculator / Meeus).
++// Jie boundaries from the canonical table (D21). equationOfTimeMinutes is kept for reference only: policy v2 (D28) does not apply it.
+ import jieData from "../../../data/jie_1900_2050.json";
+ 
+ interface JieRow { utc: string; lon: number }
+diff --git a/src/server/engine/chart.ts b/src/server/engine/chart.ts
+index babc1ca..9cbbeca 100644
+--- a/src/server/engine/chart.ts
++++ b/src/server/engine/chart.ts
+@@ -1,5 +1,5 @@
+-// haeday-chart-v1 (ENGINE_SPEC). Pure functions, no I/O besides the bundled jie table and runtime tz data.
+-import { JIE_LONS, JIE_TIMES, equationOfTimeMinutes, jieIndexAt } from "./astro";
++// haeday-chart-v2 (ENGINE_SPEC). Pure functions, no I/O besides the bundled jie table and runtime tz data.
++import { JIE_LONS, JIE_TIMES, jieIndexAt } from "./astro";
+ import {
+   BRANCHES, BRANCH_ELEMENT, BRANCH_EN, BRANCH_MAIN_STEM, JIE_LON_TO_BRANCH, STEMS, STEM_ELEMENT, STEM_EN, STEM_YINYANG,
+   dayIndex60, hourBranch, hourStem, join60, mod, monthStem, split60, tenGod, yearIndex60,
+@@ -7,7 +7,7 @@ import {
+ } from "./tables";
+ import { runtimeTzdataVersion, standardOffsetMinutes, wallToUtc, zoneOf } from "./time";
+ 
+-export const POLICY_VERSION = "haeday-chart-v1";
++export const POLICY_VERSION = "haeday-chart-v2";
+ export const COVERAGE_VERSION = "cov-1";
+ export type DayBoundary = "midnight" | "zi_23";
+ 
+@@ -31,8 +31,8 @@ export interface Candidate { reason: Warning | "timeWindow"; pillars: Pillars; w
+ export interface BoundaryQuestion { type: "timeWindow"; askCustomer: boolean; windows: Array<{ index: number; from: string; to: string; minutes: number }>; defaultIndex: number }
+ export interface Audit {
+   inputLocal: string; tz: string; tzdataVersion: string; utc: string | null; offsetMinutes: number | null;
+-  stdOffsetMinutes: number | null; lonCorrectionMin: number | null; eotMin: number | null; trueSolar: string | null;
+-  jieBefore: string | null; jieAfter: string | null; eotMethod: "noaa-meeus";
++  stdOffsetMinutes: number | null; lonCorrectionMin: number | null; solarTime: string | null;
++  jieBefore: string | null; jieAfter: string | null; solarMethod: "local-mean-time";
+ }
+ export interface Chart {
+   pillars: Pillars;
+@@ -61,28 +61,37 @@ function pillar(idx60: number): Pillar {
+   return { stem: STEMS[s]!, branch: BRANCHES[b]!, stemEn: STEM_EN[s]!, branchEn: BRANCH_EN[b]!, stemElement: STEM_ELEMENT[s]!, branchElement: BRANCH_ELEMENT[b]! };
+ }
+ 
+-interface Solar { utc: number; std: number; lonCorr: number; eot: number; trueSolar: number /* naive ms */ }
+-export function trueSolarAt(utc: number, place: Place): Solar {
++interface Solar { utc: number; std: number; lonCorr: number; solarTime: number /* naive ms */ }
++/**
++ * Local mean solar time (지역시): the civil clock corrected for longitude only. Policy v2 (D28) does not add the
++ * equation of time, matching 포스텔러 and most Korean 만세력 apps.
++ */
++export function solarTimeAt(utc: number, place: Place): Solar {
+   const std = standardOffsetMinutes(utc, place.tz);
+   const lonCorr = wrap180(place.lon - std / 4) * 4;
+-  const eot = equationOfTimeMinutes(utc);
+-  return { utc, std, lonCorr, eot, trueSolar: utc + (std + lonCorr + eot) * 60_000 };
++  // Anchor the solar clock to the civil clock actually in use (ENGINE_SPEC §2.3, D09 "anchored to the civil date"):
++  // offset + wrap180(lon − offset/4)·4 equals std + lonCorr whenever both stay within ±12 h, and it does not
++  // depend on guessing DST, so a date-line move (Samoa 2011-12-31) cannot shift the day by 24 h.
++  const offset = zoneOf(place.tz).offset(utc);
++  const solarOffset = offset + wrap180(place.lon - offset / 4) * 4;
++  return { utc, std, lonCorr, solarTime: utc + solarOffset * 60_000 };
+ }
+ 
+ function yearMonth(utc: number) {
+   const i = jieIndexAt(utc);
+-  let j = i;
+-  while (JIE_LONS[j] !== 315) j -= 1;
+-  const solarYear = new Date(JIE_TIMES[j]!).getUTCFullYear();
++  // The table begins in August 1899, so its preceding lichun is absent.
++  // The current jie identifies the solar year without an unbounded scan:
++  // January's 285-degree jie belongs to the preceding Gregorian year.
++  const solarYear = new Date(JIE_TIMES[i]!).getUTCFullYear() - (JIE_LONS[i] === 285 ? 1 : 0);
+   const y60 = yearIndex60(solarYear);
+   const monthBranch = JIE_LON_TO_BRANCH[JIE_LONS[i]!]!;
+   const m60 = join60(monthStem(mod(y60, 10), monthBranch), monthBranch);
+   return { y60, m60, jieBefore: JIE_TIMES[i]!, jieAfter: JIE_TIMES[i + 1]! };
+ }
+ 
+-function dayHour(trueSolar: number, withHour: boolean, boundary: DayBoundary) {
+-  const minutes = Math.floor(mod(trueSolar, 86_400_000) / 60_000);
+-  let epochDay = Math.floor(trueSolar / 86_400_000);
++function dayHour(solarTime: number, withHour: boolean, boundary: DayBoundary) {
++  const minutes = Math.floor(mod(solarTime, 86_400_000) / 60_000);
++  let epochDay = Math.floor(solarTime / 86_400_000);
+   if (boundary === "zi_23" && minutes >= 23 * 60) epochDay += 1;
+   const d60 = dayIndex60(epochDay);
+   let h60: number | null = null;
+@@ -95,9 +104,9 @@ function dayHour(trueSolar: number, withHour: boolean, boundary: DayBoundary) {
+ }
+ 
+ function pillarsAt(utc: number, place: Place, withHour: boolean, boundary: DayBoundary) {
+-  const solar = trueSolarAt(utc, place);
++  const solar = solarTimeAt(utc, place);
+   const ym = yearMonth(utc);
+-  const dh = dayHour(solar.trueSolar, withHour, boundary);
++  const dh = dayHour(solar.solarTime, withHour, boundary);
+   const pillars: Pillars = { year: pillar(ym.y60), month: pillar(ym.m60), day: pillar(dh.d60), hour: dh.h60 === null ? null : pillar(dh.h60) };
+   return { solar, ym, pillars };
+ }
+@@ -134,7 +143,7 @@ function warningsAndAlternatives(utc: number, place: Place, solar: Solar, ym: {
+   birthYear: number, approximate: boolean, boundary: DayBoundary) {
+   const warnings: Warning[] = [];
+   const alternatives: Candidate[] = [];
+-  const minutes = mod(solar.trueSolar, 86_400_000) / MIN;
++  const minutes = mod(solar.solarTime, 86_400_000) / MIN;
+   const hourWindow = approximate ? 60 : 5;
+   // hour-branch edges at odd hours
+   let nearest = 0, dist = Infinity;
+@@ -213,10 +222,11 @@ export function computeChart(input: ChartInput): ChartResponse {
+   const today = input.today ?? new Date().toISOString().slice(0, 10);
+   if (y < 1900 || input.birthDate > today) return { kind: "invalid_input", reason: "date_out_of_range" };
+ 
+-  const baseAudit = { inputLocal: `${input.birthDate} ${"hhmm" in input.time ? input.time.hhmm : "unknown"}`, tz: input.place.tz, tzdataVersion: runtimeTzdataVersion(), eotMethod: "noaa-meeus" as const };
++  const baseAudit = { inputLocal: `${input.birthDate} ${"hhmm" in input.time ? input.time.hhmm : "unknown"}`, tz: input.place.tz, tzdataVersion: runtimeTzdataVersion(), solarMethod: "local-mean-time" as const };
+ 
+   if (input.time.kind === "unknown") {
+     const { groups } = unknownGroups(input.birthDate, input.place, boundary);
++    if (groups.length === 0) return { kind: "invalid_input", reason: "nonexistent_local_time" };
+     const defaultIndex = groups.reduce((best, g, i) => (g.minutes > groups[best]!.minutes ? i : best), 0);
+     const chosen = input.boundaryChoice !== undefined && groups[input.boundaryChoice] ? input.boundaryChoice : defaultIndex;
+     const g = groups[chosen]!;
+@@ -234,7 +244,7 @@ export function computeChart(input: ChartInput): ChartResponse {
+     const chart: Chart = {
+       pillars: g.pillars, ...derive(g.pillars), timeBasis: "unknown", disclosure,
+       policyVersion: POLICY_VERSION, coverageVersion: COVERAGE_VERSION,
+-      audit: { ...baseAudit, utc: null, offsetMinutes: null, stdOffsetMinutes: null, lonCorrectionMin: null, eotMin: null, trueSolar: null, jieBefore: null, jieAfter: null },
++      audit: { ...baseAudit, utc: null, offsetMinutes: null, stdOffsetMinutes: null, lonCorrectionMin: null, solarTime: null, jieBefore: null, jieAfter: null },
+     };
+     const alternatives: Candidate[] = groups.filter((_, i) => i !== chosen).map((o) => ({ reason: "timeWindow", pillars: o.pillars, window: { from: o.from, to: o.to } }));
+     return { kind: "computed", chart, alternatives, warnings: y < 1970 ? ["pre1970Tz"] : [], questions };
+@@ -252,8 +262,8 @@ export function computeChart(input: ChartInput): ChartResponse {
+     policyVersion: POLICY_VERSION, coverageVersion: COVERAGE_VERSION,
+     audit: {
+       ...baseAudit, utc: iso(utc), offsetMinutes: zoneOf(input.place.tz).offset(utc),
+-      stdOffsetMinutes: solar.std, lonCorrectionMin: round3(solar.lonCorr), eotMin: round3(solar.eot),
+-      trueSolar: naiveIso(solar.trueSolar), jieBefore: iso(ym.jieBefore), jieAfter: iso(ym.jieAfter),
++      stdOffsetMinutes: round3(solar.std), lonCorrectionMin: round3(solar.lonCorr),
++      solarTime: naiveIso(solar.solarTime), jieBefore: iso(ym.jieBefore), jieAfter: iso(ym.jieAfter),
+     },
+   };
+   return { kind: "computed", chart, alternatives, warnings, questions: [] };
+diff --git a/src/server/engine/tables.ts b/src/server/engine/tables.ts
+index 38593c9..37992d6 100644
+--- a/src/server/engine/tables.ts
++++ b/src/server/engine/tables.ts
+@@ -1,4 +1,4 @@
+-// Sexagenary tables for haeday-chart-v1 (D24: own implementation). Reviewed by Jason before launch.
++// Sexagenary tables for haeday-chart (v1, v2) (D24: own implementation). Reviewed by Jason before launch.
+ 
+ export type Element = "wood" | "fire" | "earth" | "metal" | "water";
+ export type YinYang = "yin" | "yang";
+diff --git a/src/server/engine/time.ts b/src/server/engine/time.ts
+index f88b1ad..482420c 100644
+--- a/src/server/engine/time.ts
++++ b/src/server/engine/time.ts
+@@ -31,13 +31,33 @@ export function wallToUtc(date: string, hhmm: string, tz: string): WallResult {
+   return { status: "fold", utc: [list[0]!, list[list.length - 1]!] };
+ }
+ 
+-/** Standard (non-DST) offset in minutes at an instant: the lower of the year's January/July offsets when in DST. */
++const DAY = 86_400_000;
++const PROBE_DAYS = [90, 182, 273, 365];
++const MAX_DST_MINUTES = 180;
++
++/**
++ * Standard (non-DST) offset in minutes at an instant. JavaScript does not expose the tzdata isdst flag, so:
++ * the current offset is DST only if the zone returns to a lower offset (within 3 h) both before and after
++ * this instant (probes at ±3, 6, 9, 12 months); the standard offset is then the lowest of those.
++ * Offsets more than 3 h away are a different regime (date-line moves such as Samoa 2011, Kwajalein 1993)
++ * and are ignored; a permanent change of standard time (Seoul 1954, 1961) is not mistaken for DST because
++ * the offset does not come back on the future side.
++ * Pillars do not depend on this value (see solarTimeAt); it feeds the audit fields.
++ */
+ export function standardOffsetMinutes(utcMs: number, tz: string): number {
+   const zone = zoneOf(tz);
+   const offset = zone.offset(utcMs);
+-  const year = new Date(utcMs).getUTCFullYear();
+-  const base = Math.min(zone.offset(Date.UTC(year, 0, 1)), zone.offset(Date.UTC(year, 6, 1)));
+-  return offset > base ? base : offset;
++  const side = (sign: 1 | -1) => {
++    const same = PROBE_DAYS.map((d) => zone.offset(utcMs + sign * d * DAY)).filter((o) => Math.abs(o - offset) <= MAX_DST_MINUTES);
++    return { lower: same.filter((o) => o < offset), otherRegime: same.length === 0 };
++  };
++  const before = side(-1), after = side(1);
++  // DST = the offset drops back on both sides; a side that lies entirely in another regime (date-line move) does not count against it.
++  const dropsBefore = before.lower.length > 0 || before.otherRegime;
++  const dropsAfter = after.lower.length > 0 || after.otherRegime;
++  const lower = [...before.lower, ...after.lower];
++  if (!dropsBefore || !dropsAfter || lower.length === 0) return offset;
++  return Math.min(...lower);
+ }
+ 
+ export const runtimeTzdataVersion = (): string => process.versions.tz ?? "unknown";
+diff --git a/src/server/guest.ts b/src/server/guest.ts
+new file mode 100644
+index 0000000..b17d65d
+--- /dev/null
++++ b/src/server/guest.ts
+@@ -0,0 +1,31 @@
++// Guest identity (ARCHITECTURE §4.6): a random cookie; the database stores only its SHA-256.
++import { createHash, randomBytes } from "node:crypto";
++import { eq } from "drizzle-orm";
++import type { Db } from "./db/client";
++import { guests } from "./db/schema";
++
++export const GUEST_COOKIE = "hd_guest";
++const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, base64url
++
++export const hashGuestToken = (token: string) => createHash("sha256").update("guest:v1\0").update(token).digest("hex");
++
++/** Existing guest for this cookie value, or null. Never creates rows. */
++export async function findGuest(db: Db, token: string | undefined): Promise<{ id: string } | null> {
++  if (!token || !TOKEN_RE.test(token)) return null;
++  const row = await db.query.guests.findFirst({ where: eq(guests.cookieHash, hashGuestToken(token)), columns: { id: true } });
++  return row ?? null;
++}
++
++/** Guest for this cookie, creating one (and a new token) when missing or unknown. */
++export async function ensureGuest(db: Db, token: string | undefined): Promise<{ id: string; newToken?: string }> {
++  const existing = await findGuest(db, token);
++  if (existing) return existing;
++  const fresh = randomBytes(32).toString("base64url");
++  const [row] = await db.insert(guests).values({ cookieHash: hashGuestToken(fresh) }).returning({ id: guests.id });
++  return { id: row!.id, newToken: fresh };
++}
++
++export function guestCookie(token: string, secure: boolean): string {
++  return [`${GUEST_COOKIE}=${token}`, "Path=/", "HttpOnly", "SameSite=Lax", `Max-Age=${60 * 60 * 24 * 365}`, secure ? "Secure" : ""]
++    .filter(Boolean).join("; ");
++}
+diff --git a/src/server/http.ts b/src/server/http.ts
+new file mode 100644
+index 0000000..c92b92d
+--- /dev/null
++++ b/src/server/http.ts
+@@ -0,0 +1,39 @@
++// Small helpers shared by route handlers: origin check (CSRF, ARCHITECTURE §6), cookies, JSON errors.
++import { getDb, type Db } from "./db/client";
++import { getEnv, type Env } from "./env";
++import type { Keyring } from "./security/encryption";
++import { loadKeyring } from "./security/keyring";
++
++export const NO_STORE = { "Cache-Control": "no-store" } as const;
++
++export function json(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
++  return Response.json(body, { status, headers: { ...NO_STORE, ...extra } });
++}
++
++/**
++ * POSTs must come from our own pages. Browsers always send Origin on cross-site POSTs and a page cannot forge it.
++ * Accepted: the configured APP_ORIGIN, or the host this request was addressed to (e.g. the Railway staging domain).
++ */
++export function sameOrigin(request: Request, env: Env): boolean {
++  const origin = request.headers.get("origin");
++  if (!origin) return false;
++  if (origin === new URL(env.APP_ORIGIN).origin) return true;
++  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
++  try { return host !== null && new URL(origin).host === host; } catch { return false; }
++}
++
++export function readCookie(request: Request, name: string): string | undefined {
++  for (const part of (request.headers.get("cookie") ?? "").split(";")) {
++    const [k, ...v] = part.trim().split("=");
++    if (k === name) return v.join("=");
++  }
++  return undefined;
++}
++
++export interface ServerContext { env: Env; db: Db; ring: Keyring }
++export function serverContext(): ServerContext {
++  const env = getEnv();
++  return { env, db: getDb(env.DATABASE_URL).db, ring: loadKeyring(env) };
++}
++
++export const isSecureOrigin = (env: Env) => env.APP_ORIGIN.startsWith("https://");
+diff --git a/src/server/observability/sentry.ts b/src/server/observability/sentry.ts
+index 95a2211..8e1efc7 100644
+--- a/src/server/observability/sentry.ts
++++ b/src/server/observability/sentry.ts
+@@ -1,32 +1,61 @@
+-import type { ErrorEvent } from "@sentry/nextjs";
++import type { ErrorEvent, StackFrame } from "@sentry/nextjs";
+ 
+-/** Strip anything that could carry personal data before an event leaves the server (CLAUDE.md rule 9). */
+-export function scrubEvent(event: ErrorEvent): ErrorEvent {
+-  if (event.request) {
+-    delete event.request.data;
+-    delete event.request.cookies;
+-    delete event.request.headers;
+-    delete event.request.query_string;
+-    if (event.request.url) event.request.url = event.request.url.split("?")[0];
++// Allowlist scrubber (CLAUDE.md rule 9): everything not explicitly kept is dropped. Free-form text can carry
++// birth data, emails or tokens, so it is only forwarded when it cannot contain any of them (no digits, no "@").
++const TYPES = new Set(["Error", "TypeError", "RangeError", "SyntaxError", "ReferenceError", "DrizzleQueryError", "ZodError"]);
++const PUBLIC_PATHS = new Set(["/", "/saju", "/method", "/api/places", "/api/charts", "/api/health/live", "/api/health/ready"]);
++const ID_PATHS = /^\/(chart|order|r|refund|api\/charts)\/[^/]+$/;
++const SAFE_TEXT = /^[A-Za-z][A-Za-z ,.:;'()_-]{0,159}$/;
++
++const safeText = (text: string | undefined, fallback: string) => (text && SAFE_TEXT.test(text) ? text : fallback);
++
++function scrubPath(raw: string): string | undefined {
++  try {
++    const url = new URL(raw);
++    const path = PUBLIC_PATHS.has(url.pathname) ? url.pathname
++      : ID_PATHS.test(url.pathname) ? url.pathname.replace(/\/[^/]+$/, "/[id]")
++      : "/[redacted]";
++    return url.origin + path;
++  } catch {
++    return undefined; // never forward an unparseable URL
+   }
+-  delete event.user;
+-  delete event.breadcrumbs;
+-  delete event.extra;
+-  delete event.contexts;
+-  for (const ex of event.exception?.values ?? []) {
+-    // ORM errors embed SQL parameters (hashes, envelopes, utm) after "params:"; keep only the head.
+-    if (ex.value) ex.value = ex.value.split(/\nparams:|params:/)[0]!.slice(0, 300);
++}
++
++/** Code location only: file, function, line. No local variables or source lines (they can hold customer data). */
++function scrubFrame(f: StackFrame): StackFrame {
++  const file = f.filename?.replace(/^.*?(?=(src|node_modules|\.next)\/)/, "").split("?")[0];
++  return { filename: file, function: f.function, lineno: f.lineno, colno: f.colno, in_app: f.in_app, module: f.module };
++}
++
++export function scrubEvent(event: ErrorEvent): ErrorEvent {
++  const clean: ErrorEvent = {
++    type: undefined,
++    event_id: event.event_id,
++    timestamp: event.timestamp,
++    level: event.level,
++    platform: event.platform ?? "javascript",
++    environment: event.environment,
++    release: event.release,
++    sdk: event.sdk,
++  };
++  if (event.message !== undefined) clean.message = safeText(event.message, "Message redacted");
++  const url = event.request?.url ? scrubPath(event.request.url) : undefined;
++  if (url) clean.request = { url, method: event.request?.method };
++  if (event.exception?.values) {
++    clean.exception = {
++      values: event.exception.values.map((ex) => ({
++        type: TYPES.has(ex.type ?? "") ? ex.type : "Error",
++        value: ex.type === "DrizzleQueryError" ? "Failed query (details redacted)" : safeText(ex.value, "Exception details redacted"),
++        mechanism: ex.mechanism ? { type: ex.mechanism.type, handled: ex.mechanism.handled } : undefined,
++        stacktrace: ex.stacktrace?.frames ? { frames: ex.stacktrace.frames.map(scrubFrame) } : undefined,
++      })),
++    };
+   }
+-  if (event.message) event.message = event.message.slice(0, 300);
+-  return event;
++  // Dropped on purpose: user, request data/headers/cookies/query, breadcrumbs, extra, contexts, tags,
++  // fingerprint, transaction, logentry, server_name, stack locals and source context.
++  return clean;
+ }
+ 
+ export function sentryOptions(dsn: string, environment: string) {
+-  return {
+-    dsn,
+-    environment,
+-    sendDefaultPii: false,
+-    tracesSampleRate: 0,
+-    beforeSend: scrubEvent,
+-  };
++  return { dsn, environment, sendDefaultPii: false, tracesSampleRate: 0, beforeSend: scrubEvent };
+ }
+diff --git a/tests/e2e/chart.spec.ts b/tests/e2e/chart.spec.ts
+new file mode 100644
+index 0000000..b7ae4a9
+--- /dev/null
++++ b/tests/e2e/chart.spec.ts
+@@ -0,0 +1,81 @@
++// M2 end-to-end: input → free chart on a phone viewport, including fold, gap and unknown-time cases (TASKS M2).
++import { expect, test, type Page } from "@playwright/test";
++
++test.skip(!(process.env.E2E_DATABASE_URL ?? process.env.TEST_DATABASE_URL), "needs a database");
++
++async function fill(page: Page, date: string, mode: "I know it" | "Roughly" | "I don't know", time: string | null, city: string, pick: RegExp) {
++  await page.goto("/saju");
++  await page.getByLabel("Birth date").fill(date);
++  await page.getByRole("radio", { name: mode }).click();
++  if (time) await page.getByRole("textbox", { name: /birth time/i }).fill(time);
++  await page.getByRole("combobox", { name: "Birth city" }).fill(city);
++  await page.getByRole("option", { name: pick }).first().click();
++  await page.getByRole("button", { name: "See my birth chart · Free" }).click();
++}
++
++test("exact time: landing → input → chart with pillars, Day Master, details and share preview", async ({ page }) => {
++  await page.goto("/");
++  await page.getByRole("link", { name: "See my birth chart · Free" }).click();
++  await expect(page).toHaveURL(/\/saju$/);
++  await fill(page, "1990-05-12", "I know it", "09:30", "seoul", /^Seoul, South Korea$/);
++  await expect(page).toHaveURL(/\/chart\/[0-9a-f-]{36}$/);
++  const pillars = page.getByRole("list", { name: "Your four pillars" });
++  for (const p of ["Year pillar: 庚午", "Month pillar: 辛巳", "Day pillar: 丁丑", "Hour pillar: 甲辰"]) await expect(pillars).toContainText(p);
++  await expect(page.getByRole("heading", { name: /Yin Fire/ })).toBeVisible();
++  await expect(page.getByText("Out of 8 characters")).toBeVisible();
++  await expect(page.getByText(/Your details: May 12, 1990, 9:30 AM, Seoul, South Korea\. Solar time adjusted\./)).toBeVisible();
++  await expect(page.getByRole("button", { name: "Unlock my reading · $3.99" })).toBeDisabled();
++  await page.getByRole("button", { name: "Share my Day Master" }).click();
++  await expect(page.getByRole("img", { name: /Share image: Day Master 丁 Yin Fire/ })).toBeVisible();
++  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
++});
++
++test("fold: 1:30 AM on 1995-10-29 in New York asks which one, then shows the chart", async ({ page }) => {
++  await fill(page, "1995-10-29", "I know it", "01:30", "new york", /^New York City, NY/);
++  await expect(page.getByRole("heading", { name: "Clocks fell back that night, so 1:30 AM happened twice. Which one?" })).toBeVisible();
++  const firstUrl = page.url();
++  await page.getByRole("button", { name: "The second 1:30 AM" }).click();
++  await expect(page).not.toHaveURL(firstUrl);
++  await expect(page.getByRole("list", { name: "Your four pillars" })).toBeVisible();
++  await expect(page.getByText(/1:30 AM \(the second one\)/)).toBeVisible();
++});
++
++test("gap: 2:30 AM on 1995-04-02 in New York is rejected with a clear message", async ({ page }) => {
++  await fill(page, "1995-04-02", "I know it", "02:30", "new york", /^New York City, NY/);
++  await expect(page.locator(".error")).toContainText("didn't exist on this date because clocks sprang forward");
++  await expect(page).toHaveURL(/\/saju$/);
++});
++
++test("unknown time with a day-only split shows the disclosure, no question, hour unknown", async ({ page }) => {
++  await fill(page, "1990-11-03", "I don't know", null, "new york", /^New York City, NY/);
++  await expect(page.getByText("Hour unknown")).toBeVisible();
++  await expect(page.getByText("Out of 6 characters (no hour pillar)")).toBeVisible();
++  await expect(page.locator(".disclosure")).toContainText("If you were born between");
++  await expect(page.getByRole("heading", { name: /When were you born/ })).toHaveCount(0);
++});
++
++test("unknown time on the 立春 date asks for the window, and 'I don't know' keeps the disclosed default", async ({ page }) => {
++  await fill(page, "2024-02-04", "I don't know", null, "new york", /^New York City, NY/);
++  await expect(page.getByRole("heading", { name: "Your chart changes during that day. When were you born?" })).toBeVisible();
++  await page.getByRole("button", { name: "I don't know" }).click();
++  await expect(page.getByRole("heading", { name: /When were you born/ })).toHaveCount(0);
++  await expect(page.locator(".disclosure")).toBeVisible();
++});
++
++test("edit keeps the details and creates a new chart; another browser cannot open it", async ({ page, browser }) => {
++  await fill(page, "1985-03-20", "Roughly", "14:40", "chicago", /^Chicago, IL/);
++  await expect(page).toHaveURL(/\/chart\/[0-9a-f-]{36}$/);
++  const chartUrl = page.url();
++  await expect(page.getByText(/about 2:40 PM/)).toBeVisible();
++  await page.getByRole("link", { name: "Edit" }).click();
++  await expect(page.getByLabel("Birth date")).toHaveValue("1985-03-20");
++  await expect(page.getByRole("combobox", { name: "Birth city" })).toHaveValue("Chicago, IL, United States");
++  await page.getByRole("radio", { name: "I know it" }).click();
++  await page.getByRole("button", { name: "See my birth chart · Free" }).click();
++  await expect(page).not.toHaveURL(chartUrl);
++  await expect(page.getByText(/2:40 PM, Chicago/)).toBeVisible();
++  const other = await browser.newContext();
++  const res = await (await other.newPage()).goto(chartUrl);
++  expect(res?.status()).toBe(404);
++  await other.close();
++});
+diff --git a/tests/e2e/foundation.spec.ts b/tests/e2e/foundation.spec.ts
+index 04db97f..56e8edb 100644
+--- a/tests/e2e/foundation.spec.ts
++++ b/tests/e2e/foundation.spec.ts
+@@ -1,11 +1,11 @@
+-import { expect, test } from "@playwright/test";
+-test("mobile placeholder stays honest and exposes no checkout", async ({ page }) => {
+-  await page.goto("/");
+-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Find your heyday");
+-  await expect(page.getByRole("status")).toContainText("in preparation");
+-  await expect(page.getByRole("button", { name: /pay|buy|checkout/i })).toHaveCount(0);
+-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+-});
++import { expect, test } from "@playwright/test";
++test("mobile placeholder stays honest and exposes no checkout", async ({ page }) => {
++  await page.goto("/");
++  await expect(page.getByRole("heading", { level: 1 })).toContainText("Find your heyday");
++  await expect(page.getByRole("status")).toContainText("Full readings open soon");
++  await expect(page.getByRole("button", { name: /pay|buy|checkout/i })).toHaveCount(0);
++  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
++});
+ 
+ test("city autocomplete API works through the real server", async ({ request }) => {
+   const res = await request.get("/api/places?q=chicago");
+@@ -15,3 +15,13 @@ test("city autocomplete API works through the real server", async ({ request })
+   expect(body.results[0]?.placeId).toMatch(/^gn:\d+$/);
+   expect((await request.get("/api/places")).status()).toBe(400);
+ });
++
++
++test("method page explains uncertainty and attributes the city data on mobile", async ({ page }) => {
++  await page.goto("/");
++  await page.getByRole("link", { name: "How we calculate" }).click();
++  await expect(page.getByRole("heading", { name: "Tradition, with clear assumptions." })).toBeVisible();
++  await expect(page.getByRole("heading", { name: "When you do not know the time" })).toBeVisible();
++  await expect(page.getByRole("link", { name: "GeoNames city data" })).toHaveAttribute("href", "https://www.geonames.org/");
++  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
++});
+diff --git a/tests/engine/golden.test.ts b/tests/engine/golden.test.ts
+index d9649c7..4f5cd47 100644
+--- a/tests/engine/golden.test.ts
++++ b/tests/engine/golden.test.ts
+@@ -5,8 +5,7 @@ import { computeChart, type ChartInput, type Pillars } from "../../src/server/en
+ 
+ type Exp = Record<string, unknown> & { kind: string };
+ interface Case { id: string; input: ChartInput & { place: ChartInput["place"] }; expected: Exp }
+-const cases = (golden as unknown as { cases: Case[]; eotToleranceSeconds: number }).cases;
+-const TOL_MIN = (golden as { eotToleranceSeconds: number }).eotToleranceSeconds / 60;
++const cases = (golden as unknown as { cases: Case[] }).cases;
+ const gz = (p: Pillars) => ({ year: p.year.stem + p.year.branch, month: p.month.stem + p.month.branch, day: p.day.stem + p.day.branch, hour: p.hour ? p.hour.stem + p.hour.branch : null });
+ const naive = (s: string) => Date.parse(s + "Z");
+ 
+@@ -25,8 +24,8 @@ describe("engine matches the oracle on every fixture", () => {
+         expect(a.utc).toBe(e.utc);
+         expect(a.stdOffsetMinutes).toBe(e.stdOffsetMinutes);
+         expect(Math.abs(a.lonCorrectionMin! - (e.lonCorrectionMin as number))).toBeLessThan(0.01);
+-        expect(Math.abs(a.eotMin! - (e.eotMin as number))).toBeLessThanOrEqual(TOL_MIN);
+-        expect(Math.abs(naive(a.trueSolar!) - naive(e.trueSolar as string)) / 60_000).toBeLessThanOrEqual(TOL_MIN + 1 / 60);
++        // Same formula on both sides; allow one second for rounding of LMT offsets.
++        expect(Math.abs(naive(a.solarTime!) - naive(e.solarTime as string))).toBeLessThanOrEqual(1000);
+         expect(a.jieBefore).toBe(e.jieBefore);
+         expect(a.jieAfter).toBe(e.jieAfter);
+         expect(gz(res.chart.pillars)).toEqual(e.pillars);
+diff --git a/tests/engine/review-regressions.test.ts b/tests/engine/review-regressions.test.ts
+new file mode 100644
+index 0000000..ea8e458
+--- /dev/null
++++ b/tests/engine/review-regressions.test.ts
+@@ -0,0 +1,19 @@
++import { expect, it } from "vitest";
++import { spawnSync } from "node:child_process";
++import { computeChart } from "../../src/server/engine";
++const seoul = { label:"Seoul", lat:37.57, lon:126.98, tz:"Asia/Seoul" };
++it("supports January 1900 without an unbounded backwards search", () => {
++  const source = `const {computeChart}=require('./src/server/engine/chart.ts'); const r=computeChart({birthDate:'1900-01-01',time:{kind:'exact',hhmm:'12:00'},place:${JSON.stringify(seoul)}}); console.log(JSON.stringify(r));`;
++  const child = spawnSync(process.execPath, ["--import", "tsx", "--eval", source], { timeout: 8000, encoding:"utf8" });
++  expect(child.error).toBeUndefined();
++  expect(child.status).toBe(0);
++  const result = JSON.parse(child.stdout);
++  expect(result.kind).toBe("computed");
++  expect(result.chart.pillars.year.stem + result.chart.pillars.year.branch).toBe("己亥");
++  expect(result.chart.pillars.month.stem + result.chart.pillars.month.branch).toBe("丙子");
++}, 12000);
++it("returns the existing nonexistent-time error for a whole skipped civil date", () => {
++  expect(computeChart({birthDate:"2011-12-30", time:{kind:"unknown"},
++    place:{label:"Apia",lat:-13.83,lon:-171.75,tz:"Pacific/Apia"}}))
++    .toEqual({kind:"invalid_input",reason:"nonexistent_local_time"});
++});
+diff --git a/tests/engine/tables.test.ts b/tests/engine/tables.test.ts
+index f370c30..e1d46ee 100644
+--- a/tests/engine/tables.test.ts
++++ b/tests/engine/tables.test.ts
+@@ -86,7 +86,8 @@ describe("chart contract", () => {
+   it("unknown time never blocks and discloses the exact alternative window (D06)", () => {
+     const r = computeChart({ birthDate: "1990-11-03", time: { kind: "unknown" }, place: nyc, today: "2026-09-24" });
+     if (r.kind !== "computed") throw new Error("expected computed");
+-    expect(r.chart.disclosure).toBe("If you were born between 11:40 PM and 11:59 PM, your day pillar would be 癸酉 (Yin Water Rooster) instead of 壬申.");
++    // Policy v2 (D28): New York is 3.98 min east of its meridian, so solar midnight falls at 11:56:01 PM local.
++    expect(r.chart.disclosure).toBe("If you were born between 11:57 PM and 11:59 PM, your day pillar would be 癸酉 (Yin Water Rooster) instead of 壬申.");
+     expect(r.questions[0]!.askCustomer).toBe(false); // day-only split: disclose, don't ask (D25)
+     const lichun = computeChart({ birthDate: "2024-02-04", time: { kind: "unknown" }, place: nyc, today: "2026-09-24" });
+     if (lichun.kind !== "computed") throw new Error("expected computed");
+diff --git a/tests/health.test.ts b/tests/health.test.ts
+index 8006730..35311e0 100644
+--- a/tests/health.test.ts
++++ b/tests/health.test.ts
+@@ -1,8 +1,8 @@
+-import { expect, it } from "vitest";
+-import { GET } from "../src/app/api/health/live/route";
+-it("reports liveness without infrastructure details", async () => {
+-  const response = GET();
+-  expect(response.status).toBe(200);
+-  expect(response.headers.get("Cache-Control")).toBe("no-store");
+-  expect(await response.json()).toEqual({ status: "ok" });
+-});
++import { expect, it } from "vitest";
++import { GET } from "../src/app/api/health/live/route";
++it("reports liveness without infrastructure details", async () => {
++  const response = GET();
++  expect(response.status).toBe(200);
++  expect(response.headers.get("Cache-Control")).toBe("no-store");
++  expect(await response.json()).toEqual({ status: "ok" });
++});
+diff --git a/tests/http.test.ts b/tests/http.test.ts
+new file mode 100644
+index 0000000..9d097e6
+--- /dev/null
++++ b/tests/http.test.ts
+@@ -0,0 +1,14 @@
++import { expect, it } from "vitest";
++import { sameOrigin } from "../src/server/http";
++import { parseEnv } from "../src/server/env";
++
++const env = parseEnv({ APP_ENV: "dev", APP_ORIGIN: "https://haeday.com" });
++const req = (headers: Record<string, string>) => new Request("http://internal/api/charts", { method: "POST", headers });
++
++it("accepts the configured origin and the request's own host, rejects everything else", () => {
++  expect(sameOrigin(req({ origin: "https://haeday.com" }), env)).toBe(true);
++  expect(sameOrigin(req({ origin: "https://web-staging.up.railway.app", host: "web-staging.up.railway.app" }), env)).toBe(true);
++  expect(sameOrigin(req({ origin: "https://evil.example", host: "web-staging.up.railway.app" }), env)).toBe(false);
++  expect(sameOrigin(req({ host: "haeday.com" }), env)).toBe(false);
++  expect(sameOrigin(req({ origin: "null", host: "haeday.com" }), env)).toBe(false);
++});
+diff --git a/tests/integration/charts.test.ts b/tests/integration/charts.test.ts
+new file mode 100644
+index 0000000..4992842
+--- /dev/null
++++ b/tests/integration/charts.test.ts
+@@ -0,0 +1,118 @@
++// Chart revisions: encrypted at rest, owner-only, immutable, rate limited (ARCHITECTURE §4.1, §4.6, §6; D16/D17).
++import { randomBytes } from "node:crypto";
++import { eq, sql } from "drizzle-orm";
++import { afterAll, beforeAll, describe, expect, it } from "vitest";
++import type { DbHandle } from "../../src/server/db/client";
++import { chartRevisions } from "../../src/server/db/schema";
++import { answerQuestion, CHARTS_PER_HOUR, createChart, loadChart } from "../../src/server/charts/service";
++import { ensureGuest, findGuest } from "../../src/server/guest";
++import { searchPlaces } from "../../src/server/places";
++import type { Keyring } from "../../src/server/security/encryption";
++import { freshDb, hasDb } from "./helpers";
++
++const ring: Keyring = { activeId: "t1", keys: { t1: randomBytes(32) }, lookupKey: randomBytes(32) };
++const nyc = searchPlaces("new york")[0]!.placeId;
++const chicago = searchPlaces("chicago")[0]!.placeId;
++
++describe.skipIf(!hasDb)("chart revisions", () => {
++  let h: DbHandle;
++  beforeAll(async () => { h = await freshDb(); });
++  afterAll(async () => { await h?.pool.end(); });
++
++  it("creates a guest from a cookie token and finds it again by hash only", async () => {
++    const g = await ensureGuest(h.db, undefined);
++    expect(g.newToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
++    expect((await findGuest(h.db, g.newToken))?.id).toBe(g.id);
++    expect(await findGuest(h.db, "x".repeat(43))).toBeNull();
++    const rows = await h.db.execute(sql`select cookie_hash from guests`);
++    expect(JSON.stringify(rows.rows)).not.toContain(g.newToken!);
++  });
++
++  it("stores input and chart encrypted; no birth data in plaintext columns", async () => {
++    const g = await ensureGuest(h.db, undefined);
++    const r = await createChart(h.db, ring, g.id, { birthDate: "1985-03-20", time: { kind: "exact", hhmm: "14:15" }, placeId: nyc });
++    expect(r.ok).toBe(true);
++    const row = (await h.db.execute(sql`select * from chart_revisions`)).rows[0];
++    const text = JSON.stringify(row);
++    expect(text).not.toMatch(/1985|14:15|New York|己卯|戊午/);
++    expect(text).toMatch(/v1\.t1\./);
++    const loaded = await loadChart(h.db, ring, (r as { id: string }).id, g.id);
++    expect(loaded?.input.placeLabel).toBe("New York City, NY, United States");
++    expect(loaded?.response.kind).toBe("computed");
++    expect(loaded?.ownedOrderId).toBeNull();
++  });
++
++  it("sets deleteAfter 30 days out", async () => {
++    const g = await ensureGuest(h.db, undefined);
++    const now = new Date("2026-09-24T12:00:00Z");
++    const r = await createChart(h.db, ring, g.id, { birthDate: "1990-05-12", time: { kind: "unknown" }, placeId: chicago }, now);
++    const row = await h.db.query.chartRevisions.findFirst({ where: eq(chartRevisions.id, (r as { id: string }).id) });
++    expect(row!.deleteAfter.toISOString()).toBe("2026-10-24T12:00:00.000Z");
++  });
++
++  it("only the owner can load a chart; other guests and bad ids see nothing", async () => {
++    const a = await ensureGuest(h.db, undefined), b = await ensureGuest(h.db, undefined);
++    const r = await createChart(h.db, ring, a.id, { birthDate: "1990-05-12", time: { kind: "exact", hhmm: "09:30" }, placeId: chicago });
++    const id = (r as { id: string }).id;
++    expect(await loadChart(h.db, ring, id, b.id)).toBeNull();
++    expect(await loadChart(h.db, ring, id, null)).toBeNull();
++    expect(await loadChart(h.db, ring, "not-a-uuid", a.id)).toBeNull();
++    expect(await createChart(h.db, ring, b.id, { birthDate: "1990-05-12", time: { kind: "unknown" }, placeId: chicago, chartGroupId: (await loadChart(h.db, ring, id, a.id))!.chartGroupId }))
++      .toEqual({ ok: false, error: "not_found" });
++  });
++
++  it("does not store invalid input (gap time, unknown place, future date)", async () => {
++    const g = await ensureGuest(h.db, undefined);
++    const before = (await h.db.execute(sql`select count(*)::int as n from chart_revisions where guest_id = ${g.id}`)).rows[0] as { n: number };
++    expect(await createChart(h.db, ring, g.id, { birthDate: "1995-04-02", time: { kind: "exact", hhmm: "02:30" }, placeId: nyc }))
++      .toEqual({ ok: false, error: "invalid_input", reason: "nonexistent_local_time" });
++    expect(await createChart(h.db, ring, g.id, { birthDate: "1995-04-02", time: { kind: "unknown" }, placeId: "gn:1" }))
++      .toEqual({ ok: false, error: "invalid_input", reason: "unknown_place" });
++    expect(await createChart(h.db, ring, g.id, { birthDate: "2999-01-01", time: { kind: "unknown" }, placeId: nyc }))
++      .toEqual({ ok: false, error: "invalid_input", reason: "date_out_of_range" });
++    const after = (await h.db.execute(sql`select count(*)::int as n from chart_revisions where guest_id = ${g.id}`)).rows[0] as { n: number };
++    expect(after.n).toBe(before.n);
++  });
++
++  it("fold answer creates a new revision in the same group; the old one is unchanged", async () => {
++    const g = await ensureGuest(h.db, undefined);
++    const r = await createChart(h.db, ring, g.id, { birthDate: "1995-10-29", time: { kind: "exact", hhmm: "01:30" }, placeId: nyc });
++    const id = (r as { id: string }).id;
++    const first = await loadChart(h.db, ring, id, g.id);
++    expect(first!.response.kind).toBe("needs_fold_choice");
++    const beforeRow = await h.db.query.chartRevisions.findFirst({ where: eq(chartRevisions.id, id) });
++    const ans = await answerQuestion(h.db, ring, id, g.id, { foldChoice: "later" });
++    expect(ans.ok).toBe(true);
++    const next = await loadChart(h.db, ring, (ans as { id: string }).id, g.id);
++    expect(next!.chartGroupId).toBe(first!.chartGroupId);
++    expect(next!.input.foldChoice).toBe("later");
++    expect(next!.response.kind).toBe("computed");
++    const afterRow = await h.db.query.chartRevisions.findFirst({ where: eq(chartRevisions.id, id) });
++    expect(afterRow).toEqual(beforeRow);
++    // A fold answer on a chart that has no fold question is refused.
++    expect((await answerQuestion(h.db, ring, next!.id, g.id, { foldChoice: "earlier" })).ok).toBe(false);
++  });
++
++  it("time-window answer accepts only offered windows", async () => {
++    const g = await ensureGuest(h.db, undefined);
++    // 2024-02-04 in New York: 立春 at 03:27:08 local splits the day by year and month (askCustomer).
++    const r = await createChart(h.db, ring, g.id, { birthDate: "2024-02-04", time: { kind: "unknown" }, placeId: nyc });
++    const c = await loadChart(h.db, ring, (r as { id: string }).id, g.id);
++    const q = c!.response.kind === "computed" ? c!.response.questions[0] : undefined;
++    expect(q?.askCustomer).toBe(true);
++    expect((await answerQuestion(h.db, ring, c!.id, g.id, { boundaryChoice: 9 })).ok).toBe(false);
++    const ans = await answerQuestion(h.db, ring, c!.id, g.id, { boundaryChoice: 0 });
++    const next = await loadChart(h.db, ring, (ans as { id: string }).id, g.id);
++    expect(next!.input.boundaryChoice).toBe(0);
++    expect(next!.response.kind === "computed" && next!.response.chart.disclosure).toBeNull();
++  });
++
++  it(`rate limits at ${CHARTS_PER_HOUR} charts per guest per hour`, async () => {
++    const g = await ensureGuest(h.db, undefined);
++    const req = { birthDate: "2000-01-01", time: { kind: "unknown" as const }, placeId: chicago };
++    for (let i = 0; i < CHARTS_PER_HOUR; i++) expect((await createChart(h.db, ring, g.id, req)).ok).toBe(true);
++    expect(await createChart(h.db, ring, g.id, req)).toEqual({ ok: false, error: "rate_limited" });
++    const other = await ensureGuest(h.db, undefined);
++    expect((await createChart(h.db, ring, other.id, req)).ok).toBe(true);
++  });
++});
+diff --git a/tests/places.test.ts b/tests/places.test.ts
+index c0121b4..114c30b 100644
+--- a/tests/places.test.ts
++++ b/tests/places.test.ts
+@@ -73,7 +73,7 @@ describe("placeId resolution (server side)", () => {
+     };
+     // Kiritimati (pop. ~6k) is below the cities15000 cutoff; it stays an engine-only date-line fixture.
+     expect(searchPlaces("kiritimati")).toEqual([]);
+-    for (const [key, place] of Object.entries(manifest.places).filter(([k]) => k !== "kiritimati")) {
++    for (const [key, place] of Object.entries(manifest.places).filter(([k]) => k in queries)) {
+       const hit = searchPlaces(queries[key]!)[0];
+       expect(hit, key).toBeDefined();
+       const p = resolvePlace(hit!.placeId)!;
+diff --git a/tests/sentry-scrub.test.ts b/tests/sentry-scrub.test.ts
+index 20866d1..ead2872 100644
+--- a/tests/sentry-scrub.test.ts
++++ b/tests/sentry-scrub.test.ts
+@@ -9,7 +9,7 @@ it("removes request bodies, cookies, headers, query strings and users from error
+     user: { email: "a@b.co" },
+   } as ErrorEvent);
+   expect(JSON.stringify(event)).not.toMatch(/a@b\.co|1990-01-01|cookie/);
+-  expect(event.request?.url).toBe("https://haeday.com/chart/1");
++  expect(event.request?.url).toBe("https://haeday.com/chart/[id]");
+ });
+ 
+ it("drops breadcrumbs, extra, contexts and SQL params from exception text", () => {
+@@ -24,3 +24,39 @@ it("drops breadcrumbs, extra, contexts and SQL params from exception text", () =
+   expect(text).not.toMatch(/token=abc|a@b\.co|v1\.k1/);
+   expect(event.exception?.values?.[0]?.value).toContain("Failed query");
+ });
++
++
++it("never forwards PII in messages, tags, exception text, path tokens or stack locals", () => {
++  const secret = "synthetic-person@example.test";
++  const event = scrubEvent({
++    message: secret, tags: { email: secret }, fingerprint: [secret],
++    request: { url: "https://haeday.com/login/secret-token?email=" + secret },
++    exception: { values: [{ type: "Error", value: "Birth 1990-01-01 " + secret,
++      stacktrace: { frames: [{ vars: { email: secret }, context_line: secret }] } }] },
++  } as unknown as ErrorEvent);
++  expect(JSON.stringify(event)).not.toMatch(/synthetic-person|1990-01-01|secret-token/);
++});
++
++it("keeps what is needed to debug: code location, error type, safe messages, environment", () => {
++  const event = scrubEvent({
++    type: undefined, environment: "staging", release: "abc", level: "error",
++    message: "Haeday Sentry connection test",
++    request: { url: "https://haeday.com/order/123e4567", method: "POST" },
++    exception: { values: [{ type: "RangeError", value: "date outside jie table", mechanism: { type: "generic", handled: false },
++      stacktrace: { frames: [{ filename: "/app/src/server/engine/astro.ts?x=1", abs_path: "/home/u/app/src/server/engine/astro.ts", function: "jieIndexAt", lineno: 13, colno: 5,
++        pre_context: ["secret"], vars: { a: 1 } }] } }] },
++  } as unknown as ErrorEvent);
++  expect(event.environment).toBe("staging");
++  expect(event.message).toBe("Haeday Sentry connection test");
++  expect(event.request).toEqual({ url: "https://haeday.com/order/[id]", method: "POST" });
++  const ex = event.exception!.values![0]!;
++  expect(ex.value).toBe("date outside jie table");
++  expect(ex.stacktrace!.frames![0]).toEqual({ filename: "src/server/engine/astro.ts", function: "jieIndexAt", lineno: 13, colno: 5, in_app: undefined, module: undefined });
++  expect(JSON.stringify(event)).not.toMatch(/secret|abs_path|\/home\/u/);
++});
++
++it("redacts any message that could hold a date, number or email", () => {
++  for (const m of ["born 1990-01-01", "user a@b.co failed", "order 12 failed", "token=abc"]) {
++    expect(scrubEvent({ type: undefined, message: m } as ErrorEvent).message).toBe("Message redacted");
++  }
++});
+diff --git a/tools/oracle/build_golden.py b/tools/oracle/build_golden.py
+index 94b6e80..136f1f6 100644
+--- a/tools/oracle/build_golden.py
++++ b/tools/oracle/build_golden.py
+@@ -2,11 +2,11 @@
+ Also re-verifies data/jie_1900_2050.json against Skyfield. Run via `pnpm oracle:update` only; CI uses oracle:verify."""
+ import json, sys
+ from astro import jie_instants, TS
+-from compute import JIE_TIMES, compute_case
++from compute import JIE_TIMES, JIE_LONS, compute_case
+ 
+ def verify_jie_table():
+-    fresh = [dt for dt, _ in jie_instants((1899, 8, 1), (2051, 1, 1))]
+-    if [t.replace(tzinfo=None) for t in fresh] != [t.replace(tzinfo=None) for t in JIE_TIMES]:
++    fresh = jie_instants((1899, 8, 1), (2051, 1, 1))
++    if [(t.replace(tzinfo=None), lon) for t, lon in fresh] != [(t.replace(tzinfo=None), lon) for t, lon in zip(JIE_TIMES, JIE_LONS)]:
+         sys.exit("jie table does not match Skyfield recomputation")
+ 
+ def main(out="fixtures/golden.json"):
+@@ -17,7 +17,7 @@ def main(out="fixtures/golden.json"):
+     for c in m["cases"]:
+         case = {**c, "place": m["places"][c["place"]]}
+         cases.append({"id": c["id"], "input": case, "expected": compute_case(case)})
+-    data = {"policyVersion": m["policyVersion"], "tzdata": tzdata.IANA_VERSION, "eotToleranceSeconds": 30, "cases": cases}
++    data = {"policyVersion": m["policyVersion"], "tzdata": tzdata.IANA_VERSION, "cases": cases}
+     json.dump(data, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+     print(f"wrote {len(cases)} cases to {out}")
+ 
+diff --git a/tools/oracle/compute.py b/tools/oracle/compute.py
+index 6658894..430f0a2 100644
+--- a/tools/oracle/compute.py
++++ b/tools/oracle/compute.py
+@@ -1,16 +1,20 @@
+ """Independent oracle for ENGINE_SPEC haeday-chart-v1. Shares only data/jie_1900_2050.json with the engine
+-(after re-verifying it against Skyfield). Everything else (tz conversion, EoT, sexagenary math) is separate code."""
++(after re-verifying it against Skyfield). Everything else (tz conversion, solar time, sexagenary math) is separate code.
++Policy haeday-chart-v2: local mean solar time (longitude correction only, no equation of time; D28)."""
+ from __future__ import annotations
+ import bisect, json
+ from datetime import date, datetime, timedelta, timezone
+-from zoneinfo import ZoneInfo
++from zoneinfo import ZoneInfo, reset_tzpath
++
++# Use the pinned tzdata wheel on Linux as well as Windows, not the host OS database.
++reset_tzpath(())
+ from sexagenary import BRANCHES, JIE_LON_TO_BRANCH, STEMS, day_index, ganzhi, hour_ganzhi, month_ganzhi, year_index
+-from astro import eot_minutes
+ 
+ UTC = timezone.utc
+ _jie = json.load(open("data/jie_1900_2050.json", encoding="utf-8"))["jie"]
+ JIE_TIMES = [datetime.strptime(r["utc"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC) for r in _jie]
+ JIE_LONS = [r["lon"] for r in _jie]
++LICHUN_TIMES = [t for t, lon in zip(JIE_TIMES, JIE_LONS) if lon == 315]
+ 
+ 
+ def iso(dt: datetime) -> str:
+@@ -36,7 +40,7 @@ def wall_to_utc(d: str, hhmm: str, tz: str):
+ 
+ def std_offset_minutes(u: datetime, tz: str) -> int:
+     local = u.astimezone(ZoneInfo(tz))
+-    return int((local.utcoffset() - (local.dst() or timedelta(0))).total_seconds() // 60)
++    return (local.utcoffset() - (local.dst() or timedelta(0))).total_seconds() / 60  # exact (LMT offsets have seconds)
+ 
+ 
+ def wrap180(x: float) -> float:
+@@ -44,23 +48,20 @@ def wrap180(x: float) -> float:
+     return 180.0 if r == -180 else r
+ 
+ 
+-def true_solar(u: datetime, lon: float, tz: str):
++def solar_time(u: datetime, lon: float, tz: str):
+     std = std_offset_minutes(u, tz)
+     meridian = std / 4.0  # degrees (60 min per 15 degrees)
+     lon_corr = wrap180(lon - meridian) * 4.0
+-    eot = eot_minutes(u.replace(tzinfo=None))
+-    ts = u.astimezone(UTC).replace(tzinfo=None) + timedelta(minutes=std + lon_corr + eot)
+-    return ts, std, lon_corr, eot
++    ts = u.astimezone(UTC).replace(tzinfo=None) + timedelta(minutes=std + lon_corr)
++    return ts, std, lon_corr
+ 
+ 
+ def year_month(u: datetime):
+     i = bisect.bisect_right(JIE_TIMES, u) - 1  # boundary instant belongs to the new period
+     lon = JIE_LONS[i]
+-    # Solar year: the most recent 立春 (315) at or before u.
+-    j = i
+-    while JIE_LONS[j] != 315:
+-        j -= 1
+-    solar_year = JIE_TIMES[j].year
++    # Bounded search: the preceding lichun is absent at the table's start.
++    j = bisect.bisect_right(LICHUN_TIMES, u) - 1
++    solar_year = LICHUN_TIMES[j].year if j >= 0 else LICHUN_TIMES[0].year - 1
+     yi = year_index(solar_year)
+     return ganzhi(yi), month_ganzhi(yi % 10, JIE_LON_TO_BRANCH[lon]), JIE_TIMES[i], JIE_TIMES[i + 1]
+ 
+@@ -102,11 +103,11 @@ def warnings_for(u: datetime, ts: datetime, jb: datetime, ja: datetime, birth_ye
+ 
+ 
+ def chart_at(u: datetime, place: dict, with_hour=True, day_boundary="midnight", birth_year=2000, approximate=False):
+-    ts, std, lon_corr, eot = true_solar(u, place["lon"], place["tz"])
++    ts, std, lon_corr = solar_time(u, place["lon"], place["tz"])
+     y, m, jb, ja = year_month(u)
+     d, h = day_hour(ts, day_boundary, with_hour)
+-    return {"utc": iso(u), "stdOffsetMinutes": std, "lonCorrectionMin": round(lon_corr, 3), "eotMin": round(eot, 3),
+-            "trueSolar": ts.strftime("%Y-%m-%dT%H:%M:%S"), "jieBefore": iso(jb), "jieAfter": iso(ja),
++    return {"utc": iso(u), "stdOffsetMinutes": round(std, 3), "lonCorrectionMin": round(lon_corr, 3),
++            "solarTime": ts.strftime("%Y-%m-%dT%H:%M:%S"), "jieBefore": iso(jb), "jieAfter": iso(ja),
+             "pillars": {"year": y, "month": m, "day": d, "hour": h},
+             "warnings": warnings_for(u, ts, jb, ja, birth_year, approximate, with_hour)}
+ 
+@@ -131,7 +132,10 @@ def unknown_groups(birth_date: str, place: dict):
+ def compute_case(case: dict) -> dict:
+     place, t = case["place"], case["time"]
+     if t["kind"] == "unknown":
+-        return {"kind": "unknown", "groups": unknown_groups(case["birthDate"], place)}
++        groups = unknown_groups(case["birthDate"], place)
++        if not groups:  # the whole civil date was skipped (e.g. Samoa 2011-12-30)
++            return {"kind": "invalid_input", "reason": "nonexistent_local_time"}
++        return {"kind": "unknown", "groups": groups}
+     status, cands = wall_to_utc(case["birthDate"], t["hhmm"], place["tz"])
+     if status == "gap":
+         return {"kind": "invalid_input", "reason": "nonexistent_local_time"}
+diff --git a/tools/oracle/crosscheck_lunar.py b/tools/oracle/crosscheck_lunar.py
+index f3f58b3..fdc0a05 100644
+--- a/tools/oracle/crosscheck_lunar.py
++++ b/tools/oracle/crosscheck_lunar.py
+@@ -5,9 +5,9 @@ TypeScript engine.
+ How the comparison is fair: lunar_python has no time zones or solar-time correction and its solar terms are in
+ Beijing time. So
+   * year and month pillars: feed lunar the UTC instant shifted to UTC+8 (Beijing wall clock);
+-  * day and hour pillars: feed lunar our true-solar wall clock, with sect=2 (晚子時 keeps the current day = 야자시).
++  * day and hour pillars: feed lunar our local-mean-solar wall clock, with sect=2 (晚子時 keeps the current day = 야자시).
+ Samples within 5 minutes of a solar term or within 1 minute of an hour/day edge are skipped (the libraries' term
+-instants differ by about a second and EoT methods by seconds).
++instants differ by about a second).
+ 
+ Usage: pnpm oracle:lunar   (python tools/oracle/crosscheck_lunar.py [N=3000])
+ """
+@@ -15,10 +15,14 @@ from __future__ import annotations
+ import json, random, sys
+ from datetime import timedelta
+ from lunar_python import Solar
+-from compute import JIE_TIMES, true_solar, wall_to_utc, year_month, day_hour
++from compute import JIE_TIMES, solar_time, wall_to_utc, year_month, day_hour
+ import bisect
+ 
+ places = json.load(open("fixtures/manifest.json", encoding="utf-8"))["places"]
++# Plus 400 cities drawn from the bundled dataset (every continent, historical tz rules, date-line zones).
++_rows = json.load(open("data/cities.json", encoding="utf-8"))["rows"]
++for _r in random.Random(7).sample(_rows, 400):
++    places[f"gn{_r[0]}"] = {"label": f"{_r[1]}, {_r[3]}", "lat": _r[4], "lon": _r[5], "tz": _r[6]}
+ 
+ 
+ def lunar_bazi(dt, sect=2):
+@@ -43,7 +47,7 @@ def main(n: int = 3000, seed: int = 20260924):
+         u = cands[0]
+         i = bisect.bisect_right(JIE_TIMES, u) - 1
+         near_term = min(abs((u - JIE_TIMES[i]).total_seconds()), abs((JIE_TIMES[i + 1] - u).total_seconds())) < 300
+-        ts, *_ = true_solar(u, place["lon"], place["tz"])
++        ts, *_ = solar_time(u, place["lon"], place["tz"])
+         mins = ts.hour * 60 + ts.minute + ts.second / 60
+         near_edge = min(abs(((mins - 60 * e) + 720) % 1440 - 720) for e in range(1, 24, 2)) < 1 or min(mins, 1440 - mins) < 1
+         if near_term or near_edge:
