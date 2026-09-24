@@ -20,7 +20,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/server/db/migrate.ts",
     "sentry:test": "tsx scripts/sentry-test.ts",
+    "places:build": "tsx scripts/build-cities.ts",
     "oracle:update": "python tools/oracle/gen_jie.py && python tools/oracle/build_golden.py",
+    "oracle:lunar": "python tools/oracle/crosscheck_lunar.py",
     "oracle:verify": "python tools/oracle/verify.py && vitest run tests/engine"
   },
   "dependencies": {
