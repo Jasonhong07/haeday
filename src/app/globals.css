@@ -70,3 +70,17 @@ dialog.sheet::backdrop { background:rgba(8,9,20,.7); }
 dialog.sheet img { width:100%; border-radius:var(--r1); display:block; margin:0 0 12px; }
 .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 @media (prefers-reduced-motion: no-preference) { .fill { transition:width .6s ease; } }
+
+/* ---------- Paid reading (hanji, PRD §6) ---------- */
+.reading { background:var(--hanji); color:var(--ink); min-height:100svh; max-width:none; padding:0; display:block; }
+.reading-head { background:var(--night); color:var(--text); padding:20px 16px 28px; }
+.reading-brand { color:var(--text); text-decoration:none; font-family:var(--serif); font-size:20px; }
+.reading-brand span { color:var(--gold); }
+.reading-dm { font-family:var(--serif); font-size:20px; margin:16px auto 0; max-width:680px; display:flex; align-items:center; gap:12px; }
+.reading-dm-hanja { font-family:var(--hanja); color:var(--gold); font-size:44px; line-height:1; }
+.reading article { max-width:680px; margin:0 auto; padding:28px 20px 48px; font-size:17px; line-height:1.7; }
+.reading h1 { font-family:var(--serif); font-weight:400; font-size:34px; letter-spacing:-.02em; margin:0 0 20px; }
+.reading h2 { font-family:var(--serif); font-weight:400; font-size:23px; margin:32px 0 8px; color:var(--ink); }
+.reading a { color:var(--gold-on-hanji); }
+.reading-disclosure { border-left:3px solid var(--gold-on-hanji); background:#EADFCB; padding:10px 14px; font-size:15px; border-radius:0 12px 12px 0; }
+.reading-fine { font-size:13px; color:#6b6358; margin-top:40px; }

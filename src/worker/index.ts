@@ -1,10 +1,16 @@
-// Worker process: pg-boss consumer + cron. Business handlers arrive in M4/M6.
+// Worker process: pg-boss consumers + cron (ARCHITECTURE §4.4–4.10). Logs carry ids and codes only (CLAUDE.md rule 9).
 import * as Sentry from "@sentry/nextjs";
 import { getDb } from "../server/db/client";
 import { settings } from "../server/db/schema";
+import { emailAdapter, llmAdapter, paymentAdapter, supportEmail } from "../server/deps";
+import { sendQueuedEmail } from "../server/email/outbox";
 import { getEnv } from "../server/env";
+import { RetryGeneration, generateReading, sweepDeadlines } from "../server/fulfillment/generate";
 import { sentryOptions } from "../server/observability/sentry";
+import { reconcileRefunds } from "../server/payments/refunds";
 import { QUEUES, createBoss, ensureQueues } from "../server/queue/boss";
+import { runRetention } from "../server/retention";
+import { loadKeyring } from "../server/security/keyring";
 
 function errorCode(err: unknown): string {
   if (err && typeof err === "object") {
@@ -23,15 +29,64 @@ async function main(): Promise<void> {
   boss.on("error", (err) => { console.error(`[worker] queue error ${errorCode(err)}`); Sentry.captureException(err); });
   await boss.start();
   await ensureQueues(boss);
+
   await boss.schedule(QUEUES.heartbeat, "* * * * *");
   await boss.work(QUEUES.heartbeat, async () => {
     const at = new Date().toISOString();
     await db.insert(settings).values({ key: "worker_heartbeat", value: at, updatedBy: "worker" })
       .onConflictDoUpdate({ target: settings.key, set: { value: at, updatedAt: new Date(), updatedBy: "worker" } });
-    console.log(`[worker] heartbeat ${at}`);
   });
-  console.log("[worker] started");
 
+  // Private-data jobs need the keyring; without it the worker keeps its heartbeat but does not touch orders (fail closed).
+  let ring;
+  try { ring = loadKeyring(env); } catch { console.error("[worker] encryption keys unavailable: order jobs paused"); Sentry.captureMessage("Worker without encryption keys", "error"); }
+  const payments = paymentAdapter(env);
+
+  if (ring && payments) {
+    const deps = {
+      db, ring, boss, payments, llm: llmAdapter(env),
+      approvedSnippetsOnly: env.APP_ENV === "production", dailyCap: env.LLM_DAILY_CAP,
+    };
+    await boss.work<{ orderId: string }>(QUEUES.generateReading, async ([job]) => {
+      if (!job) return;
+      try {
+        const outcome = await generateReading(deps, job.data.orderId);
+        console.log(`[worker] generate order=${job.data.orderId} outcome=${outcome}`);
+      } catch (e) {
+        if (e instanceof RetryGeneration) console.warn(`[worker] generate order=${job.data.orderId} retry code=${e.code}`);
+        else Sentry.captureException(e);
+        throw e;
+      }
+    });
+    await boss.schedule(QUEUES.deadlines, "* * * * *");
+    await boss.work(QUEUES.deadlines, async () => {
+      const r = await sweepDeadlines(deps);
+      if (r.failed) Sentry.captureMessage(`Fulfillment deadline failures: ${r.failed}`, "error");
+      if (r.slow) Sentry.captureMessage(`Paid orders undelivered after 5 minutes: ${r.slow}`, "warning");
+    });
+    await boss.schedule(QUEUES.reconcileRefunds, "*/15 * * * *");
+    await boss.work(QUEUES.reconcileRefunds, async () => { await reconcileRefunds({ db, payments }); });
+  } else {
+    console.warn("[worker] payments or keys not configured: generation, deadlines and refunds are idle");
+  }
+
+  const mail = emailAdapter(env);
+  if (ring && mail) {
+    const send = { db, ring, email: mail, origin: new URL(env.APP_ORIGIN).origin, supportEmail: supportEmail(env) };
+    await boss.work<{ dedupeKey: string }>(QUEUES.sendEmail, async ([job]) => {
+      if (!job) return;
+      const r = await sendQueuedEmail(send, job.data.dedupeKey);
+      if (r === "failed") Sentry.captureMessage("Email permanently failed", "warning");
+    });
+  }
+
+  await boss.schedule(QUEUES.retention, "17 9 * * *"); // daily 09:17 UTC
+  await boss.work(QUEUES.retention, async () => {
+    const r = await runRetention(db);
+    console.log(`[worker] retention ${JSON.stringify(r)}`);
+  });
+
+  console.log("[worker] started");
   const stop = async () => { await boss.stop({ graceful: true }); process.exit(0); };
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);

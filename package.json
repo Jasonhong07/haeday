@@ -21,6 +21,7 @@
     "db:migrate": "tsx src/server/db/migrate.ts",
     "sentry:test": "tsx scripts/sentry-test.ts",
     "places:build": "tsx scripts/build-cities.ts",
+    "samples": "tsx scripts/generate-samples.ts",
     "oracle:update": "python tools/oracle/gen_jie.py && python tools/oracle/build_golden.py",
     "oracle:lunar": "python tools/oracle/crosscheck_lunar.py",
     "oracle:verify": "python tools/oracle/verify.py && vitest run tests/engine"
@@ -34,6 +35,7 @@
     "pg-boss": "12.34.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "stripe": "22.6.2",
     "tsx": "4.23.15",
     "zod": "4.6.5"
   },

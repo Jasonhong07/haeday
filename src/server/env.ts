@@ -12,6 +12,8 @@ const schema = z.object({
   STRIPE_SECRET_KEY: optionalText,
   STRIPE_WEBHOOK_SECRET: optionalText,
   STRIPE_PRICE_SAJU: optionalText,
+  // Stripe Tax must be set up in the Stripe dashboard before this is turned on (docs/QUESTIONS.md Q4).
+  STRIPE_AUTOMATIC_TAX: z.enum(["true", "false"]).default("false").transform(v => v === "true"),
   LLM_API_KEY: optionalText,
   LLM_MODEL: optionalText,
   LLM_DAILY_CAP: z.coerce.number().nonnegative().finite().default(0),
@@ -59,6 +61,11 @@ export function parseEnv(input: Record<string, string | undefined>): Env {
   return result.data;
 }
 export function getEnv(): Env { return parseEnv(process.env); }
+
+/** A paid reading can only be sold when it can also be written (fail closed, D10). */
+export function llmConfigured(env: Env): boolean {
+  return Boolean(env.LLM_API_KEY && env.LLM_MODEL && env.LLM_DAILY_CAP > 0);
+}
 
 export function paymentsConfigured(env: Env): boolean {
   return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_SAJU);

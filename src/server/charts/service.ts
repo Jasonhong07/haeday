@@ -63,7 +63,8 @@ async function storeRevision(db: Db, ring: Keyring, guestId: string, chartGroupI
   const response = computeChart({
     birthDate: input.birthDate, time: input.time, place,
     foldChoice: input.foldChoice, boundaryChoice: input.boundaryChoice,
-    today: now.toISOString().slice(0, 10),
+    // The latest civil date on Earth (UTC+14), so a baby born "today" in Asia or the Pacific is accepted.
+    today: new Date(now.getTime() + 14 * 3_600_000).toISOString().slice(0, 10),
   });
   if (response.kind === "invalid_input") return { ok: false, error: "invalid_input", reason: response.reason };
 

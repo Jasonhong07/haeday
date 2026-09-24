@@ -1,0 +1,51 @@
+# 결제·AI·이메일 연결 가이드 (Jason용, staging = 테스트 모드)
+
+코드는 다 들어가 있습니다. 아래 값만 Railway에 넣으면 staging에서 실제 흐름(차트 → 결제 → 풀이)이 돕니다.
+**키 값은 절대 채팅에 붙여넣지 마세요.** Railway에만 넣으면 됩니다.
+
+## 1. Stripe 테스트 모드 (약 10분)
+1. dashboard.stripe.com 로그인 → 오른쪽 위 **Test mode**(또는 Sandbox) 스위치를 켭니다. 화면 위에 주황색 "Test" 표시가 보이면 됩니다.
+2. **API 키**: 왼쪽 아래 **Developers** → **API keys** → **Secret key** 옆 Reveal → `sk_test_...` 복사.
+3. **상품·가격**: 왼쪽 **Product catalog** → **+ Add product**
+   - Name: `Haeday personal saju reading`
+   - Pricing: **One-off**, `3.99` USD → Save
+   - 저장된 상품을 열어 Pricing 줄의 **Price ID** `price_...` 복사.
+4. **웹훅**: **Developers** → **Webhooks** → **+ Add endpoint**
+   - Endpoint URL: `https://<staging 주소>/api/webhooks/stripe`
+   - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`
+   - 저장 후 **Signing secret** → Reveal → `whsec_...` 복사.
+
+## 2. AI (Anthropic) (약 5분, Q1 확정 후)
+1. console.anthropic.com 가입/로그인 → **Billing**에서 소액 충전(예: $10) → **API Keys** → Create key → `sk-ant-...` 복사.
+2. 모델 이름은 Anthropic 문서의 모델 목록에서 고른 정확한 모델 ID를 그대로 씁니다(Q1).
+
+## 3. Railway 변수 입력 (web, worker **둘 다**)
+railway.app → haeday 프로젝트 → **web** 서비스 → **Variables** → **+ New Variable** (worker 서비스에도 똑같이):
+
+| 이름 | 값 |
+|---|---|
+| `PAYMENTS_MODE` | `test` |
+| `STRIPE_SECRET_KEY` | `sk_test_...` |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` |
+| `STRIPE_PRICE_SAJU` | `price_...` |
+| `LLM_API_KEY` | `sk-ant-...` |
+| `LLM_MODEL` | 모델 ID (Q1) |
+| `LLM_DAILY_CAP` | `50` |
+
+저장하면 자동 재배포됩니다.
+
+## 4. 판매 켜기 (staging)
+관리자 화면(/admin)은 이메일 로그인이 필요해서 도메인·Resend 연결 전에는 못 씁니다. 그 전에는:
+1. Railway → **Postgres** 서비스 → **Data**(또는 Query) 탭
+2. 아래 한 줄 실행:
+   `insert into settings (key, value, updated_by) values ('sales_enabled', 'true', 'jason') on conflict (key) do update set value = 'true';`
+3. 끄려면 `'true'` 두 곳을 `'false'`로 바꿔 실행.
+
+## 5. 테스트 결제
+- staging에서 차트 → **Unlock my reading** → 동의 체크 → Stripe 화면에서 카드 `4242 4242 4242 4242`, 만료일 아무 미래 날짜, CVC `123`, ZIP `10001`.
+- 1분 안에 주문 화면이 "Your reading is ready"로 바뀌면 성공. 이메일은 5번(Resend) 연결 후부터 발송됩니다.
+- **실제 카드로 결제하지 마세요** (D08, Stripe 정책).
+
+## 6. 이메일 (Resend) — 도메인(Q3) 정한 뒤
+resend.com 가입 → Domains → Add domain → 알려주는 DNS 레코드(SPF/DKIM)를 도메인 회사에 입력 → Verified 확인 → API Keys → `re_...` 복사.
+Railway 변수(web, worker): `RESEND_API_KEY`, `EMAIL_FROM` = `Haeday <hello@도메인>`, `SUPPORT_EMAIL` = `hello@도메인`, `ADMIN_EMAILS` = 관리자 이메일(Q10).

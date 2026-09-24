@@ -1,15 +1,17 @@
-# Status (2026-09-24)
+# Status (2026-09-24, evening)
 
-Overall: about **35%** of the launch scope (weighted by effort: M0 10, M1 20, M2 15, M3 20, M4 20, M5 content/quality 5, M6 legal/ops/launch 10).
+**Code: about 80% of launch scope. Launch readiness: about 55%.** The rest is mostly outside the code: keys and accounts, content approval, real test payments on staging, landing page copy, domain.
 
-| Milestone | State |
-|---|---|
-| M0 foundation | done · staging on Railway, CI green, Sentry receiving |
-| M1 chart engine + city search | done · policy v2 (no 균시차, D28), 43 oracle fixtures, lunar_python 3,000/3,000, 포스텔러 10/10, jie table approved |
-| M2 input + free chart | done in code · 145 tests + 9 E2E pass; needs staging check on a phone |
-| M3 payments (Stripe test) | next · needs Stripe account (Jason) |
-| M4 AI reading | needs LLM choice (D11) + key, Resend account |
-| M5 content + quality | needs Jason to approve library copy and score 15 samples |
-| M6 legal, domain, launch | needs domain, legal review (D05) |
+| Milestone | Code | Verified on staging | Blocked by |
+|---|---|---|---|
+| M0 foundation | done | yes | — |
+| M1 engine + city search | done (policy v2, 포스텔러 10/10) | n/a | — |
+| M2 input + free chart | done | not yet | Jason phone check |
+| M3 payments (Stripe test) | done: checkout, webhook, refunds, disputes | no | Stripe test keys (docs/SETUP_PROVIDERS.md) |
+| M4 AI reading | done: prompt, gate, worker, fencing, deadline, reading page | no | Q1 model choice + API key |
+| M5 content + quality | draft library (51 entries) + sample script | no | Q7 approval, 15 samples scored |
+| M6 email, identity, refunds, ops | done: outbox, magic link, /my, refunds page, /admin, crons | no | Q3 domain → Resend, Q10 admin email |
+| M7 legal, analytics, launch | legal drafts done; PostHog, CSP, landing, production env pending | no | Q9, Q14, domain |
 
-Jason open items: Stripe activation, Day Master copy approval, staging check.
+Tests: 22 files / 197 unit+integration, 11 E2E (phone viewport), all green in the cloud workspace.
+Open questions for Jason: docs/QUESTIONS.md. Review recommendations: docs/review/RECOMMENDATIONS_M0-M2.md.

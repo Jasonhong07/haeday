@@ -7,6 +7,9 @@ export const QUEUES = {
   heartbeat: "system.heartbeat",
   generateReading: "reading.generate",
   sendEmail: "email.send",
+  deadlines: "cron.deadlines",
+  reconcileRefunds: "cron.reconcile-refunds",
+  retention: "cron.retention",
 } as const;
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
 
@@ -35,11 +38,25 @@ const POLICIES: Record<QueueName, "standard" | "exclusive"> = {
   [QUEUES.heartbeat]: "standard",
   [QUEUES.generateReading]: "exclusive",
   [QUEUES.sendEmail]: "exclusive",
+  [QUEUES.deadlines]: "standard",
+  [QUEUES.reconcileRefunds]: "standard",
+  [QUEUES.retention]: "standard",
+};
+
+/** Retries (ARCHITECTURE §4.4/§4.5): generation 3 attempts total (~0 s, 20 s, 40–80 s); email 6 attempts with backoff. */
+const RETRY: Record<QueueName, { retryLimit: number; retryDelay: number; retryBackoff: boolean; expireInSeconds: number }> = {
+  [QUEUES.heartbeat]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 60 },
+  [QUEUES.generateReading]: { retryLimit: 2, retryDelay: 20, retryBackoff: true, expireInSeconds: 180 },
+  [QUEUES.sendEmail]: { retryLimit: 5, retryDelay: 30, retryBackoff: true, expireInSeconds: 60 },
+  [QUEUES.deadlines]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 120 },
+  [QUEUES.reconcileRefunds]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 600 },
+  [QUEUES.retention]: { retryLimit: 1, retryDelay: 600, retryBackoff: false, expireInSeconds: 900 },
 };
 
 export async function ensureQueues(boss: PgBoss): Promise<void> {
   for (const name of Object.values(QUEUES)) {
-    await boss.createQueue(name, { policy: POLICIES[name] });
+    await boss.createQueue(name, { policy: POLICIES[name], ...RETRY[name] });
+    await boss.updateQueue(name, RETRY[name]); // queues created by an earlier deploy pick up new retry settings
   }
 }
 

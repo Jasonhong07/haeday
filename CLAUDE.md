@@ -17,7 +17,7 @@ Next.js App Router + TypeScript strict · pnpm · Postgres (Railway) · Drizzle 
 ## Commands
 pnpm dev · pnpm worker · pnpm db:generate (read the SQL) · pnpm db:migrate · pnpm test · pnpm e2e · pnpm check (typecheck+lint+test)
 pnpm oracle:verify (CI, read-only) · pnpm oracle:update (manual; produces a diff Jason approves) · pnpm oracle:lunar (third-party cross-check)
-pnpm places:build (rebuild data/cities.json; needs data/cities15000.txt, see data/README.md)
+pnpm places:build (rebuild data/cities.json; needs data/cities15000.txt, see data/README.md) · pnpm samples (15 sample readings; needs LLM key)
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ## Hard rules

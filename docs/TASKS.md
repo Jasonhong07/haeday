@@ -32,33 +32,33 @@ Rules: one milestone at a time, in order. A box is ticked only with evidence rec
 - [x] E2E: fold case (1995-10-29 01:30 New York), gap case (1995-04-02 02:30), unknown time with day split (+ 立春 window question, edit, cross-browser 404)
 
 ## M3 · Payments in test mode (9/28)
-- [ ] PaymentAdapter + Stripe Checkout (card + wallets), consent checkbox, snapshot on order creation, reuse open session, "already owned"
-- [ ] Webhook per ARCHITECTURE §4.3 with the same-transaction enqueue
-- [ ] Tests: duplicate event; completed after refund (stays refunded); wrong livemode; wrong amount/price; session not matching order; success URL opened without payment; double-click checkout (one order); edit during checkout (paid order keeps its snapshot); SALES soft stop; tax present (subtotal validated, total stored)
-- [ ] Reconciliation function shared with webhook validation
+- [x] PaymentAdapter + Stripe Checkout (card + wallets), consent checkbox, snapshot on order creation, reuse open session, "already owned" · code + tests; staging run needs Stripe test keys (docs/SETUP_PROVIDERS.md)
+- [x] Webhook per ARCHITECTURE §4.3 with the same-transaction enqueue
+- [x] Tests: duplicate event; completed after refund (stays refunded); wrong livemode; wrong amount/price; session not matching order; success URL opened without payment; double-click checkout (one order); edit during checkout (paid order keeps its snapshot); SALES soft stop; tax present (subtotal validated, total stored)
+- [ ] Reconciliation function shared with webhook validation · refund reconciliation done; Stripe session reconciliation (§4.10) pending
 
 ## M4 · Reading generation (9/29)
-- [ ] D11: pick LLM + model with structured output; record cost per reading from 5 real test calls
-- [ ] Prompt per PRD §7 with facts + approved snippets; Zod schema; content checks (word range, forbidden claims list, usedSnippetIds ⊆ provided)
-- [ ] Worker per ARCHITECTURE §4.4 with fencing tokens and deadlines; email_outbox
-- [ ] Tests: timeout twice then success (one reading, one email); refund starts during generation (late result not saved); email provider down (no regeneration, no refund); worker killed mid-generation (retry completes once)
-- [ ] /order/[id] status page and /r/[id] reading page (hanji layout), escaped rendering
+- [ ] D11: pick LLM + model with structured output; record cost per reading from 5 real test calls · adapter built (Anthropic), waiting for Q1 + key
+- [x] Prompt per PRD §7 with facts + approved snippets; Zod schema; content checks (word range, forbidden claims list, usedSnippetIds ⊆ provided)
+- [x] Worker per ARCHITECTURE §4.4 with fencing tokens and deadlines; email_outbox
+- [x] Tests: timeout twice then success (one reading, one email); refund starts during generation (late result not saved); email provider down (no regeneration, no refund); worker killed mid-generation (retry completes once)
+- [x] /order/[id] status page and /r/[id] reading page (hanji layout), escaped rendering
 
 ## M5 · Reading quality (9/30)
-- [ ] Jason finishes content/library (PRD §9) with ids/versions
-- [ ] Script generates 15 samples across all 10 day masters incl. 3 unknown-time charts
+- [ ] Jason finishes content/library (PRD §9) with ids/versions · Claude draft-1 ready for review (D33, Q7)
+- [x] Script generates 15 samples across all 10 day masters incl. 3 unknown-time charts (`pnpm samples`; readings need the LLM key)
 - [ ] Jason scores; fix prompt/library; regenerate; ≥ 12/15 pass and zero factual/unsafe errors
 
 ## M6 · Email, identity, refunds, ops (10/1)
-- [ ] Resend domain verified (SPF/DKIM), delivery email template, outbox worker, bounce handling
-- [ ] Magic link per ARCHITECTURE §4.7; /my; guest→customer linking on verification
-- [ ] Refund service §4.8 + /refund/[orderId] POST + /admin actions; disputes table from webhooks
-- [ ] Tests: attacker pays with admin's email → no admin access; attacker enters victim email → cannot see victim's past orders; two concurrent token uses → one succeeds; cron + admin + customer refund at once → one Stripe refund; refund pending shown as pending
-- [ ] Crons: 5-min alert, 15-min deadline, reconciliation, retention; hard stop button
+- [ ] Resend domain verified (SPF/DKIM), delivery email template, outbox worker, bounce handling · code done; domain pending (Q3)
+- [x] Magic link per ARCHITECTURE §4.7; /my; guest→customer linking on verification
+- [x] Refund service §4.8 + /refund/[orderId] POST + /admin actions; disputes table from webhooks
+- [x] Tests: attacker pays with admin's email → no admin access; attacker enters victim email → cannot see victim's past orders; two concurrent token uses → one succeeds; cron + admin + customer refund at once → one Stripe refund; refund pending shown as pending
+- [x] Crons: 5-min alert, 15-min deadline, reconciliation, retention; hard stop button · Stripe session reconciliation pending
 - [ ] Restore drill (ARCHITECTURE §8) on staging
 
 ## M7 · Legal, analytics, SEO, launch readiness (10/1–10/2 AM)
-- [ ] /privacy /terms /refunds from PRD §12 (Jason edits); seller name per D04
+- [x] /privacy /terms /refunds from PRD §12 (Jason edits); seller name per D04 · drafts, marked "Draft for review"
 - [ ] PostHog allowlisted events; test that sends sample birth data/email through the flow and asserts none reaches PostHog/Sentry/logs
 - [ ] /go with bounded UTM, sitemap, metadata, OG image, PWA manifest, security headers
 - [ ] Production environment created with TEST keys first; smoke test

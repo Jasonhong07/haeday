@@ -7,7 +7,7 @@ import { DAY_MASTERS, ELEMENT_LABEL, OFFER_ITEMS } from "@/content/library";
 import { formatDate, formatTime } from "@/lib/format";
 import { loadChart, type LoadedChart } from "@/server/charts/service";
 import { formatClock, type Pillar, type Pillars } from "@/server/engine";
-import { paymentsConfigured } from "@/server/env";
+import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { findGuest, GUEST_COOKIE } from "@/server/guest";
 import { serverContext } from "@/server/http";
 import { isSalesEnabled } from "@/server/settings";
@@ -67,7 +67,7 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
   const chart = await loadChart(ctx.db, ctx.ring, id, guest?.id ?? null);
   if (!chart) notFound();
   const r = chart.response;
-  const salesOpen = r.kind === "computed" && paymentsConfigured(ctx.env) && (await isSalesEnabled(ctx.db));
+  const salesOpen = r.kind === "computed" && paymentsConfigured(ctx.env) && llmConfigured(ctx.env) && (await isSalesEnabled(ctx.db));
 
   let body: React.ReactNode;
   if (r.kind === "needs_fold_choice") {

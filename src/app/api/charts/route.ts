@@ -3,6 +3,8 @@
 import { createChart, ChartRequest } from "@/server/charts/service";
 import { ensureGuest, GUEST_COOKIE, guestCookie } from "@/server/guest";
 import { isSecureOrigin, json, readCookie, sameOrigin, serverContext } from "@/server/http";
+import { resolvePlace } from "@/server/places";
+import { allowRequest, clientIp } from "@/server/ratelimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +15,9 @@ export async function POST(request: Request): Promise<Response> {
   const body = ChartRequest.safeParse(await request.json().catch(() => null));
   if (!body.success) return json({ error: "bad_request" }, 400);
 
+  // Cheap checks first, so bots and bad input don't create guest rows.
+  if (!resolvePlace(body.data.placeId)) return json({ error: "invalid_input", reason: "unknown_place" }, 422);
+  if (!allowRequest(clientIp(request), "charts", 60, 3_600_000)) return json({ error: "rate_limited" }, 429);
   const guest = await ensureGuest(ctx.db, readCookie(request, GUEST_COOKIE));
   const extra: Record<string, string> = guest.newToken ? { "Set-Cookie": guestCookie(guest.newToken, isSecureOrigin(ctx.env)) } : {};
   const result = await createChart(ctx.db, ctx.ring, guest.id, body.data);
