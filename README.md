@@ -2,7 +2,7 @@
 
 Mobile-first Korean saju web app for English speakers. Free chart → $3.99 reading.
 
-Read in order: `AGENTS.md` → `CLAUDE.md` → `docs/DECISIONS.md` → `docs/APPROVED_CHANGES_2026-09-23.md` → `docs/TASKS.md`. Status: `docs/M0_STATUS.md`, evidence: `docs/LAUNCH_EVIDENCE.md`. Human runbook: `docs/LAUNCH_RUNBOOK_v8.md`.
+Read in order: `AGENTS.md` → `CLAUDE.md` → `docs/DECISIONS.md` → `docs/APPROVED_CHANGES_2026-09-23.md` → `docs/TASKS.md`. Status: `docs/STATUS.md`, evidence: `docs/LAUNCH_EVIDENCE.md`. Human runbook: `docs/LAUNCH_RUNBOOK_v8.md`.
 
 ## Requirements
 Node 24.18.0, pnpm 11.19.0, PostgreSQL 16. Python for the oracle is decided in M1.

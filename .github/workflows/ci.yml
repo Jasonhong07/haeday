@@ -27,9 +27,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install -r tools/oracle/requirements.txt
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      - run: pnpm oracle:verify
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e

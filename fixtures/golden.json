@@ -1,0 +1,1195 @@
+{
+ "policyVersion": "haeday-chart-v1",
+ "tzdata": "2026d",
+ "eotToleranceSeconds": 30,
+ "cases": [
+  {
+   "id": "F01",
+   "input": {
+    "id": "F01",
+    "note": "ordinary Seoul",
+    "birthDate": "1990-05-12",
+    "time": {
+     "kind": "exact",
+     "hhmm": "09:30"
+    },
+    "place": {
+     "label": "Seoul, KR",
+     "lat": 37.5665,
+     "lon": 126.978,
+     "tz": "Asia/Seoul"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1990-05-12T00:30:00Z",
+    "stdOffsetMinutes": 540,
+    "lonCorrectionMin": -32.088,
+    "eotMin": 3.68,
+    "trueSolar": "1990-05-12T09:01:35",
+    "jieBefore": "1990-05-05T18:35:26Z",
+    "jieAfter": "1990-06-05T22:46:18Z",
+    "pillars": {
+     "year": "庚午",
+     "month": "辛巳",
+     "day": "丁丑",
+     "hour": "乙巳"
+    },
+    "warnings": [
+     "hourBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F02",
+   "input": {
+    "id": "F02",
+    "note": "ordinary New York",
+    "birthDate": "1985-03-20",
+    "time": {
+     "kind": "exact",
+     "hhmm": "14:15"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1985-03-20T19:15:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": 3.976,
+    "eotMin": -7.427,
+    "trueSolar": "1985-03-20T14:11:32",
+    "jieBefore": "1985-03-05T15:16:22Z",
+    "jieAfter": "1985-04-04T20:13:35Z",
+    "pillars": {
+     "year": "乙丑",
+     "month": "己卯",
+     "day": "戊午",
+     "hour": "己未"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F03",
+   "input": {
+    "id": "F03",
+    "note": "ordinary Los Angeles (DST)",
+    "birthDate": "2000-09-01",
+    "time": {
+     "kind": "exact",
+     "hhmm": "06:45"
+    },
+    "place": {
+     "label": "Los Angeles, CA, US",
+     "lat": 34.0522,
+     "lon": -118.2437,
+     "tz": "America/Los_Angeles"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2000-09-01T13:45:00Z",
+    "stdOffsetMinutes": -480,
+    "lonCorrectionMin": 7.025,
+    "eotMin": 0.156,
+    "trueSolar": "2000-09-01T05:52:10",
+    "jieBefore": "2000-08-07T05:02:59Z",
+    "jieAfter": "2000-09-07T07:59:09Z",
+    "pillars": {
+     "year": "庚辰",
+     "month": "甲申",
+     "day": "壬戌",
+     "hour": "癸卯"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F04",
+   "input": {
+    "id": "F04",
+    "note": "ordinary Chicago",
+    "birthDate": "1998-12-24",
+    "time": {
+     "kind": "exact",
+     "hhmm": "18:05"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1998-12-25T00:05:00Z",
+    "stdOffsetMinutes": -360,
+    "lonCorrectionMin": 9.481,
+    "eotMin": 0.248,
+    "trueSolar": "1998-12-24T18:14:43",
+    "jieBefore": "1998-12-07T08:01:35Z",
+    "jieAfter": "1999-01-05T19:17:08Z",
+    "pillars": {
+     "year": "戊寅",
+     "month": "甲子",
+     "day": "乙巳",
+     "hour": "乙酉"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F05",
+   "input": {
+    "id": "F05",
+    "note": "tz layer: DST fold without choice",
+    "birthDate": "2024-11-03",
+    "time": {
+     "kind": "exact",
+     "hhmm": "01:30"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "needs_fold_choice",
+    "utcCandidates": [
+     "2024-11-03T05:30:00Z",
+     "2024-11-03T06:30:00Z"
+    ]
+   }
+  },
+  {
+   "id": "F06",
+   "input": {
+    "id": "F06",
+    "note": "tz layer: DST gap",
+    "birthDate": "2024-03-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "02:30"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "invalid_input",
+    "reason": "nonexistent_local_time"
+   }
+  },
+  {
+   "id": "F07",
+   "input": {
+    "id": "F07",
+    "note": "product range fold, customer chose the later 1:30",
+    "birthDate": "1995-10-29",
+    "time": {
+     "kind": "exact",
+     "hhmm": "01:30"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    },
+    "foldChoice": "later"
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1995-10-29T06:30:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": 3.976,
+    "eotMin": 16.22,
+    "trueSolar": "1995-10-29T01:50:11",
+    "jieBefore": "1995-10-08T18:27:12Z",
+    "jieAfter": "1995-11-07T21:35:36Z",
+    "pillars": {
+     "year": "乙亥",
+     "month": "丙戌",
+     "day": "癸巳",
+     "hour": "癸丑"
+    },
+    "warnings": [],
+    "utcCandidates": [
+     "1995-10-29T05:30:00Z",
+     "1995-10-29T06:30:00Z"
+    ]
+   }
+  },
+  {
+   "id": "F08",
+   "input": {
+    "id": "F08",
+    "note": "product range gap",
+    "birthDate": "1995-04-02",
+    "time": {
+     "kind": "exact",
+     "hhmm": "02:30"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "invalid_input",
+    "reason": "nonexistent_local_time"
+   }
+  },
+  {
+   "id": "F09",
+   "input": {
+    "id": "F09",
+    "note": "rollover to previous date: DST + far west in zone",
+    "birthDate": "1995-07-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "00:50"
+    },
+    "place": {
+     "label": "Anchorage, AK, US",
+     "lat": 61.2181,
+     "lon": -149.9003,
+     "tz": "America/Anchorage"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1995-07-15T08:50:00Z",
+    "stdOffsetMinutes": -540,
+    "lonCorrectionMin": -59.601,
+    "eotMin": -5.881,
+    "trueSolar": "1995-07-14T22:44:31",
+    "jieBefore": "1995-07-07T14:00:59Z",
+    "jieAfter": "1995-08-07T23:51:44Z",
+    "pillars": {
+     "year": "乙亥",
+     "month": "癸未",
+     "day": "丙午",
+     "hour": "己亥"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F10",
+   "input": {
+    "id": "F10",
+    "note": "rollover to previous date: west in zone + negative EoT",
+    "birthDate": "1995-02-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "00:20"
+    },
+    "place": {
+     "label": "Detroit, MI, US",
+     "lat": 42.3314,
+     "lon": -83.0458,
+     "tz": "America/Detroit"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1995-02-10T05:20:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": -32.183,
+    "eotMin": -14.254,
+    "trueSolar": "1995-02-09T23:33:33",
+    "jieBefore": "1995-02-04T07:12:50Z",
+    "jieAfter": "1995-03-06T01:16:03Z",
+    "pillars": {
+     "year": "乙亥",
+     "month": "戊寅",
+     "day": "辛未",
+     "hour": "庚子"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F11",
+   "input": {
+    "id": "F11",
+    "note": "true solar 22:58 (hour edge before 子)",
+    "birthDate": "1992-06-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "23:49"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1992-06-11T04:49:00Z",
+    "stdOffsetMinutes": -360,
+    "lonCorrectionMin": 9.481,
+    "eotMin": 0.398,
+    "trueSolar": "1992-06-10T22:58:52",
+    "jieBefore": "1992-06-05T10:22:20Z",
+    "jieAfter": "1992-07-06T20:40:15Z",
+    "pillars": {
+     "year": "壬申",
+     "month": "丙午",
+     "day": "丁巳",
+     "hour": "辛亥"
+    },
+    "warnings": [
+     "hourBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F12",
+   "input": {
+    "id": "F12",
+    "note": "true solar 23:02 (子 hour, same day pillar, next-day stem)",
+    "birthDate": "1992-06-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "23:53"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1992-06-11T04:53:00Z",
+    "stdOffsetMinutes": -360,
+    "lonCorrectionMin": 9.481,
+    "eotMin": 0.397,
+    "trueSolar": "1992-06-10T23:02:52",
+    "jieBefore": "1992-06-05T10:22:20Z",
+    "jieAfter": "1992-07-06T20:40:15Z",
+    "pillars": {
+     "year": "壬申",
+     "month": "丙午",
+     "day": "丁巳",
+     "hour": "壬子"
+    },
+    "warnings": [
+     "hourBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F12z",
+   "input": {
+    "id": "F12z",
+    "note": "same as F12 with zi_23 day boundary",
+    "birthDate": "1992-06-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "23:53"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    },
+    "dayBoundary": "zi_23"
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1992-06-11T04:53:00Z",
+    "stdOffsetMinutes": -360,
+    "lonCorrectionMin": 9.481,
+    "eotMin": 0.397,
+    "trueSolar": "1992-06-10T23:02:52",
+    "jieBefore": "1992-06-05T10:22:20Z",
+    "jieAfter": "1992-07-06T20:40:15Z",
+    "pillars": {
+     "year": "壬申",
+     "month": "丙午",
+     "day": "戊午",
+     "hour": "壬子"
+    },
+    "warnings": [
+     "hourBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F13",
+   "input": {
+    "id": "F13",
+    "note": "true solar 23:58 of the previous date",
+    "birthDate": "1992-06-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "00:48"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1992-06-10T05:48:00Z",
+    "stdOffsetMinutes": -360,
+    "lonCorrectionMin": 9.481,
+    "eotMin": 0.59,
+    "trueSolar": "1992-06-09T23:58:04",
+    "jieBefore": "1992-06-05T10:22:20Z",
+    "jieAfter": "1992-07-06T20:40:15Z",
+    "pillars": {
+     "year": "壬申",
+     "month": "丙午",
+     "day": "丙辰",
+     "hour": "庚子"
+    },
+    "warnings": [
+     "dayBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F14",
+   "input": {
+    "id": "F14",
+    "note": "true solar 00:02",
+    "birthDate": "1992-06-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "00:52"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1992-06-10T05:52:00Z",
+    "stdOffsetMinutes": -360,
+    "lonCorrectionMin": 9.481,
+    "eotMin": 0.59,
+    "trueSolar": "1992-06-10T00:02:04",
+    "jieBefore": "1992-06-05T10:22:20Z",
+    "jieAfter": "1992-07-06T20:40:15Z",
+    "pillars": {
+     "year": "壬申",
+     "month": "丙午",
+     "day": "丁巳",
+     "hour": "庚子"
+    },
+    "warnings": [
+     "dayBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F15",
+   "input": {
+    "id": "F15",
+    "note": "立春 2024 one minute before",
+    "birthDate": "2024-02-04",
+    "time": {
+     "kind": "exact",
+     "hhmm": "03:26"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2024-02-04T08:26:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": 3.976,
+    "eotMin": -13.814,
+    "trueSolar": "2024-02-04T03:16:09",
+    "jieBefore": "2024-01-05T20:49:23Z",
+    "jieAfter": "2024-02-04T08:27:08Z",
+    "pillars": {
+     "year": "癸卯",
+     "month": "乙丑",
+     "day": "戊戌",
+     "hour": "甲寅"
+    },
+    "warnings": [
+     "termBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F16",
+   "input": {
+    "id": "F16",
+    "note": "立春 2024 same minute (03:27:00 is 8 s before 03:27:08)",
+    "birthDate": "2024-02-04",
+    "time": {
+     "kind": "exact",
+     "hhmm": "03:27"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2024-02-04T08:27:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": 3.976,
+    "eotMin": -13.814,
+    "trueSolar": "2024-02-04T03:17:09",
+    "jieBefore": "2024-01-05T20:49:23Z",
+    "jieAfter": "2024-02-04T08:27:08Z",
+    "pillars": {
+     "year": "癸卯",
+     "month": "乙丑",
+     "day": "戊戌",
+     "hour": "甲寅"
+    },
+    "warnings": [
+     "termBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F17",
+   "input": {
+    "id": "F17",
+    "note": "立春 2024 one minute after",
+    "birthDate": "2024-02-04",
+    "time": {
+     "kind": "exact",
+     "hhmm": "03:28"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2024-02-04T08:28:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": 3.976,
+    "eotMin": -13.814,
+    "trueSolar": "2024-02-04T03:18:09",
+    "jieBefore": "2024-02-04T08:27:08Z",
+    "jieAfter": "2024-03-05T02:22:46Z",
+    "pillars": {
+     "year": "甲辰",
+     "month": "丙寅",
+     "day": "戊戌",
+     "hour": "甲寅"
+    },
+    "warnings": [
+     "termBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F18",
+   "input": {
+    "id": "F18",
+    "note": "立秋 1995 before",
+    "birthDate": "1995-08-07",
+    "time": {
+     "kind": "exact",
+     "hhmm": "16:50"
+    },
+    "place": {
+     "label": "Los Angeles, CA, US",
+     "lat": 34.0522,
+     "lon": -118.2437,
+     "tz": "America/Los_Angeles"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1995-08-07T23:50:00Z",
+    "stdOffsetMinutes": -480,
+    "lonCorrectionMin": 7.025,
+    "eotMin": -5.74,
+    "trueSolar": "1995-08-07T15:51:17",
+    "jieBefore": "1995-07-07T14:00:59Z",
+    "jieAfter": "1995-08-07T23:51:44Z",
+    "pillars": {
+     "year": "乙亥",
+     "month": "癸未",
+     "day": "庚午",
+     "hour": "甲申"
+    },
+    "warnings": [
+     "termBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F19",
+   "input": {
+    "id": "F19",
+    "note": "立秋 1995 same minute",
+    "birthDate": "1995-08-07",
+    "time": {
+     "kind": "exact",
+     "hhmm": "16:51"
+    },
+    "place": {
+     "label": "Los Angeles, CA, US",
+     "lat": 34.0522,
+     "lon": -118.2437,
+     "tz": "America/Los_Angeles"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1995-08-07T23:51:00Z",
+    "stdOffsetMinutes": -480,
+    "lonCorrectionMin": 7.025,
+    "eotMin": -5.74,
+    "trueSolar": "1995-08-07T15:52:17",
+    "jieBefore": "1995-07-07T14:00:59Z",
+    "jieAfter": "1995-08-07T23:51:44Z",
+    "pillars": {
+     "year": "乙亥",
+     "month": "癸未",
+     "day": "庚午",
+     "hour": "甲申"
+    },
+    "warnings": [
+     "termBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F20",
+   "input": {
+    "id": "F20",
+    "note": "立秋 1995 after",
+    "birthDate": "1995-08-07",
+    "time": {
+     "kind": "exact",
+     "hhmm": "16:52"
+    },
+    "place": {
+     "label": "Los Angeles, CA, US",
+     "lat": 34.0522,
+     "lon": -118.2437,
+     "tz": "America/Los_Angeles"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1995-08-07T23:52:00Z",
+    "stdOffsetMinutes": -480,
+    "lonCorrectionMin": 7.025,
+    "eotMin": -5.74,
+    "trueSolar": "1995-08-07T15:53:17",
+    "jieBefore": "1995-08-07T23:51:44Z",
+    "jieAfter": "1995-09-08T02:48:34Z",
+    "pillars": {
+     "year": "乙亥",
+     "month": "甲申",
+     "day": "庚午",
+     "hour": "甲申"
+    },
+    "warnings": [
+     "termBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F21",
+   "input": {
+    "id": "F21",
+    "note": "unknown time, day split by positive solar correction",
+    "birthDate": "1990-11-03",
+    "time": {
+     "kind": "unknown"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "unknown",
+    "groups": [
+     {
+      "from": "00:00",
+      "to": "23:39",
+      "minutes": 1420,
+      "pillars": {
+       "year": "庚午",
+       "month": "丙戌",
+       "day": "壬申"
+      }
+     },
+     {
+      "from": "23:40",
+      "to": "23:59",
+      "minutes": 20,
+      "pillars": {
+       "year": "庚午",
+       "month": "丙戌",
+       "day": "癸酉"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "F22",
+   "input": {
+    "id": "F22",
+    "note": "unknown time on a DST date (60+ minute window)",
+    "birthDate": "1992-06-10",
+    "time": {
+     "kind": "unknown"
+    },
+    "place": {
+     "label": "Chicago, IL, US",
+     "lat": 41.8781,
+     "lon": -87.6298,
+     "tz": "America/Chicago"
+    }
+   },
+   "expected": {
+    "kind": "unknown",
+    "groups": [
+     {
+      "from": "00:00",
+      "to": "00:49",
+      "minutes": 50,
+      "pillars": {
+       "year": "壬申",
+       "month": "丙午",
+       "day": "丙辰"
+      }
+     },
+     {
+      "from": "00:50",
+      "to": "23:59",
+      "minutes": 1390,
+      "pillars": {
+       "year": "壬申",
+       "month": "丙午",
+       "day": "丁巳"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "F23",
+   "input": {
+    "id": "F23",
+    "note": "unknown time on the 立春 date (month and year split)",
+    "birthDate": "2024-02-04",
+    "time": {
+     "kind": "unknown"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "unknown",
+    "groups": [
+     {
+      "from": "00:00",
+      "to": "00:09",
+      "minutes": 10,
+      "pillars": {
+       "year": "癸卯",
+       "month": "乙丑",
+       "day": "丁酉"
+      }
+     },
+     {
+      "from": "00:10",
+      "to": "03:27",
+      "minutes": 198,
+      "pillars": {
+       "year": "癸卯",
+       "month": "乙丑",
+       "day": "戊戌"
+      }
+     },
+     {
+      "from": "03:28",
+      "to": "23:59",
+      "minutes": 1232,
+      "pillars": {
+       "year": "甲辰",
+       "month": "丙寅",
+       "day": "戊戌"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "F24",
+   "input": {
+    "id": "F24",
+    "note": "Korea 1955 (UTC+8:30 standard, summer time)",
+    "birthDate": "1955-06-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "10:00"
+    },
+    "place": {
+     "label": "Seoul, KR",
+     "lat": 37.5665,
+     "lon": 126.978,
+     "tz": "Asia/Seoul"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1955-06-15T00:30:00Z",
+    "stdOffsetMinutes": 510,
+    "lonCorrectionMin": -2.088,
+    "eotMin": 0.107,
+    "trueSolar": "1955-06-15T08:58:01",
+    "jieBefore": "1955-06-06T11:43:14Z",
+    "jieAfter": "1955-07-07T22:05:40Z",
+    "pillars": {
+     "year": "乙未",
+     "month": "壬午",
+     "day": "丁未",
+     "hour": "甲辰"
+    },
+    "warnings": [
+     "hourBoundary",
+     "pre1970Tz"
+    ]
+   }
+  },
+  {
+   "id": "F25",
+   "input": {
+    "id": "F25",
+    "note": "Korea 1987 DST",
+    "birthDate": "1987-07-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "00:40"
+    },
+    "place": {
+     "label": "Seoul, KR",
+     "lat": 37.5665,
+     "lon": 126.978,
+     "tz": "Asia/Seoul"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1987-07-14T14:40:00Z",
+    "stdOffsetMinutes": 540,
+    "lonCorrectionMin": -32.088,
+    "eotMin": -5.791,
+    "trueSolar": "1987-07-14T23:02:07",
+    "jieBefore": "1987-07-07T15:38:40Z",
+    "jieAfter": "1987-08-08T01:29:14Z",
+    "pillars": {
+     "year": "丁卯",
+     "month": "丁未",
+     "day": "甲子",
+     "hour": "丙子"
+    },
+    "warnings": [
+     "hourBoundary"
+    ]
+   }
+  },
+  {
+   "id": "F26",
+   "input": {
+    "id": "F26",
+    "note": "Phoenix, no DST",
+    "birthDate": "1990-07-10",
+    "time": {
+     "kind": "exact",
+     "hhmm": "13:05"
+    },
+    "place": {
+     "label": "Phoenix, AZ, US",
+     "lat": 33.4484,
+     "lon": -112.074,
+     "tz": "America/Phoenix"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1990-07-10T20:05:00Z",
+    "stdOffsetMinutes": -420,
+    "lonCorrectionMin": -28.296,
+    "eotMin": -5.349,
+    "trueSolar": "1990-07-10T12:31:21",
+    "jieBefore": "1990-07-07T09:00:29Z",
+    "jieAfter": "1990-08-07T18:45:31Z",
+    "pillars": {
+     "year": "庚午",
+     "month": "癸未",
+     "day": "丙子",
+     "hour": "甲午"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F27",
+   "input": {
+    "id": "F27",
+    "note": "Honolulu, no DST, far west",
+    "birthDate": "1990-03-01",
+    "time": {
+     "kind": "exact",
+     "hhmm": "01:15"
+    },
+    "place": {
+     "label": "Honolulu, HI, US",
+     "lat": 21.3069,
+     "lon": -157.8583,
+     "tz": "Pacific/Honolulu"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1990-03-01T11:15:00Z",
+    "stdOffsetMinutes": -600,
+    "lonCorrectionMin": -31.433,
+    "eotMin": -12.407,
+    "trueSolar": "1990-03-01T00:31:09",
+    "jieBefore": "1990-02-04T02:14:00Z",
+    "jieAfter": "1990-03-05T20:19:17Z",
+    "pillars": {
+     "year": "庚午",
+     "month": "戊寅",
+     "day": "乙丑",
+     "hour": "丙子"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F28a",
+   "input": {
+    "id": "F28a",
+    "note": "Indianapolis 1990 (no DST then)",
+    "birthDate": "1990-07-01",
+    "time": {
+     "kind": "exact",
+     "hhmm": "12:00"
+    },
+    "place": {
+     "label": "Indianapolis, IN, US",
+     "lat": 39.7684,
+     "lon": -86.1581,
+     "tz": "America/Indiana/Indianapolis"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1990-07-01T17:00:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": -44.632,
+    "eotMin": -3.824,
+    "trueSolar": "1990-07-01T11:11:32",
+    "jieBefore": "1990-06-05T22:46:18Z",
+    "jieAfter": "1990-07-07T09:00:29Z",
+    "pillars": {
+     "year": "庚午",
+     "month": "壬午",
+     "day": "丁卯",
+     "hour": "丙午"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F28b",
+   "input": {
+    "id": "F28b",
+    "note": "Indianapolis 2010 (DST)",
+    "birthDate": "2010-07-01",
+    "time": {
+     "kind": "exact",
+     "hhmm": "12:00"
+    },
+    "place": {
+     "label": "Indianapolis, IN, US",
+     "lat": 39.7684,
+     "lon": -86.1581,
+     "tz": "America/Indiana/Indianapolis"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2010-07-01T16:00:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": -44.632,
+    "eotMin": -3.874,
+    "trueSolar": "2010-07-01T10:11:29",
+    "jieBefore": "2010-06-05T18:49:23Z",
+    "jieAfter": "2010-07-07T05:02:24Z",
+    "pillars": {
+     "year": "庚寅",
+     "month": "壬午",
+     "day": "壬子",
+     "hour": "乙巳"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F29",
+   "input": {
+    "id": "F29",
+    "note": "Sydney summer DST, southern hemisphere, no season flip",
+    "birthDate": "1995-01-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "23:10"
+    },
+    "place": {
+     "label": "Sydney, NSW, AU",
+     "lat": -33.8688,
+     "lon": 151.2093,
+     "tz": "Australia/Sydney"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1995-01-15T12:10:00Z",
+    "stdOffsetMinutes": 600,
+    "lonCorrectionMin": 4.837,
+    "eotMin": -9.322,
+    "trueSolar": "1995-01-15T22:05:30",
+    "jieBefore": "1995-01-05T19:34:04Z",
+    "jieAfter": "1995-02-04T07:12:50Z",
+    "pillars": {
+     "year": "甲戌",
+     "month": "丁丑",
+     "day": "丙午",
+     "hour": "己亥"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F30",
+   "input": {
+    "id": "F30",
+    "note": "date line: UTC+14 anchored to civil date via wrap180",
+    "birthDate": "2000-06-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "07:00"
+    },
+    "place": {
+     "label": "Kiritimati, KI",
+     "lat": 1.8721,
+     "lon": -157.4278,
+     "tz": "Pacific/Kiritimati"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2000-06-14T17:00:00Z",
+    "stdOffsetMinutes": 840,
+    "lonCorrectionMin": -29.711,
+    "eotMin": -0.352,
+    "trueSolar": "2000-06-15T06:29:56",
+    "jieBefore": "2000-06-05T08:58:34Z",
+    "jieAfter": "2000-07-06T19:13:56Z",
+    "pillars": {
+     "year": "庚辰",
+     "month": "壬午",
+     "day": "甲辰",
+     "hour": "丁卯"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F31",
+   "input": {
+    "id": "F31",
+    "note": "approximate time near an hour edge",
+    "birthDate": "1985-03-20",
+    "time": {
+     "kind": "approximate",
+     "hhmm": "14:40"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1985-03-20T19:40:00Z",
+    "stdOffsetMinutes": -300,
+    "lonCorrectionMin": 3.976,
+    "eotMin": -7.422,
+    "trueSolar": "1985-03-20T14:36:33",
+    "jieBefore": "1985-03-05T15:16:22Z",
+    "jieAfter": "1985-04-04T20:13:35Z",
+    "pillars": {
+     "year": "乙丑",
+     "month": "己卯",
+     "day": "戊午",
+     "hour": "己未"
+    },
+    "warnings": [
+     "hourBoundary",
+     "approximateTime"
+    ]
+   }
+  }
+ ]
+}

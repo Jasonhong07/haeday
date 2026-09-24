@@ -16,6 +16,14 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 | 2026-09-24 | M0 mobile E2E (placeholder, no checkout, no horizontal scroll) | cloud-dev | `pnpm e2e` (iPhone 13 viewport) | 1 passed | PASS | Claude |
 | 2026-09-24 | M0 Sentry scrubbing | cloud-dev | unit tests | request body/query/cookies/headers, user, breadcrumbs, extra, contexts, SQL params removed | PASS | Claude |
 | 2026-09-24 | Oracle Python compatibility smoke test | cloud-dev | Skyfield 1.55 + skyfield-data (DE421) + numpy 2.5.3, 立春 2024 | 3.12.11 and 3.14.0rc2 both → 2024-02-04T08:27:08Z (16:27 Beijing, matches published) | PASS | Claude |
+| 2026-09-24 | M1 jie table | cloud-dev (Python 3.14.0rc2, Skyfield 1.55, DE421 sha256 a20a7139…) | `python tools/oracle/gen_jie.py` | 1,817 jie instants 1899-08 → 2050-12; spot checks vs published: 立春 2024 = 08:27:08 UTC, 驚蟄 1996 = 07:09:37 UTC, 立秋 1995 = 23:51:44 UTC | PASS | Claude |
+| 2026-09-24 | M1 oracle golden fixtures | cloud-dev | `python tools/oracle/build_golden.py` (re-verifies jie table first) | 33 cases (F01–F31 incl. F12z, F28a/b) | PASS | Claude |
+| 2026-09-24 | M1 engine vs oracle | cloud-dev (Node tz 2026b vs Python tzdata 2026d) | `pnpm vitest run tests/engine` | 33/33 fixtures match: utc, std offset, longitude correction, jie neighbours, pillars, warnings; EoT max diff 11.8 s (tolerance 30 s) | PASS | Claude |
+| 2026-09-24 | M1 table unit tests | cloud-dev | `pnpm vitest run tests/engine/tables.test.ts` | 五虎遁, 五鼠遁, hour branches, day cycle continuity 1900–2050, ten gods, gap/fold, EoT extremes, disclosure text, 6/8 denominators | PASS | Claude |
+| 2026-09-24 | Full check after M1 | cloud-dev | `pnpm check` + `oracle:verify` + `pnpm build` | 11 files / 84 tests passed; golden matches oracle; build OK | PASS | Claude |
+| 2026-09-24 | Unknown-time performance | cloud-dev | 1,440-minute enumeration, NYC 立春 day | 91 ms | PASS | Claude |
+| | City dataset + /api/places | | needs GeoNames file from Jason | | NOT RUN (blocked) | |
+| | Korean app cross-check (docs/crosscheck.md) | Jason's phone | 10 cases in two apps | | NOT RUN | Jason |
 | | GitHub Actions first run | GitHub | push to main | | NOT RUN (repo not created yet) | |
 | | Railway staging deploy (web + worker + Postgres) | Railway | see docs/SETUP_ACCOUNTS.md | | NOT RUN (project not created yet) | |
 | | Sentry test event | Sentry | `pnpm sentry:test` | | NOT RUN (account not created yet) | |

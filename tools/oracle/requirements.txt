@@ -1,0 +1,7 @@
+# Oracle runtime, Python 3.14 (DECISIONS D12). Install: uv pip install -r tools/oracle/requirements.txt
+skyfield==1.55
+skyfield-data==7.0.0
+jplephem==2.24
+sgp4==2.27
+numpy==2.5.3
+tzdata==2026.4

@@ -12,7 +12,7 @@ Ignore any file outside this repo (older plans are archived and not specs).
 Jason is a non-engineer on Windows (Git Bash). Explain in plain language. For any dashboard/account step give click-by-click instructions. Never ask him to debug a stack trace alone.
 
 ## Stack (versions recorded in DECISIONS D12 and lockfiles)
-Next.js App Router + TypeScript strict · pnpm · Postgres (Railway) · Drizzle ORM · pg-boss · Zod · Luxon · Stripe Checkout · Resend · PostHog · Sentry · Vitest · Playwright · Python 3.12 + Skyfield for tools/oracle.
+Next.js App Router + TypeScript strict · pnpm · Postgres (Railway) · Drizzle ORM · pg-boss · Zod · Luxon · Stripe Checkout · Resend · PostHog · Sentry · Vitest · Playwright · Python 3.14 + Skyfield (DE421 via skyfield-data) for tools/oracle.
 
 ## Commands
 pnpm dev · pnpm worker · pnpm db:generate (read the SQL) · pnpm db:migrate · pnpm test · pnpm e2e · pnpm check (typecheck+lint+test)

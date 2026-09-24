@@ -18,7 +18,7 @@ type ChartInput = {
     | { kind: "unknown" };
   placeId: string;                // server resolves lat, lon, IANA tz from the bundled city dataset. Client never sends lat/lon/tz.
   foldChoice?: "earlier" | "later";          // only when the wall time occurs twice
-  boundaryChoice?: "before" | "after";       // only when the customer answers a boundary question (§4)
+  boundaryChoice?: number;                   // index of the time window picked from questions[0].windows (§4, D25)
 };
 ```
 
@@ -34,7 +34,7 @@ type ChartInput = {
    - `standardClock = UTC + standardOffset` (standard offset at that date, DST excluded).
    - `lonCorrectionMin = wrap180(lon − meridian) × 4` where wrap180 maps to (−180°, 180°]. This keeps date-line places anchored to their civil date.
    - `trueSolar = standardClock + lonCorrectionMin + EoT(UTC)` as a full datetime (date may roll forward/back).
-   - EoT: NOAA general solar position approximation, minutes. Record `eotMethod: "noaa-gsp"`.
+   - EoT: NOAA solar calculator (Meeus) formulation, minutes. Record `eotMethod: "noaa-meeus"` (D26).
 5. **Day pillar** from the trueSolar date via the 60-day cycle. Anchor: 1900-01-31 is 甲辰 (verify against at least two independent published 만세력 references and record them in DECISIONS before M1 is done). Boundary policy `dayBoundary: "midnight"`: 23:00–23:59 trueSolar keeps the current day pillar.
 6. **Hour pillar**: branch from trueSolar (子 23:00–00:59, 丑 01:00–02:59, ...). Stem via 五鼠遁 from the day stem; for 23:00–23:59 use the NEXT day's stem.
 7. **Derived facts**, always recomputed from the final pillars of that candidate:
@@ -49,7 +49,6 @@ type ChartInput = {
 type ChartResponse =
   | { kind: "computed"; chart: Chart; alternatives: Candidate[]; warnings: Warning[]; questions: [] }
   | { kind: "needs_fold_choice"; utcCandidates: [string, string] }
-  | { kind: "needs_boundary_choice"; question: BoundaryQuestion; candidates: Candidate[] } // optional UX step, customer may skip → default + disclosure
   | { kind: "invalid_input"; reason: "nonexistent_local_time" | "date_out_of_range" | "unknown_place" | "bad_format" }
   | { kind: "engine_error"; referenceId: string };
 
@@ -70,15 +69,15 @@ Checkout never trusts client flags. It re-reads the stored chart revision (ARCHI
 1. Enumerate every local minute 00:00–23:59 of the birth date (fold minutes twice, gap minutes skipped) and compute year/month/day pillars for each. With minute-precision input this enumeration is exhaustive, so no boundary can be missed.
 2. Group minutes into contiguous windows by (year, month, day) pillars.
 3. If only one group: chart with hour = null, no question.
-4. If several groups:
-   - Ask the customer: "Were you born before or after {h:mm AM/PM}?" with an "I don't know" option.
-   - On "before/after" → use that group.
-   - On "I don't know" → use the group that contains the most local minutes as a **default**, and set `disclosure` to the exact window, e.g. "If you were born between 11:56 PM and midnight, your day pillar would be 乙丑 instead of 甲子." Never call it "most likely".
+4. If several groups (D25): return `computed` with the default chart plus `questions[0] = { type: "timeWindow", windows, defaultIndex }`.
+   - The UI may ask "Were you born between …?" with an "I don't know" option; re-computing with `boundaryChoice = windowIndex` uses that group.
+   - Without a choice → the group that contains the most local minutes is the **default**, and `disclosure` states every other window exactly, e.g. "If you were born between 11:40 PM and 11:59 PM, your day pillar would be 癸酉 (Yin Water Rooster) instead of 壬申." Never call it "most likely".
+   - Observation from fixtures: because the solar correction is almost never zero, nearly every unknown-time date has a small day-split window at one end of the day.
 5. Hour pillar = null, denominator 6, and the reading contract excludes hour-pillar topics.
 6. Approximate time is computed like exact time, `timeBasis: "approximate"`, and `hourBoundary` warnings use ±60 min instead of ±5 min.
 
 ## 5. Canonical jie table and oracle
-- `data/jie_1900_2100.json`: UTC instants (second precision) of the 12 jie (Sun apparent ecliptic longitude 315°, 345°, 15°, …, step 30°), generated ONCE by the Python oracle with Skyfield (DE440s or DE421, record file name and hash), time scale converted TT→UTC. Both engine and oracle read this file for year/month boundaries, so boundaries never disagree.
+- `data/jie_1900_2050.json` (D21): UTC instants (second precision) of the 12 jie (Sun apparent ecliptic longitude 315°, 345°, 15°, …, step 30°), generated ONCE by the Python oracle with Skyfield + DE421 (`skyfield-data`), file name and hash recorded, time scale converted TT→UTC. Both engine and oracle read this file for year/month boundaries, so boundaries never disagree.
 - Engine and oracle compute EoT independently (NOAA vs Skyfield). Tolerance: |ΔEoT| ≤ 30 s. If a trueSolar value is within tolerance of an hour or day boundary, the fixture must assert the warning, not a single answer.
 - `pnpm oracle:verify` (CI, read-only) and `pnpm oracle:update` (manual, produces a diff for Jason to approve). CI never rewrites expected values.
 - The day-cycle anchor is a published fact, not something copied from our own code.
@@ -91,13 +90,14 @@ Minimum 30 cases:
 - F09–F10 date rollover by solar correction (Anchorage summer after midnight, a far-west-in-zone city early morning)
 - F11–F14 trueSolar at 22:58, 23:02, 23:58, 00:02 (hour and day boundaries)
 - F15–F20 立春 and one mid-year jie: 1 min before, exact minute, 1 min after (from the canonical table)
-- F21–F23 unknown time: ordinary date (1 group), date with day split (2 groups + disclosure text), jie date (month split + question)
+- F21–F23 unknown time: day split by solar correction, DST date, jie date (month and year split)
 - F24–F25 historical: Seoul 1955-06 (UTC+8:30), Seoul 1987-07 (Korean DST)
 - F26–F27 no-DST zones: Phoenix, Honolulu
 - F28 Indianapolis 1990 vs 2010 same wall time: assert different UTC offsets
 - F29 Sydney summer (southern hemisphere, no season flip)
-- F30 date-line: Apia or Kiritimati, assert civil-date anchoring via wrap180
+- F30 date-line: Kiritimati (UTC+14), civil-date anchoring via wrap180
+- F12z zi_23 day boundary variant, F28a/F28b Indianapolis pair, F31 approximate time
 Founder cross-check (`docs/crosscheck.md`): 10 cases in two Korean apps with overseas-birth settings. Differences must be explained by policy (EoT, 자시, solar correction) or investigated.
 
 ## 7. Coverage
-`coverageVersion: "cov-1"`: birth years 1900–present, all cities in the bundled dataset. `pre1970Tz` warning only. City dataset: GeoNames cities15000 (CC BY 4.0, attribute on /method). Same-name cities show "City, State/Region, Country" in autocomplete.
+`coverageVersion: "cov-1"`: birth years 1900–present (jie table to 2050), all cities in the bundled dataset. `pre1970Tz` warning only. City dataset: GeoNames cities15000 (CC BY 4.0, attribute on /method). Same-name cities show "City, State/Region, Country" in autocomplete.
