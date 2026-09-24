@@ -10,7 +10,7 @@ import { startCheckout } from "@/server/payments/checkout";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const Body = z.object({ chartRevisionId: z.uuid(), consent: z.literal(true) }).strict();
+const Body = z.object({ chartRevisionId: z.uuid(), consent: z.literal(true), promise: z.enum(["minutes", "24h"]).default("minutes") }).strict();
 
 export async function POST(request: Request): Promise<Response> {
   const ctx = serverContext();
@@ -25,9 +25,9 @@ export async function POST(request: Request): Promise<Response> {
   const r = await startCheckout({
     db: ctx.db, ring: ctx.ring, payments, priceId: ctx.env.STRIPE_PRICE_SAJU!,
     origin: new URL(ctx.env.APP_ORIGIN).origin, automaticTax: ctx.env.STRIPE_AUTOMATIC_TAX,
-    approvedSnippetsOnly: ctx.env.APP_ENV === "production", allowPromotionCodes: true,
-  }, guest.id, body.data.chartRevisionId, true);
+    approvedSnippetsOnly: ctx.env.APP_ENV === "production", allowPromotionCodes: true, dailyCap: ctx.env.LLM_DAILY_CAP,
+  }, guest.id, body.data.chartRevisionId, true, "saju_reading", body.data.promise);
   if (r.ok) return json({ url: r.url });
   const status = r.error === "not_found" ? 404 : r.error === "provider_error" ? 502 : 409;
-  return json({ error: r.error, ...("orderId" in r ? { orderId: r.orderId } : {}) }, status);
+  return json({ error: r.error, ...("orderId" in r ? { orderId: r.orderId } : {}), ...("promise" in r ? { promise: r.promise } : {}) }, status);
 }

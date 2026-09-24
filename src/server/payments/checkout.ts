@@ -16,7 +16,8 @@ import { SNIPPETS_VERSION } from "@/content/snippets";
 import { PROMPT_VERSION, buildFacts, contentReady, selectSnippets } from "../fulfillment/prompt";
 import { PaymentProviderError, type CheckoutSessionRequest, type PaymentAdapter } from "./adapter";
 import { openIssue } from "./issues";
-import { CONSENT_VERSION, SKUS, type Sku } from "./sku";
+import { CONSENT_VERSION, CONSENT_VERSION_DELAYED, SKUS, type Sku } from "./sku";
+import { capacityState } from "../fulfillment/capacity";
 
 export interface CheckoutDeps {
   db: Db;
@@ -29,12 +30,15 @@ export interface CheckoutDeps {
   approvedSnippetsOnly: boolean;
   /** D43: Stripe promotion codes on the Stripe page. */
   allowPromotionCodes?: boolean;
+  /** F13: LLM_DAILY_CAP, for the delivery promise shown before payment. 0 = no capacity check. */
+  dailyCap?: number;
   now?: () => Date;
 }
 
 export type CheckoutResult =
   | { ok: true; url: string; orderId: string }
-  | { ok: false; error: "consent_required" | "sales_closed" | "not_found" | "needs_answer" | "provider_error" | "content_not_ready" }
+  | { ok: false; error: "consent_required" | "sales_closed" | "not_found" | "needs_answer" | "provider_error" | "content_not_ready" | "busy" }
+  | { ok: false; error: "promise_changed"; promise: "minutes" | "24h" }
   | { ok: false; error: "already_owned" | "processing"; orderId: string };
 
 /** Frozen at checkout creation: what the customer is buying (CLAUDE.md rule 6). */
@@ -50,6 +54,8 @@ export interface OrderSnapshot {
   promptVersion: string;
   consentVersion: string;
   createdAt: string;
+  /** D35/D47: the delivery promise the customer saw and accepted. */
+  deliveryPromise?: "minutes" | "24h";
   /** F7: the exact interpretation texts this order pays for; generation uses these, not whatever is deployed later. */
   content?: { snippetsVersion: string; snippets: Array<{ id: string; version: number; text: string; approvedBy?: string | null }> };
 }
@@ -59,7 +65,11 @@ const ACTIVE = ["open", "paid", "refund_pending", "partially_refunded"] as const
 export const SESSION_TTL_MIN = 60;
 export const RESEND_WINDOW_MIN = 25;
 
-export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRevisionId: string, consent: boolean, sku: Sku = "saju_reading"): Promise<CheckoutResult> {
+/**
+ * `quotedPromise` = the delivery promise the checkout page showed (and the customer consented to). The server
+ * re-decides; if it is now WORSE than what was shown, nothing is created and the page must show the new notice.
+ */
+export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRevisionId: string, consent: boolean, sku: Sku = "saju_reading", quotedPromise: "minutes" | "24h" = "minutes"): Promise<CheckoutResult> {
   if (!consent) return { ok: false, error: "consent_required" };
   if (!(await isSalesEnabled(deps.db))) return { ok: false, error: "sales_closed" };
   const chart = await loadChart(deps.db, deps.ring, chartRevisionId, guestId);
@@ -67,6 +77,13 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
   if (chart.response.kind !== "computed") return { ok: false, error: "needs_answer" };
   const facts = buildFacts(chart.response.chart);
   if (!contentReady(facts, deps.approvedSnippetsOnly)) return { ok: false, error: "content_not_ready" };
+  const cap = deps.dailyCap ?? 0;
+  const capacity = cap > 0 ? (await capacityState(deps.db, cap, deps.now?.() ?? new Date())).state : "minutes";
+
+  // The promise for THIS page view (D35/D47/D52). Decided once, before touching any order.
+  if (capacity === "paused") return { ok: false, error: "busy" };
+  if (capacity === "24h" && quotedPromise !== "24h") return { ok: false, error: "promise_changed", promise: "24h" };
+  const promise: "minutes" | "24h" = capacity === "24h" || quotedPromise === "24h" ? "24h" : "minutes";
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const existing = await deps.db.query.orders.findFirst({
@@ -75,6 +92,14 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
     });
     if (existing && existing.paymentStatus !== "open") return { ok: false, error: "already_owned", orderId: existing.id };
 
+    if (existing && existing.deliveryPromise !== promise) {
+      // An open order made under a different promise: never charge under a promise this page did not show.
+      if (existing.stripeSessionId) {
+        try { await deps.payments.expireCheckoutSession(existing.stripeSessionId); } catch { return { ok: false, error: "provider_error" }; }
+      }
+      await deps.db.update(orders).set({ paymentStatus: "expired", updatedAt: new Date() }).where(and(eq(orders.id, existing.id), eq(orders.paymentStatus, "open")));
+      continue;
+    }
     if (existing) {
       if (existing.stripeSessionId) {
         let session;
@@ -91,6 +116,7 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
       return resumed;
     }
 
+    const consentVersion = promise === "24h" ? CONSENT_VERSION_DELAYED : CONSENT_VERSION;
     const now = deps.now?.() ?? new Date();
     const id = randomUUID();
     const snippets = selectSnippets(facts, deps.approvedSnippetsOnly);
@@ -100,7 +126,7 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
       response: chart.response,
       sku, amountCents: SKUS[sku].amountCents, currency: SKUS[sku].currency,
       policyVersion: POLICY_VERSION, libraryVersion: LIBRARY_VERSION, promptVersion: PROMPT_VERSION,
-      consentVersion: CONSENT_VERSION, createdAt: now.toISOString(),
+      consentVersion, createdAt: now.toISOString(), deliveryPromise: promise,
       content: { snippetsVersion: SNIPPETS_VERSION, snippets: snippets.map((s) => ({ id: s.id, version: s.version, text: s.text, approvedBy: s.approvedBy })) },
     };
     const request: CheckoutSessionRequest = {
@@ -118,7 +144,7 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
         id, chartRevisionId, guestId, sku,
         unitAmountCents: SKUS[sku].amountCents, currency: SKUS[sku].currency,
         snapshotEnc: encryptPrivate(snapshot, aad("orders", id, "snapshot"), deps.ring),
-        consentVersion: CONSENT_VERSION, createdAt: now, updatedAt: now,
+        consentVersion, deliveryPromise: promise, createdAt: now, updatedAt: now,
       }).onConflictDoNothing().returning({ id: orders.id });
       if (inserted.length === 0) return false;
       await tx.insert(checkoutAttempts).values({ orderId: id, idempotencyKey: request.idempotencyKey, request, createdAt: now });

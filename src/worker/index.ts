@@ -3,9 +3,11 @@ import * as Sentry from "@sentry/nextjs";
 import { getDb } from "../server/db/client";
 import { settings } from "../server/db/schema";
 import { emailAdapter, llmAdapter, paymentAdapter, supportEmail } from "../server/deps";
-import { sendQueuedEmail } from "../server/email/outbox";
+import { requeueDueEmails, sendQueuedEmail } from "../server/email/outbox";
 import { getEnv } from "../server/env";
-import { RetryGeneration, generateReading, sweepDeadlines } from "../server/fulfillment/generate";
+import { RetryGeneration, generateReading, releaseDeferred, sweepDeadlines } from "../server/fulfillment/generate";
+import { capacityState } from "../server/fulfillment/capacity";
+import { openIssue } from "../server/payments/issues";
 import { sentryOptions } from "../server/observability/sentry";
 import { executeRefund, reconcileRefunds, syncOrderRefunds } from "../server/payments/refunds";
 import { reconcileOpenSessions, reconcileStripeSessions } from "../server/payments/reconcile";
@@ -64,7 +66,15 @@ async function main(): Promise<void> {
       const r = await sweepDeadlines(deps);
       if (r.failed) Sentry.captureMessage(`Fulfillment deadline failures: ${r.failed}`, "error");
       if (r.slow) Sentry.captureMessage(`Paid orders undelivered after 5 minutes: ${r.slow}`, "warning");
+      // D52: past 2× the daily AI cap new payments pause by themselves; make that visible to Jason.
+      const cap = await capacityState(db, env.LLM_DAILY_CAP);
+      if (cap.state === "paused") {
+        await openIssue(db, { kind: "llm_capacity_paused", objectId: new Date().toISOString().slice(0, 10), livemode: env.PAYMENTS_MODE === "live", nextAction: `sales_paused_backlog_${cap.backlog}_raise_LLM_DAILY_CAP_or_wait` });
+        Sentry.captureMessage(`New payments paused: AI backlog ${cap.backlog} ≥ 2× daily cap`, "warning");
+      }
     });
+    await boss.schedule(QUEUES.deferredGeneration, "* * * * *");
+    await boss.work(QUEUES.deferredGeneration, async () => { await releaseDeferred(deps); });
     await boss.schedule(QUEUES.reconcileRefunds, "*/15 * * * *");
     await boss.work(QUEUES.reconcileRefunds, async () => { await reconcileRefunds({ db, payments }); });
     // CC1b F12: missed or failed checkout webhooks. Same validation/transaction as the webhook (applyPaidSession).
@@ -98,7 +108,13 @@ async function main(): Promise<void> {
 
   const mail = emailAdapter(env);
   if (ring && mail) {
-    const send = { db, ring, email: mail, origin: new URL(env.APP_ORIGIN).origin, supportEmail: supportEmail(env) };
+    const send = {
+      db, ring, email: mail, origin: new URL(env.APP_ORIGIN).origin, supportEmail: supportEmail(env),
+      limits: { daily: env.EMAIL_DAILY_LIMIT, monthly: env.EMAIL_MONTHLY_LIMIT, alertAt: env.EMAIL_ALERT_AT },
+      onAlert: (n: number) => Sentry.captureMessage(`Email volume reached ${n} today (plan limit ${env.EMAIL_DAILY_LIMIT}): upgrade the email plan`, "warning"),
+    };
+    await boss.schedule(QUEUES.emailDue, "*/5 * * * *");
+    await boss.work(QUEUES.emailDue, async () => { await requeueDueEmails(db, boss); });
     await boss.work<{ dedupeKey: string }>(QUEUES.sendEmail, async ([job]) => {
       if (!job) return;
       const r = await sendQueuedEmail(send, job.data.dedupeKey);

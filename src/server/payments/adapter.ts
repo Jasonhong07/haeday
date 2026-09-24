@@ -54,6 +54,8 @@ export interface CheckoutDetails {
   promotionCodeId: string | null;
   /** Session creation time (unix seconds). */
   created: number;
+  /** When the provider captured the payment (charge.created, unix seconds); null for $0 orders. */
+  paidAt: number | null;
 }
 
 export type RefundStatus = "pending" | "requires_action" | "succeeded" | "failed" | "canceled";

@@ -81,7 +81,7 @@ export class FakePaymentAdapter implements PaymentAdapter {
       currency: "usd", amountSubtotal: 399, amountTax: 0, amountTotal: 399,
       clientReferenceId: s.req.orderId, metadataOrderId: s.req.orderId,
       lineItems: [{ priceId: s.req.priceId, quantity: 1 }], paymentIntentId: null, customerEmail: null,
-      amountDiscount: 0, amountShipping: 0, promotionCodeId: null, created: s.created,
+      amountDiscount: 0, amountShipping: 0, promotionCodeId: null, created: s.created, paidAt: s.created,
       ...s.details,
     };
   }

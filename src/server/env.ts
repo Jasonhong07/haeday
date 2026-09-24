@@ -18,6 +18,10 @@ const schema = z.object({
   LLM_MODEL: optionalText,
   LLM_DAILY_CAP: z.coerce.number().nonnegative().finite().default(0),
   RESEND_API_KEY: optionalText,
+  // L7/D45: provider plan limits (Resend free: 100/day, 3,000/month) and the alert level. Raise after upgrading.
+  EMAIL_DAILY_LIMIT: z.coerce.number().int().positive().default(100),
+  EMAIL_MONTHLY_LIMIT: z.coerce.number().int().positive().default(3000),
+  EMAIL_ALERT_AT: z.coerce.number().int().positive().default(70),
   EMAIL_FROM: optionalText,
   SUPPORT_EMAIL: z.preprocess((v) => v === "" ? undefined : v, z.email().optional()),
   ADMIN_EMAILS: z.string().default("").transform(v => v.split(",").map(s => s.trim().toLowerCase()).filter(Boolean)).pipe(z.array(z.email())),

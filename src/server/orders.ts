@@ -30,7 +30,7 @@ export async function loadOrderView(db: Db, orderId: string, v: Viewer) {
   else if (o.fulfillmentStatus === "failed") state = "failed_refunded";
   else if (o.paymentStatus === "refunded" || o.paymentStatus === "refund_pending") state = "refunded";
   else state = "processing";
-  return { id: o.id, state, readingId: reading?.id ?? null, chartRevisionId: o.chartRevisionId, paidAt: o.paidAt };
+  return { id: o.id, state, readingId: reading?.id ?? null, chartRevisionId: o.chartRevisionId, paidAt: o.paidAt, delayed: o.deliveryPromise === "24h" };
 }
 
 export async function loadReadingView(db: Db, ring: Keyring, readingId: string, v: Viewer) {

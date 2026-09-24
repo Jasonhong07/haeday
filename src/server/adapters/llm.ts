@@ -1,11 +1,14 @@
 // LLM boundary (D11 pending): business code depends on LlmAdapter only. Provider calls never run inside a DB transaction.
 
 export interface LlmRequest { system: string; user: string; jsonSchema: object; maxTokens: number; timeoutMs: number }
-export interface LlmResult { json: unknown; modelId: string; inputTokens: number; outputTokens: number }
+export interface LlmResult { json: unknown; modelId: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }
 export interface LlmAdapter { readonly modelId: string; generate(req: LlmRequest): Promise<LlmResult> }
 
+/** Usage the provider reported even though the call failed (e.g. no tool output): still billed, so still costed. */
+export interface LlmUsage { modelId: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }
+
 export class LlmError extends Error {
-  constructor(public readonly code: "timeout" | "http" | "no_tool_output" | "network") { super(`LLM ${code}`); this.name = "LlmError"; }
+  constructor(public readonly code: "timeout" | "http" | "no_tool_output" | "network", public readonly usage: LlmUsage | null = null) { super(`LLM ${code}`); this.name = "LlmError"; }
 }
 
 /**
@@ -35,10 +38,17 @@ export class AnthropicLlm implements LlmAdapter {
       throw new LlmError(e instanceof Error && e.name === "TimeoutError" ? "timeout" : "network");
     }
     if (!res.ok) throw new LlmError("http");
-    const body = (await res.json()) as { content?: Array<{ type: string; input?: unknown }>; usage?: { input_tokens?: number; output_tokens?: number }; model?: string };
+    const body = (await res.json()) as {
+      content?: Array<{ type: string; input?: unknown }>; model?: string;
+      usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
+    };
+    const usage: LlmUsage = {
+      modelId: body.model ?? this.modelId, inputTokens: body.usage?.input_tokens ?? 0, outputTokens: body.usage?.output_tokens ?? 0,
+      cacheReadTokens: body.usage?.cache_read_input_tokens ?? 0, cacheWriteTokens: body.usage?.cache_creation_input_tokens ?? 0,
+    };
     const tool = body.content?.find((c) => c.type === "tool_use");
-    if (!tool || tool.input === undefined) throw new LlmError("no_tool_output");
-    return { json: tool.input, modelId: body.model ?? this.modelId, inputTokens: body.usage?.input_tokens ?? 0, outputTokens: body.usage?.output_tokens ?? 0 };
+    if (!tool || tool.input === undefined) throw new LlmError("no_tool_output", usage);
+    return { json: tool.input, ...usage };
   }
 }
 
@@ -51,6 +61,6 @@ export class FakeLlm implements LlmAdapter {
     this.calls.push(req);
     const next = this.queue.shift();
     if (next instanceof Error) throw next;
-    return { json: next, modelId: this.modelId, inputTokens: 1000, outputTokens: 1500 };
+    return { json: next, modelId: this.modelId, inputTokens: 1000, outputTokens: 1500, cacheReadTokens: 0, cacheWriteTokens: 0 };
   }
 }

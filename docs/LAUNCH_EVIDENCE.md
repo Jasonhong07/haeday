@@ -68,3 +68,9 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 - `TEST_DATABASE_URL=…/haeday_test pnpm check` → typecheck OK, lint OK, **263 passed**, 3 skipped (Stripe contract, no key); no `it.fails` left. `pnpm build` OK.
 - Mutation checks: frozen provider body → CO01b; duplicate marking → CO03d; content gate → E.
 - Independent review: Claude sub-agent (read-only) ×2; 9 + 4 findings fixed. ChatGPT review: **NOT RUN**. Stripe test-mode contract: **NOT RUN** (needs `STRIPE_CONTRACT_KEY`, `STRIPE_CONTRACT_PRICE`). 100% promo code end-to-end: **NOT RUN** (browser on staging).
+
+# CC1c delivery · 2026-09-24 · on top of CC1b
+- Details: `review/CHANGES_CC1c.md`. Environment: cloud workspace, Node 22.22, pnpm 11.19, Postgres 16 throwaway `haeday_test`.
+- `TEST_DATABASE_URL=…/haeday_test pnpm check` → typecheck OK, lint OK, **281 passed**, 3 skipped (Stripe contract, no key). `pnpm build` OK.
+- Mutation checks: per-day admission lock → DL03; email budget row lock → EM01; retry release marker → AR5.
+- Independent review: Claude sub-agent (read-only) ×1; 1 major + 5 minor fixed, 1 recorded (test clock). ChatGPT review: **NOT RUN**. Real Anthropic usage fields and Resend limits: **NOT RUN** (keys/domain pending).

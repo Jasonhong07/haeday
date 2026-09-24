@@ -1,3 +1,5 @@
+import { sentToday } from "@/server/email/budget";
+import { randomUUID } from "node:crypto";
 // Owner dashboard (D19): aggregates only, sales switch, stuck orders. Verified session + ADMIN_EMAILS, else 404.
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -12,19 +14,26 @@ export const metadata: Metadata = { title: "Admin · Haeday", robots: { index: f
 export const dynamic = "force-dynamic";
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
 
-export default async function Admin({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+export default async function Admin({ searchParams }: { searchParams: Promise<{ days?: string; retry?: string }> }) {
   const ctx = serverContext();
   const v = await currentViewer(ctx.db);
   if (!(await isAdmin(ctx.db, ctx.ring, v.customerId, ctx.env.ADMIN_EMAILS))) notFound();
-  const days = Math.min(Math.max(Number((await searchParams).days ?? 7) || 7, 1), 365);
+  const sp = await searchParams;
+  const days = Math.min(Math.max(Number(sp.days ?? 7) || 7, 1), 365);
+  const RETRY_MSG: Record<string, string> = {
+    queued: "Retry queued.", granted_and_queued: "Retry queued with one extra attempt.", already_queued: "A generation job was already queued: nothing new started.",
+    duplicate_request: "That retry was already submitted.", not_allowed: "Retry not allowed (refunded, refund in progress, dispute, or not paid).",
+  };
+  const retryMsg = sp.retry ? RETRY_MSG[sp.retry] : undefined;
   resetSettingsCache();
-  const [d, stuck, issues, sales, heartbeat] = await Promise.all([
-    dashboard(ctx.db, days), undelivered(ctx.db), openIssues(ctx.db), isSalesEnabled(ctx.db),
+  const [d, stuck, issues, sales, emailsToday, heartbeat] = await Promise.all([
+    dashboard(ctx.db, days), undelivered(ctx.db), openIssues(ctx.db), isSalesEnabled(ctx.db), sentToday(ctx.db),
     ctx.db.query.settings.findFirst({ where: (s, { eq }) => eq(s.key, "worker_heartbeat") }),
   ]);
   const conv = d.chartBrowsers ? ((d.paidOrders / d.chartBrowsers) * 100).toFixed(1) : "0.0";
   return (
     <main className="app" style={{ maxWidth: 760 }}>
+      {retryMsg && <p className="notice card" role="status">{retryMsg}</p>}
       <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday admin</Link></header>
       <p className="note">Last {days} days, UTC · <Link href="/admin?days=1">1d</Link> · <Link href="/admin?days=7">7d</Link> · <Link href="/admin?days=30">30d</Link> · Worker heartbeat: {String(heartbeat?.value ?? "none")}</p>
       <section className="card">
@@ -38,6 +47,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <section className="card">
         <h2>Funnel and money</h2>
         <p>Browsers that made a chart (device-based): <b>{d.chartBrowsers}</b> · charts: {d.chartsCreated} · checkouts started: {d.checkoutsStarted}</p>
+        <p>AI: {d.aiAttempts} calls · ${(d.aiCostMicroUsd / 1e6).toFixed(2)} total · {d.aiCostPerDeliveredMicroUsd === null ? "no deliveries yet" : `$${(d.aiCostPerDeliveredMicroUsd / 1e6).toFixed(3)} per delivered reading`}{d.aiUnknownCostAttempts ? ` · ${d.aiUnknownCostAttempts} calls with unknown cost (model not priced or timed out)` : ""}</p>
+        <p>Emails sent today (UTC): {emailsToday}</p>
         <p>Paid orders: <b>{d.paidOrders}</b> · free (100% code): {d.freeOrders} · conversion (paid ÷ chart browsers, activity-based): {conv}%</p>
         <p>Gross {usd(d.grossCents)} · tax {usd(d.taxCents)} · refunds {usd(d.refundCents)} ({d.refundsCount}) · <b>net {usd(d.netCents)}</b></p>
         <p className="note">Landing visitors need PostHog (not connected yet).</p>
@@ -47,7 +58,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         {stuck.map((o) => (
           <div key={o.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", margin: "8px 0" }}>
             <code style={{ fontSize: 12 }}>{o.id.slice(0, 8)}</code> <span className="note">{o.fulfillment} · paid {o.paidAt?.toISOString().slice(0, 16)}</span>
-            <form method="post" action={`/api/admin/orders/${o.id}/retry`}><button className="btn btn-ghost" style={{ minHeight: 40, width: "auto", padding: "0 14px" }}>Retry</button></form>
+            <form method="post" action={`/api/admin/orders/${o.id}/retry`}><input type="hidden" name="requestId" value={randomUUID()} /><button className="btn btn-ghost" style={{ minHeight: 40, width: "auto", padding: "0 14px" }}>Retry</button></form>
             <form method="post" action={`/api/admin/orders/${o.id}/refund`}><button className="btn btn-ghost" style={{ minHeight: 40, width: "auto", padding: "0 14px" }}>Refund</button></form>
           </div>
         ))}

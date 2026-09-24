@@ -31,6 +31,7 @@ railway.app → haeday 프로젝트 → **web** 서비스 → **Variables** → 
 | `LLM_API_KEY` | `sk-ant-...` |
 | `LLM_MODEL` | 모델 ID (Q1) |
 | `LLM_DAILY_CAP` | `100` (출시 때 `1000`) |
+| `EMAIL_DAILY_LIMIT` · `EMAIL_MONTHLY_LIMIT` · `EMAIL_ALERT_AT` | 넣지 않으면 Resend 무료 플랜 기준 100 · 3000 · 70. 유료로 바꾸면 그 플랜 숫자로 변경 |
 
 저장하면 자동 재배포됩니다.
 

@@ -22,10 +22,10 @@ describe.skipIf(!hasDb)("admin dashboard data", () => {
     const d = await dashboard(h.db, 7);
     expect(d).toMatchObject({ paidOrders: 2, grossCents: 828, taxCents: 30, refundCents: 429, netCents: 369 });
     expect((await undelivered(h.db)).map((o) => o.id)).toContain(a!.id);
-    expect(await retryOrder(h.db, boss, a!.id, admin!.id)).toBe(true);
+    expect(await retryOrder(h.db, boss, a!.id, admin!.id)).toBe("queued");
     expect((await h.db.query.orders.findFirst({ where: eq(orders.id, a!.id) }))!.fulfillmentStatus).toBe("queued");
     const n = (await h.db.execute(sql`select count(*)::int as n from pgboss.job where name = ${QUEUES.generateReading} and singleton_key = ${a!.id}`)).rows[0] as { n: number };
     expect(n.n).toBe(1);
-    expect(await retryOrder(h.db, boss, b!.id, admin!.id)).toBe(false); // refunded orders are never retried
+    expect(await retryOrder(h.db, boss, b!.id, admin!.id)).toBe("not_allowed"); // refunded orders are never retried
   });
 });

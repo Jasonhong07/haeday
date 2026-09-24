@@ -283,7 +283,7 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const reading = await queueReading(orderId);
     llm.generate = async () => {
       await requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" });
-      return { json: reading, modelId: "fake", inputTokens: 1, outputTokens: 1 };
+      return { json: reading, modelId: "fake", inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 };
     };
     expect(await generateReading(gen, orderId)).toBe("skipped");
     expect(await h.db.select().from(readings).where(eq(readings.orderId, orderId))).toHaveLength(0);
@@ -295,8 +295,8 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const reading = await queueReading(orderId);
     let inner: Promise<unknown> | null = null;
     llm.generate = async () => {
-      if (!inner) { inner = generateReading({ ...gen, llm: { modelId: "x", generate: async () => ({ json: reading, modelId: "x", inputTokens: 1, outputTokens: 1 }) } }, orderId); await inner; }
-      return { json: reading, modelId: "fake", inputTokens: 1, outputTokens: 1 };
+      if (!inner) { inner = generateReading({ ...gen, llm: { modelId: "x", generate: async () => ({ json: reading, modelId: "x", inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 }) } }, orderId); await inner; }
+      return { json: reading, modelId: "fake", inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 };
     };
     expect(await generateReading(gen, orderId)).toBe("skipped");
     expect(await inner).toBe("delivered");

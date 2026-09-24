@@ -82,6 +82,9 @@ export const orders = pgTable("orders", {
   discountCents: integer("discount_cents"),        // F15: from the provider session (total_details.amount_discount)
   promotionCodeId: text("promotion_code_id"),      // Stripe promotion_code id (not the typed code)
   duplicateOfOrderId: uuid("duplicate_of_order_id"), // D51: a late payment for something already owned (refunded)
+  deliveryPromise: text("delivery_promise").notNull().default("minutes"), // D35/D47: "minutes" | "24h", shown before payment
+  fulfillmentNotBefore: ts("fulfillment_not_before"),  // F13: deferred generation (next UTC day) for "24h" orders
+  providerPaidAt: ts("provider_paid_at"),              // F13: when the provider captured the payment (charge.created)
   piiDeletedAt: ts("pii_deleted_at"),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").notNull().defaultNow(),
@@ -116,6 +119,14 @@ export const generationAttempts = pgTable("generation_attempts", {
   fencingToken: uuid("fencing_token").notNull().defaultRandom(),
   status: attemptStatus("status").notNull().default("running"),
   errorCode: text("error_code"),
+  // F14: provider usage for this attempt (null = unknown, e.g. timeout) and the price version used to cost it.
+  modelId: text("model_id"),
+  inputTokens: integer("tokens_in"),
+  outputTokens: integer("tokens_out"),
+  cacheReadTokens: integer("tokens_cache_read"),
+  cacheWriteTokens: integer("tokens_cache_write"),
+  costMicroUsd: integer("cost_micro_usd"),
+  pricingVersion: text("pricing_version"),
   startedAt: ts("started_at").notNull().defaultNow(),
   finishedAt: ts("finished_at"),
 }, (t) => [uniqueIndex("generation_attempts_order_no_uq").on(t.orderId, t.attemptNo)]);
@@ -188,6 +199,21 @@ export const checkoutAttempts = pgTable("checkout_attempts", {
   sessionId: text("session_id"),
   createdAt: createdAt(),
   lastTriedAt: ts("last_tried_at"),
+});
+
+/** D36: an extra generation attempt granted by an admin retry. One row per admin request (double click = one grant). */
+export const attemptGrants = pgTable("attempt_grants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id),
+  requestId: text("request_id").notNull().unique(),
+  actorCustomerId: uuid("actor_customer_id"),
+  createdAt: createdAt(),
+});
+
+/** L7/D45: emails sent per UTC day (all kinds), reserved atomically before each send. */
+export const emailBudget = pgTable("email_budget", {
+  day: text("day").primaryKey(), // YYYY-MM-DD (UTC)
+  sent: integer("sent").notNull().default(0),
 });
 
 /**

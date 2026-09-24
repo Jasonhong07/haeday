@@ -11,6 +11,7 @@ import type { CheckoutDetails, PaymentAdapter, PaymentEvent } from "./adapter";
 import { FULFILLMENT_DEADLINE_MIN, SKUS } from "./sku";
 import { openIssue } from "./issues";
 import { claimRefundInTx, markRefundSyncInTx } from "./refunds";
+import { DELAYED_PROMISE_MS } from "../fulfillment/capacity";
 
 export interface WebhookDeps {
   db: Db;
@@ -144,9 +145,15 @@ export async function applyPaidSession(deps: WebhookDeps, details: CheckoutDetai
     }
 
     const email = details.customerEmail;
+    // D47: a "24h" order's deadline runs from when the customer actually paid (provider time), not from when we
+    // happened to hear about it; a "minutes" order keeps the 15-minute worker deadline.
+    const providerPaidAt = details.paidAt ? new Date(details.paidAt * 1000) : null;
+    const deadline = o.deliveryPromise === "24h"
+      ? new Date(Math.min(now.getTime(), (providerPaidAt ?? now).getTime()) + DELAYED_PROMISE_MS)
+      : new Date(now.getTime() + FULFILLMENT_DEADLINE_MIN * 60_000);
     const moved = await tx.update(orders).set({
-      paymentStatus: "paid", ...moneyFacts, fulfillmentStatus: "queued",
-      fulfillmentDeadlineAt: new Date(now.getTime() + FULFILLMENT_DEADLINE_MIN * 60_000),
+      paymentStatus: "paid", ...moneyFacts, fulfillmentStatus: "queued", providerPaidAt,
+      fulfillmentDeadlineAt: deadline,
       deliveryEmailEnc: email ? encryptPrivate(email, aad("orders", o.id, "delivery_email"), deps.ring) : null,
       deliveryEmailLookup: email ? emailLookup(email, deps.ring) : null,
     }).where(and(eq(orders.id, o.id), inArray(orders.paymentStatus, ["open", "expired"]))).returning({ id: orders.id });

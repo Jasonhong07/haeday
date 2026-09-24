@@ -14,7 +14,7 @@ describe("Anthropic adapter", () => {
     }) as unknown as typeof fetch;
     const llm = new AnthropicLlm("sk-test", "m-1", fake);
     const r = await llm.generate({ system: "s", user: "u", jsonSchema: { type: "object" }, maxTokens: 100, timeoutMs: 1000 });
-    expect(r).toEqual({ json: { ok: true }, modelId: "m-1", inputTokens: 10, outputTokens: 20 });
+    expect(r).toEqual({ json: { ok: true }, modelId: "m-1", inputTokens: 10, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0 });
     expect(sent!.url).toBe("https://api.anthropic.com/v1/messages");
     expect(sent!.body).toMatchObject({ model: "m-1", tool_choice: { type: "tool", name: "write_reading" }, max_tokens: 100 });
     expect(sent!.headers["x-api-key"]).toBe("sk-test");

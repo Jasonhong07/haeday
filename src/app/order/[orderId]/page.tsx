@@ -25,14 +25,18 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
   const ctx = serverContext();
   const view = await loadOrderView(ctx.db, orderId, await currentViewer(ctx.db));
   if (!view) notFound();
-  const [title, body] = COPY[view.state];
+  const [title, copyBody] = COPY[view.state];
+  // D35/D47: orders sold with the 24-hour promise say so while waiting.
+  const body = view.state === "processing" && view.delayed
+    ? "It's busy right now, so your reading will be ready within 24 hours. We'll email you the link. If it isn't ready by then, you get an automatic full refund."
+    : copyBody;
   const waiting = view.state === "awaiting_payment" || view.state === "processing";
   return (
     <main className="app">
       <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday</Link></header>
       <h1>{title}</h1>
       {body && <p className="lede" role="status">{body}</p>}
-      {waiting && <AutoRefresh seconds={4} />}
+      {waiting && !(view.state === "processing" && view.delayed) && <AutoRefresh seconds={4} />}
       {view.state === "delivered" && view.readingId && <Link className="btn btn-primary" href={`/r/${view.readingId}`}>Open my reading</Link>}
       {view.state === "expired" && view.chartRevisionId && <Link className="btn btn-primary" href={`/chart/${view.chartRevisionId}`}>Back to my chart</Link>}
       <p className="fine">Questions? {SITE.support} · <Link href="/login">Open your readings on another device</Link></p>

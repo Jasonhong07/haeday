@@ -57,7 +57,7 @@ export class StripePaymentAdapter implements PaymentAdapter {
   }
 
   async getCheckoutDetails(sessionId: string): Promise<CheckoutDetails> {
-    const s = await this.stripe.checkout.sessions.retrieve(sessionId, { expand: ["line_items"] });
+    const s = await this.stripe.checkout.sessions.retrieve(sessionId, { expand: ["line_items", "payment_intent.latest_charge"] });
     return {
       id: s.id,
       livemode: s.livemode,
@@ -76,6 +76,8 @@ export class StripePaymentAdapter implements PaymentAdapter {
       amountShipping: s.total_details?.amount_shipping ?? 0,
       promotionCodeId: piId(s.discounts?.[0]?.promotion_code ?? null),
       created: s.created,
+      paidAt: typeof s.payment_intent === "object" && s.payment_intent && typeof s.payment_intent.latest_charge === "object" && s.payment_intent.latest_charge
+        ? s.payment_intent.latest_charge.created : null,
     };
   }
 

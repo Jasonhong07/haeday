@@ -14,7 +14,8 @@ export type IssueKind =
   | "refund_amount_mismatch"      // provider charge total disagrees with the refund list
   | "checkout_idempotency_mismatch" // a checkout key already ran with a different body (F4)
   | "reconcile_session_failed"    // a completed session could not be processed by reconciliation (F12)
-  | "reconcile_list_failed";      // the provider session list failed or was truncated; the cursor did not move
+  | "reconcile_list_failed"       // the provider session list failed or was truncated; the cursor did not move
+  | "llm_capacity_paused";        // D52: AI backlog ≥ 2× daily cap, new payments paused automatically
 
 export async function openIssue(db: Db | Tx, i: { kind: IssueKind; objectId: string; livemode: boolean; orderId?: string | null; nextAction: string }): Promise<void> {
   await db.insert(paymentIssues).values({

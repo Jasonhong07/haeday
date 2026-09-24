@@ -7,6 +7,7 @@ import type { Db } from "./db/client";
 import { customers, magicLinks, orders, sessions } from "./db/schema";
 import type { EmailAdapter } from "./adapters/email";
 import { magicLinkEmail } from "./email/templates";
+import { reserveEmail, type BudgetLimits } from "./email/budget";
 import { emailLookup, encryptPrivate, normalizeEmail, type Keyring } from "./security/encryption";
 import { aad } from "./security/keyring";
 
@@ -25,7 +26,7 @@ export type LinkRequestResult = "sent" | "throttled" | "not_sent" | "unavailable
  * Sends a link to known addresses or an explicitly allowlisted administrator (D38).
  * Public callers must hide all internal outcomes, including throttle and delivery errors.
  */
-export async function requestMagicLink(deps: { db: Db; ring: Keyring; email: EmailAdapter | null; origin: string; supportEmail: string; adminEmails?: string[]; now?: () => Date }, rawEmail: string): Promise<LinkRequestResult> {
+export async function requestMagicLink(deps: { db: Db; ring: Keyring; email: EmailAdapter | null; origin: string; supportEmail: string; adminEmails?: string[]; now?: () => Date; limits?: BudgetLimits; onAlert?: (sentToday: number) => void }, rawEmail: string): Promise<LinkRequestResult> {
   const now = deps.now?.() ?? new Date();
   const email = normalizeEmail(rawEmail);
   const lookup = emailLookup(email, deps.ring);
@@ -44,6 +45,11 @@ export async function requestMagicLink(deps: { db: Db; ring: Keyring; email: Ema
     .where(and(eq(magicLinks.customerId, customer.id), gt(magicLinks.createdAt, new Date(now.getTime() - 3_600_000))));
   if (n >= MAGIC_LINKS_PER_HOUR) return "throttled";
   if (!deps.email) return "unavailable";
+  if (deps.limits) {
+    const r = await reserveEmail(deps.db, "magic", deps.limits, now);
+    if (!r.ok) return "unavailable"; // the HTTP answer is the same 200 either way (D38)
+    if (r.alert) deps.onAlert?.(r.sentToday);
+  }
   const token = newToken();
   await deps.db.insert(magicLinks).values({ customerId: customer.id, tokenHash: hash("magic", token), expiresAt: new Date(now.getTime() + MAGIC_LINK_TTL_MIN * 60_000), createdAt: now });
   try {
