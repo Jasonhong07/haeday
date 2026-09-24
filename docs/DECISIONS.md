@@ -1,0 +1,32 @@
+# DECISIONS · Haeday
+
+Status values: `accepted` (owner approved) · `proposed` (awaiting owner) · `superseded` · `needs_external_confirmation`.
+Agents must not change an `accepted` decision. New choices made during implementation are added as `proposed` with a reason.
+
+| ID | Decision | Status | Owner / date | Affects |
+|---|---|---|---|---|
+| D01 | Product: Korean saju web app for English speakers. Free chart → one paid reading. Tarot, daily card, love match, 대운, native app are OFF for launch | accepted | Jason 2026-09-23 | PRD, TASKS |
+| D02 | Brand: **Haeday**, moon motif, tagline "Find your heyday, by moonlight." | accepted | Jason 2026-09-23 | PRD |
+| D03 | Price: **$3.99** one-time, no subscription, single SKU `saju_reading` | accepted | Jason 2026-09-23 | ARCHITECTURE |
+| D04 | Business form: **Sole proprietor + EIN** (owner: Jason Hong). Stripe account type Individual/Sole proprietorship | accepted | Jason 2026-09-23 | Runbook, Legal |
+| D05 | Remaining checks for D04: Illinois assumed-name (DBA "Haeday") filing; Stripe address/eligibility after 2026-10-13 move to Korea; tax residency and filings with CPA; OPT self-employment reporting | needs_external_confirmation | Jason, before live sales | Runbook |
+| D06 | **Sell to everyone, never block a customer because of uncertainty.** Uncertainty is resolved by the customer's choice (exact time, approximate time window, or which side of a boundary) or by a disclosed default, always shown before payment | accepted | Jason 2026-09-23 | ENGINE_SPEC, PRD |
+| D07 | 2027: short "Your 2027 energy" section inside the base reading. No add-on product at launch (Year Ahead add-on = P1) | accepted | Jason 2026-09-23 | PRD, ARCHITECTURE |
+| D08 | Web-first mobile PWA on Railway. Stripe Checkout (hosted). No live-mode self purchase tests (Stripe prohibits real-card testing in live mode) | accepted | PM recommendation, consistent with Jason's web-first choice | Runbook, TASKS |
+| D09 | Engine policy `haeday-chart-v1`: DST removed via IANA tz, year/month by UTC jie instants, day/hour by true solar time anchored to the civil date, 자시 boundary at midnight (야자시) | accepted | PM, from references in Haeday_v6 Part A | ENGINE_SPEC |
+| D10 | Release gate (not a customer gate): the engine must pass the fixture suite before paid sales open. If a systematic engine bug is found after launch, set SALES_ENABLED=false until fixed | accepted | PM | TASKS, OPERATIONS |
+| D11 | LLM provider and model | proposed | Agent picks in M4 (structured JSON output, cost cap), Jason approves | ARCHITECTURE |
+| D12 | Runtime/package versions. **Accepted by Jason:** Node 24.18.0, pnpm 11.19.0, Next.js 16.3.6, Drizzle ORM 0.45.3, pg-boss 12.34.0. **Proposed (agent, M0):** TypeScript 5.9.3 (7.x not yet supported by the Next toolchain), ESLint 9.39.5 (10.x breaks eslint-plugin-react used by eslint-config-next 16.3.6), React 19.3.0, Zod 4.6.5, pg 8.23.0, drizzle-kit 0.31.11, Vitest 5.0.1, Playwright 1.63.0, @sentry/nextjs 11.0.0, tsx 4.23.15 (runtime dependency: worker and migrations). Python for the oracle: **pending Jason** (3.12.11 and 3.14 both passed the Skyfield smoke test, see D21). Calendar library: decided in M1 | partly accepted | Jason 2026-09-23 / agent 2026-09-24 | package.json, pnpm-lock.yaml |
+| D13 | Launch targets: first paid order 10/2 (conditional on gates), public launch 10/5, hard fallback 10/9, deploy freeze 10/11–10/13 | accepted | Jason (dates) + PM (gates) | Runbook |
+
+## Implementation notes recorded during M0 (2026-09-24, no product change)
+| ID | Note | Status |
+|---|---|---|
+| D20 | Queue dedupe: in pg-boss 12 a singletonKey alone does not dedupe. `reading.generate` and `email.send` use the `exclusive` queue policy and every send must pass a singletonKey (order id / email dedupe key). The order state machine stays the primary guard | proposed (implementation detail of ARCHITECTURE §4.3) |
+| D21 | Oracle ephemeris: the only ephemeris reachable from our build environment is DE421 (via the `skyfield-data` package), which covers 1900–2053. ENGINE_SPEC §5 asks for a 1900–2100 table. Proposal: generate `data/jie_1900_2050.json` (covers every supported birth date plus the 2027 reading). A 2100 table would need DE440s downloaded from JPL on Jason's PC | proposed, needs Jason |
+| D22 | Refunds created outside the app (Stripe dashboard) are stored with `source=provider` and are not limited by the one-claim rule, so partial refunds from Stripe always stay visible (D15). The one-claim rule applies to refunds the app starts | proposed (implements D15) |
+| D23 | Web process uses a send-only pg-boss instance; the pg-boss schema and queues are installed by `pnpm db:migrate` (Railway pre-deploy) | proposed (implementation detail) |
+
+## Owner-approved additions (2026-09-23)
+
+See APPROVED_CHANGES_2026-09-23.md for D14–D19: delivery email, refund coordination, retention, encryption, error pages and admin analytics. All accepted by Jason in chat.

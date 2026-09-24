@@ -1,0 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+:root { color-scheme: dark; --night:#12132A; --dusk:#1C1E3A; --line:#2E3160; --gold:#D9B26A; --mist:#A7A3BE; --text:#F2ECE0; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--night); color:var(--text); font-family:"Plus Jakarta Sans",sans-serif; font-size:16px; line-height:1.6; }
+main { min-height:100svh; max-width:1080px; margin:auto; padding:28px clamp(20px,6vw,72px); display:flex; flex-direction:column; }
+.brand { display:flex; align-items:center; gap:12px; font-family:Fraunces,Georgia,serif; font-size:28px; }
+.moon { color:var(--gold); font-size:40px; line-height:1; }
+section { margin:auto 0; padding:72px 0; max-width:720px; }
+.eyebrow { color:var(--gold); letter-spacing:.15em; font-size:11px; font-weight:600; }
+h1 { font-family:Fraunces,Georgia,serif; font-weight:400; font-size:clamp(42px,7vw,76px); line-height:1.12; letter-spacing:-.035em; margin:24px 0; }
+h1 em { color:var(--gold); font-weight:400; }
+.intro { color:var(--mist); max-width:440px; margin:0 0 40px; }
+.notice { display:flex; gap:12px; padding:20px; border:1px solid var(--line); border-radius:16px; background:var(--dusk); max-width:510px; }
+.notice strong { font-size:14px; font-weight:500; }
+.notice p { color:var(--mist); font-size:13px; margin:6px 0 0; }
+.dot { flex-shrink:0; width:7px; height:7px; margin-top:8px; border-radius:50%; background:var(--gold); }
+footer { color:var(--mist); font-size:12px; padding:20px 0; border-top:1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto; } }

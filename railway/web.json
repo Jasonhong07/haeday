@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": { "buildCommand": "pnpm build" },
+  "deploy": {
+    "preDeployCommand": ["pnpm db:migrate"],
+    "startCommand": "pnpm start",
+    "healthcheckPath": "/api/health/live",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
