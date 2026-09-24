@@ -27,7 +27,8 @@ export interface Pillar { stem: string; branch: string; stemEn: string; branchEn
 export interface Pillars { year: Pillar; month: Pillar; day: Pillar; hour: Pillar | null }
 export type Warning = "hourBoundary" | "dayBoundary" | "termBoundary" | "pre1970Tz" | "approximateTime";
 export interface Candidate { reason: Warning | "timeWindow"; pillars: Pillars; window?: { from: string; to: string } }
-export interface BoundaryQuestion { type: "timeWindow"; windows: Array<{ index: number; from: string; to: string; minutes: number }>; defaultIndex: number }
+/** askCustomer: true only when windows differ in year or month pillar (D25). Day-only splits are disclosed, not asked. */
+export interface BoundaryQuestion { type: "timeWindow"; askCustomer: boolean; windows: Array<{ index: number; from: string; to: string; minutes: number }>; defaultIndex: number }
 export interface Audit {
   inputLocal: string; tz: string; tzdataVersion: string; utc: string | null; offsetMinutes: number | null;
   stdOffsetMinutes: number | null; lonCorrectionMin: number | null; eotMin: number | null; trueSolar: string | null;
@@ -225,8 +226,10 @@ export function computeChart(input: ChartInput): ChartResponse {
         .map((o) => `If you were born between ${formatClock(o.from)} and ${formatClock(o.to)}, ${describeDifference(g.pillars, o.pillars)}.`)
         .join(" ");
     }
+    const ym = (p: Pillars) => `${p.year.stem}${p.year.branch}${p.month.stem}${p.month.branch}`;
+    const askCustomer = new Set(groups.map((w) => ym(w.pillars))).size > 1;
     const questions: BoundaryQuestion[] = groups.length > 1
-      ? [{ type: "timeWindow", windows: groups.map((w, index) => ({ index, from: w.from, to: w.to, minutes: w.minutes })), defaultIndex }]
+      ? [{ type: "timeWindow", askCustomer, windows: groups.map((w, index) => ({ index, from: w.from, to: w.to, minutes: w.minutes })), defaultIndex }]
       : [];
     const chart: Chart = {
       pillars: g.pillars, ...derive(g.pillars), timeBasis: "unknown", disclosure,

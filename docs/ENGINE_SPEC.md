@@ -70,7 +70,7 @@ Checkout never trusts client flags. It re-reads the stored chart revision (ARCHI
 2. Group minutes into contiguous windows by (year, month, day) pillars.
 3. If only one group: chart with hour = null, no question.
 4. If several groups (D25): return `computed` with the default chart plus `questions[0] = { type: "timeWindow", windows, defaultIndex }`.
-   - The UI may ask "Were you born between …?" with an "I don't know" option; re-computing with `boundaryChoice = windowIndex` uses that group.
+   - `askCustomer` is true only when windows differ in year or month pillar. Then the UI asks "Were you born between …?" with an "I don't know" option; re-computing with `boundaryChoice = windowIndex` uses that group. Day-only splits are disclosed without a question (D25).
    - Without a choice → the group that contains the most local minutes is the **default**, and `disclosure` states every other window exactly, e.g. "If you were born between 11:40 PM and 11:59 PM, your day pillar would be 癸酉 (Yin Water Rooster) instead of 壬申." Never call it "most likely".
    - Observation from fixtures: because the solar correction is almost never zero, nearly every unknown-time date has a small day-split window at one end of the day.
 5. Hour pillar = null, denominator 6, and the reading contract excludes hour-pillar topics.

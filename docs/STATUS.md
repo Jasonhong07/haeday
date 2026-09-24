@@ -8,7 +8,6 @@ Everything verified in the cloud workspace (LAUNCH_EVIDENCE.md). Remaining: GitH
 - Waiting on Jason:
   1. **City data:** open https://download.geonames.org/export/dump/cities15000.zip in your normal browser, save it into `Desktop\Fotel\haeday\data\` (our build network cannot reach GeoNames).
   2. **Cross-check:** fill `docs/crosscheck.md` using two Korean 만세력 apps.
-  3. **Decisions:** D25 (unknown-time question format) in DECISIONS.md.
 - Engine release gate (D10): 9/27 23:59 CT.
 
 ## Next

@@ -87,6 +87,10 @@ describe("chart contract", () => {
     const r = computeChart({ birthDate: "1990-11-03", time: { kind: "unknown" }, place: nyc, today: "2026-09-24" });
     if (r.kind !== "computed") throw new Error("expected computed");
     expect(r.chart.disclosure).toBe("If you were born between 11:40 PM and 11:59 PM, your day pillar would be 癸酉 (Yin Water Rooster) instead of 壬申.");
+    expect(r.questions[0]!.askCustomer).toBe(false); // day-only split: disclose, don't ask (D25)
+    const lichun = computeChart({ birthDate: "2024-02-04", time: { kind: "unknown" }, place: nyc, today: "2026-09-24" });
+    if (lichun.kind !== "computed") throw new Error("expected computed");
+    expect(lichun.questions[0]!.askCustomer).toBe(true); // month/year split: ask
     const chosen = computeChart({ birthDate: "1990-11-03", time: { kind: "unknown" }, place: nyc, boundaryChoice: 1, today: "2026-09-24" });
     if (chosen.kind !== "computed") throw new Error("expected computed");
     expect(chosen.chart.pillars.day.stem + chosen.chart.pillars.day.branch).toBe("癸酉");

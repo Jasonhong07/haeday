@@ -36,7 +36,7 @@ Order on screen:
 1. Question card if needed (never blocks purchase, D06):
    - Fold: "Clocks fell back that night, so 1:30 AM happened twice. Which one?" [The first 1:30] [The second 1:30]
    - Gap: "That time didn't exist on this date because clocks sprang forward. Please check your birth time." (edit link)
-   - Boundary: "Your chart changes at {h:mm AM/PM} that day. Were you born before or after?" [Before] [After] [I don't know]
+   - Boundary (only when `askCustomer` is true, i.e. year or month pillar differs, D25): "Your chart changes during that day. When were you born?" [one button per window, e.g. "Before 3:28 AM"] [I don't know]. Day-only splits show just the disclosure line (item 5).
 2. Four pillar tiles (hour tile shows "Hour unknown" when null). Each tile: hanja, English (e.g. "Yang Wood · Rat").
 3. Day Master card: name + one-line description (from content/library).
 4. Visible element bars with denominator label ("out of 8 characters" or "out of 6").
