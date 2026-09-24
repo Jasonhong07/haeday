@@ -3,7 +3,10 @@
 from __future__ import annotations
 import bisect, json
 from datetime import date, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, reset_tzpath
+
+# Use the pinned tzdata wheel on Linux as well as Windows, not the host OS database.
+reset_tzpath(())
 from sexagenary import BRANCHES, JIE_LON_TO_BRANCH, STEMS, day_index, ganzhi, hour_ganzhi, month_ganzhi, year_index
 from astro import eot_minutes
 
@@ -11,6 +14,7 @@ UTC = timezone.utc
 _jie = json.load(open("data/jie_1900_2050.json", encoding="utf-8"))["jie"]
 JIE_TIMES = [datetime.strptime(r["utc"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC) for r in _jie]
 JIE_LONS = [r["lon"] for r in _jie]
+LICHUN_TIMES = [t for t, lon in zip(JIE_TIMES, JIE_LONS) if lon == 315]
 
 
 def iso(dt: datetime) -> str:
@@ -36,7 +40,7 @@ def wall_to_utc(d: str, hhmm: str, tz: str):
 
 def std_offset_minutes(u: datetime, tz: str) -> int:
     local = u.astimezone(ZoneInfo(tz))
-    return int((local.utcoffset() - (local.dst() or timedelta(0))).total_seconds() // 60)
+    return (local.utcoffset() - (local.dst() or timedelta(0))).total_seconds() / 60  # exact (LMT offsets have seconds)
 
 
 def wrap180(x: float) -> float:
@@ -56,11 +60,9 @@ def true_solar(u: datetime, lon: float, tz: str):
 def year_month(u: datetime):
     i = bisect.bisect_right(JIE_TIMES, u) - 1  # boundary instant belongs to the new period
     lon = JIE_LONS[i]
-    # Solar year: the most recent 立春 (315) at or before u.
-    j = i
-    while JIE_LONS[j] != 315:
-        j -= 1
-    solar_year = JIE_TIMES[j].year
+    # Bounded search: the preceding lichun is absent at the table's start.
+    j = bisect.bisect_right(LICHUN_TIMES, u) - 1
+    solar_year = LICHUN_TIMES[j].year if j >= 0 else LICHUN_TIMES[0].year - 1
     yi = year_index(solar_year)
     return ganzhi(yi), month_ganzhi(yi % 10, JIE_LON_TO_BRANCH[lon]), JIE_TIMES[i], JIE_TIMES[i + 1]
 
@@ -105,7 +107,7 @@ def chart_at(u: datetime, place: dict, with_hour=True, day_boundary="midnight", 
     ts, std, lon_corr, eot = true_solar(u, place["lon"], place["tz"])
     y, m, jb, ja = year_month(u)
     d, h = day_hour(ts, day_boundary, with_hour)
-    return {"utc": iso(u), "stdOffsetMinutes": std, "lonCorrectionMin": round(lon_corr, 3), "eotMin": round(eot, 3),
+    return {"utc": iso(u), "stdOffsetMinutes": round(std, 3), "lonCorrectionMin": round(lon_corr, 3), "eotMin": round(eot, 3),
             "trueSolar": ts.strftime("%Y-%m-%dT%H:%M:%S"), "jieBefore": iso(jb), "jieAfter": iso(ja),
             "pillars": {"year": y, "month": m, "day": d, "hour": h},
             "warnings": warnings_for(u, ts, jb, ja, birth_year, approximate, with_hour)}
@@ -131,7 +133,10 @@ def unknown_groups(birth_date: str, place: dict):
 def compute_case(case: dict) -> dict:
     place, t = case["place"], case["time"]
     if t["kind"] == "unknown":
-        return {"kind": "unknown", "groups": unknown_groups(case["birthDate"], place)}
+        groups = unknown_groups(case["birthDate"], place)
+        if not groups:  # the whole civil date was skipped (e.g. Samoa 2011-12-30)
+            return {"kind": "invalid_input", "reason": "nonexistent_local_time"}
+        return {"kind": "unknown", "groups": groups}
     status, cands = wall_to_utc(case["birthDate"], t["hhmm"], place["tz"])
     if status == "gap":
         return {"kind": "invalid_input", "reason": "nonexistent_local_time"}

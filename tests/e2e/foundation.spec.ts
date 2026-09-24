@@ -15,3 +15,13 @@ test("city autocomplete API works through the real server", async ({ request }) 
   expect(body.results[0]?.placeId).toMatch(/^gn:\d+$/);
   expect((await request.get("/api/places")).status()).toBe(400);
 });
+
+
+test("method page explains uncertainty and attributes the city data on mobile", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "How we calculate" }).click();
+  await expect(page.getByRole("heading", { name: "Tradition, with clear assumptions." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "When you do not know the time" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "GeoNames city data" })).toHaveAttribute("href", "https://www.geonames.org/");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

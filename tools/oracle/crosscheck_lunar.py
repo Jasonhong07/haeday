@@ -19,6 +19,10 @@ from compute import JIE_TIMES, true_solar, wall_to_utc, year_month, day_hour
 import bisect
 
 places = json.load(open("fixtures/manifest.json", encoding="utf-8"))["places"]
+# Plus 400 cities drawn from the bundled dataset (every continent, historical tz rules, date-line zones).
+_rows = json.load(open("data/cities.json", encoding="utf-8"))["rows"]
+for _r in random.Random(7).sample(_rows, 400):
+    places[f"gn{_r[0]}"] = {"label": f"{_r[1]}, {_r[3]}", "lat": _r[4], "lon": _r[5], "tz": _r[6]}
 
 
 def lunar_bazi(dt, sect=2):

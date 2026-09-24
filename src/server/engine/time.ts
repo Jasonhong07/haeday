@@ -31,13 +31,33 @@ export function wallToUtc(date: string, hhmm: string, tz: string): WallResult {
   return { status: "fold", utc: [list[0]!, list[list.length - 1]!] };
 }
 
-/** Standard (non-DST) offset in minutes at an instant: the lower of the year's January/July offsets when in DST. */
+const DAY = 86_400_000;
+const PROBE_DAYS = [90, 182, 273, 365];
+const MAX_DST_MINUTES = 180;
+
+/**
+ * Standard (non-DST) offset in minutes at an instant. JavaScript does not expose the tzdata isdst flag, so:
+ * the current offset is DST only if the zone returns to a lower offset (within 3 h) both before and after
+ * this instant (probes at ±3, 6, 9, 12 months); the standard offset is then the lowest of those.
+ * Offsets more than 3 h away are a different regime (date-line moves such as Samoa 2011, Kwajalein 1993)
+ * and are ignored; a permanent change of standard time (Seoul 1954, 1961) is not mistaken for DST because
+ * the offset does not come back on the future side.
+ * Pillars do not depend on this value (see trueSolarAt); it feeds the audit fields.
+ */
 export function standardOffsetMinutes(utcMs: number, tz: string): number {
   const zone = zoneOf(tz);
   const offset = zone.offset(utcMs);
-  const year = new Date(utcMs).getUTCFullYear();
-  const base = Math.min(zone.offset(Date.UTC(year, 0, 1)), zone.offset(Date.UTC(year, 6, 1)));
-  return offset > base ? base : offset;
+  const side = (sign: 1 | -1) => {
+    const same = PROBE_DAYS.map((d) => zone.offset(utcMs + sign * d * DAY)).filter((o) => Math.abs(o - offset) <= MAX_DST_MINUTES);
+    return { lower: same.filter((o) => o < offset), otherRegime: same.length === 0 };
+  };
+  const before = side(-1), after = side(1);
+  // DST = the offset drops back on both sides; a side that lies entirely in another regime (date-line move) does not count against it.
+  const dropsBefore = before.lower.length > 0 || before.otherRegime;
+  const dropsAfter = after.lower.length > 0 || after.otherRegime;
+  const lower = [...before.lower, ...after.lower];
+  if (!dropsBefore || !dropsAfter || lower.length === 0) return offset;
+  return Math.min(...lower);
 }
 
 export const runtimeTzdataVersion = (): string => process.versions.tz ?? "unknown";

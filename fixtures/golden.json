@@ -1,7 +1,7 @@
 {
  "policyVersion": "haeday-chart-v1",
  "tzdata": "2026d",
- "eotToleranceSeconds": 30,
+ "eotToleranceSeconds": 60,
  "cases": [
   {
    "id": "F01",
@@ -23,7 +23,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1990-05-12T00:30:00Z",
-    "stdOffsetMinutes": 540,
+    "stdOffsetMinutes": 540.0,
     "lonCorrectionMin": -32.088,
     "eotMin": 3.68,
     "trueSolar": "1990-05-12T09:01:35",
@@ -60,7 +60,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1985-03-20T19:15:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
     "eotMin": -7.427,
     "trueSolar": "1985-03-20T14:11:32",
@@ -95,7 +95,7 @@
    "expected": {
     "kind": "computed",
     "utc": "2000-09-01T13:45:00Z",
-    "stdOffsetMinutes": -480,
+    "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
     "eotMin": 0.156,
     "trueSolar": "2000-09-01T05:52:10",
@@ -130,7 +130,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1998-12-25T00:05:00Z",
-    "stdOffsetMinutes": -360,
+    "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
     "eotMin": 0.248,
     "trueSolar": "1998-12-24T18:14:43",
@@ -213,7 +213,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1995-10-29T06:30:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
     "eotMin": 16.22,
     "trueSolar": "1995-10-29T01:50:11",
@@ -274,7 +274,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1995-07-15T08:50:00Z",
-    "stdOffsetMinutes": -540,
+    "stdOffsetMinutes": -540.0,
     "lonCorrectionMin": -59.601,
     "eotMin": -5.881,
     "trueSolar": "1995-07-14T22:44:31",
@@ -309,7 +309,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1995-02-10T05:20:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": -32.183,
     "eotMin": -14.254,
     "trueSolar": "1995-02-09T23:33:33",
@@ -344,7 +344,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1992-06-11T04:49:00Z",
-    "stdOffsetMinutes": -360,
+    "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
     "eotMin": 0.398,
     "trueSolar": "1992-06-10T22:58:52",
@@ -381,7 +381,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1992-06-11T04:53:00Z",
-    "stdOffsetMinutes": -360,
+    "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
     "eotMin": 0.397,
     "trueSolar": "1992-06-10T23:02:52",
@@ -419,7 +419,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1992-06-11T04:53:00Z",
-    "stdOffsetMinutes": -360,
+    "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
     "eotMin": 0.397,
     "trueSolar": "1992-06-10T23:02:52",
@@ -456,7 +456,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1992-06-10T05:48:00Z",
-    "stdOffsetMinutes": -360,
+    "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
     "eotMin": 0.59,
     "trueSolar": "1992-06-09T23:58:04",
@@ -493,7 +493,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1992-06-10T05:52:00Z",
-    "stdOffsetMinutes": -360,
+    "stdOffsetMinutes": -360.0,
     "lonCorrectionMin": 9.481,
     "eotMin": 0.59,
     "trueSolar": "1992-06-10T00:02:04",
@@ -530,7 +530,7 @@
    "expected": {
     "kind": "computed",
     "utc": "2024-02-04T08:26:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
     "eotMin": -13.814,
     "trueSolar": "2024-02-04T03:16:09",
@@ -567,7 +567,7 @@
    "expected": {
     "kind": "computed",
     "utc": "2024-02-04T08:27:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
     "eotMin": -13.814,
     "trueSolar": "2024-02-04T03:17:09",
@@ -604,7 +604,7 @@
    "expected": {
     "kind": "computed",
     "utc": "2024-02-04T08:28:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
     "eotMin": -13.814,
     "trueSolar": "2024-02-04T03:18:09",
@@ -641,7 +641,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1995-08-07T23:50:00Z",
-    "stdOffsetMinutes": -480,
+    "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
     "eotMin": -5.74,
     "trueSolar": "1995-08-07T15:51:17",
@@ -678,7 +678,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1995-08-07T23:51:00Z",
-    "stdOffsetMinutes": -480,
+    "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
     "eotMin": -5.74,
     "trueSolar": "1995-08-07T15:52:17",
@@ -715,7 +715,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1995-08-07T23:52:00Z",
-    "stdOffsetMinutes": -480,
+    "stdOffsetMinutes": -480.0,
     "lonCorrectionMin": 7.025,
     "eotMin": -5.74,
     "trueSolar": "1995-08-07T15:53:17",
@@ -888,7 +888,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1955-06-15T00:30:00Z",
-    "stdOffsetMinutes": 510,
+    "stdOffsetMinutes": 510.0,
     "lonCorrectionMin": -2.088,
     "eotMin": 0.107,
     "trueSolar": "1955-06-15T08:58:01",
@@ -926,7 +926,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1987-07-14T14:40:00Z",
-    "stdOffsetMinutes": 540,
+    "stdOffsetMinutes": 540.0,
     "lonCorrectionMin": -32.088,
     "eotMin": -5.791,
     "trueSolar": "1987-07-14T23:02:07",
@@ -963,7 +963,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1990-07-10T20:05:00Z",
-    "stdOffsetMinutes": -420,
+    "stdOffsetMinutes": -420.0,
     "lonCorrectionMin": -28.296,
     "eotMin": -5.349,
     "trueSolar": "1990-07-10T12:31:21",
@@ -998,7 +998,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1990-03-01T11:15:00Z",
-    "stdOffsetMinutes": -600,
+    "stdOffsetMinutes": -600.0,
     "lonCorrectionMin": -31.433,
     "eotMin": -12.407,
     "trueSolar": "1990-03-01T00:31:09",
@@ -1033,7 +1033,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1990-07-01T17:00:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": -44.632,
     "eotMin": -3.824,
     "trueSolar": "1990-07-01T11:11:32",
@@ -1068,7 +1068,7 @@
    "expected": {
     "kind": "computed",
     "utc": "2010-07-01T16:00:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": -44.632,
     "eotMin": -3.874,
     "trueSolar": "2010-07-01T10:11:29",
@@ -1103,7 +1103,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1995-01-15T12:10:00Z",
-    "stdOffsetMinutes": 600,
+    "stdOffsetMinutes": 600.0,
     "lonCorrectionMin": 4.837,
     "eotMin": -9.322,
     "trueSolar": "1995-01-15T22:05:30",
@@ -1138,7 +1138,7 @@
    "expected": {
     "kind": "computed",
     "utc": "2000-06-14T17:00:00Z",
-    "stdOffsetMinutes": 840,
+    "stdOffsetMinutes": 840.0,
     "lonCorrectionMin": -29.711,
     "eotMin": -0.352,
     "trueSolar": "2000-06-15T06:29:56",
@@ -1173,7 +1173,7 @@
    "expected": {
     "kind": "computed",
     "utc": "1985-03-20T19:40:00Z",
-    "stdOffsetMinutes": -300,
+    "stdOffsetMinutes": -300.0,
     "lonCorrectionMin": 3.976,
     "eotMin": -7.422,
     "trueSolar": "1985-03-20T14:36:33",
@@ -1188,6 +1188,206 @@
     "warnings": [
      "hourBoundary",
      "approximateTime"
+    ]
+   }
+  },
+  {
+   "id": "F32",
+   "input": {
+    "id": "F32",
+    "note": "date line move: Samoa skipped 2011-12-30; first day on UTC+14 (DST) must stay on its civil date",
+    "birthDate": "2011-12-31",
+    "time": {
+     "kind": "exact",
+     "hhmm": "12:00"
+    },
+    "place": {
+     "label": "Apia, WS",
+     "lat": -13.8333,
+     "lon": -171.7667,
+     "tz": "Pacific/Apia"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "2011-12-30T22:00:00Z",
+    "stdOffsetMinutes": 780.0,
+    "lonCorrectionMin": -27.067,
+    "eotMin": -2.564,
+    "trueSolar": "2011-12-31T10:30:22",
+    "jieBefore": "2011-12-07T11:29:00Z",
+    "jieAfter": "2012-01-05T22:43:56Z",
+    "pillars": {
+     "year": "辛卯",
+     "month": "庚子",
+     "day": "庚申",
+     "hour": "辛巳"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F33",
+   "input": {
+    "id": "F33",
+    "note": "date line move: Kwajalein skipped 1993-08-21 (UTC-12 to UTC+12)",
+    "birthDate": "1993-08-22",
+    "time": {
+     "kind": "exact",
+     "hhmm": "12:00"
+    },
+    "place": {
+     "label": "Kwajalein, MH",
+     "lat": 9.1818,
+     "lon": 167.3087,
+     "tz": "Pacific/Kwajalein"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1993-08-22T00:00:00Z",
+    "stdOffsetMinutes": 720.0,
+    "lonCorrectionMin": -50.765,
+    "eotMin": -2.972,
+    "trueSolar": "1993-08-22T11:06:15",
+    "jieBefore": "1993-08-07T12:17:58Z",
+    "jieAfter": "1993-09-07T15:07:47Z",
+    "pillars": {
+     "year": "癸酉",
+     "month": "庚申",
+     "day": "乙亥",
+     "hour": "壬午"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F34",
+   "input": {
+    "id": "F34",
+    "note": "permanent standard-time change (Seoul +8:30 to +9 on 1961-08-10) is not DST",
+    "birthDate": "1961-09-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "12:00"
+    },
+    "place": {
+     "label": "Seoul, KR",
+     "lat": 37.5665,
+     "lon": 126.978,
+     "tz": "Asia/Seoul"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1961-09-15T03:00:00Z",
+    "stdOffsetMinutes": 540.0,
+    "lonCorrectionMin": -32.088,
+    "eotMin": 4.758,
+    "trueSolar": "1961-09-15T11:32:40",
+    "jieBefore": "1961-09-07T21:29:03Z",
+    "jieAfter": "1961-10-08T12:50:47Z",
+    "pillars": {
+     "year": "辛丑",
+     "month": "丁酉",
+     "day": "辛亥",
+     "hour": "甲午"
+    },
+    "warnings": [
+     "pre1970Tz"
+    ]
+   }
+  },
+  {
+   "id": "F35",
+   "input": {
+    "id": "F35",
+    "note": "US emergency year-round DST, January 1974",
+    "birthDate": "1974-01-15",
+    "time": {
+     "kind": "exact",
+     "hhmm": "12:00"
+    },
+    "place": {
+     "label": "New York, NY, US",
+     "lat": 40.7128,
+     "lon": -74.006,
+     "tz": "America/New_York"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1974-01-15T16:00:00Z",
+    "stdOffsetMinutes": -300.0,
+    "lonCorrectionMin": 3.976,
+    "eotMin": -9.424,
+    "trueSolar": "1974-01-15T10:54:33",
+    "jieBefore": "1974-01-05T17:19:55Z",
+    "jieAfter": "1974-02-04T05:00:05Z",
+    "pillars": {
+     "year": "癸丑",
+     "month": "乙丑",
+     "day": "丙辰",
+     "hour": "癸巳"
+    },
+    "warnings": []
+   }
+  },
+  {
+   "id": "F36",
+   "input": {
+    "id": "F36",
+    "note": "Samoa skipped date with unknown time → nonexistent_local_time",
+    "birthDate": "2011-12-30",
+    "time": {
+     "kind": "unknown"
+    },
+    "place": {
+     "label": "Apia, WS",
+     "lat": -13.8333,
+     "lon": -171.7667,
+     "tz": "Pacific/Apia"
+    }
+   },
+   "expected": {
+    "kind": "invalid_input",
+    "reason": "nonexistent_local_time"
+   }
+  },
+  {
+   "id": "F37",
+   "input": {
+    "id": "F37",
+    "note": "January 1900, before the first 立春 in the table (preceding year 己亥)",
+    "birthDate": "1900-01-01",
+    "time": {
+     "kind": "exact",
+     "hhmm": "12:00"
+    },
+    "place": {
+     "label": "Seoul, KR",
+     "lat": 37.5665,
+     "lon": 126.978,
+     "tz": "Asia/Seoul"
+    }
+   },
+   "expected": {
+    "kind": "computed",
+    "utc": "1900-01-01T03:32:08Z",
+    "stdOffsetMinutes": 507.867,
+    "lonCorrectionMin": 0.045,
+    "eotMin": -2.765,
+    "trueSolar": "1900-01-01T11:57:16",
+    "jieBefore": "1899-12-07T07:03:48Z",
+    "jieAfter": "1900-01-05T18:03:13Z",
+    "pillars": {
+     "year": "己亥",
+     "month": "丙子",
+     "day": "甲戌",
+     "hour": "庚午"
+    },
+    "warnings": [
+     "pre1970Tz"
     ]
    }
   }

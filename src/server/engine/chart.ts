@@ -66,14 +66,20 @@ export function trueSolarAt(utc: number, place: Place): Solar {
   const std = standardOffsetMinutes(utc, place.tz);
   const lonCorr = wrap180(place.lon - std / 4) * 4;
   const eot = equationOfTimeMinutes(utc);
-  return { utc, std, lonCorr, eot, trueSolar: utc + (std + lonCorr + eot) * 60_000 };
+  // Anchor the solar clock to the civil clock actually in use (ENGINE_SPEC §2.3, D09 "anchored to the civil date"):
+  // offset + wrap180(lon − offset/4)·4 equals std + lonCorr whenever both stay within ±12 h, and it does not
+  // depend on guessing DST, so a date-line move (Samoa 2011-12-31) cannot shift the day by 24 h.
+  const offset = zoneOf(place.tz).offset(utc);
+  const solarOffset = offset + wrap180(place.lon - offset / 4) * 4;
+  return { utc, std, lonCorr, eot, trueSolar: utc + (solarOffset + eot) * 60_000 };
 }
 
 function yearMonth(utc: number) {
   const i = jieIndexAt(utc);
-  let j = i;
-  while (JIE_LONS[j] !== 315) j -= 1;
-  const solarYear = new Date(JIE_TIMES[j]!).getUTCFullYear();
+  // The table begins in August 1899, so its preceding lichun is absent.
+  // The current jie identifies the solar year without an unbounded scan:
+  // January's 285-degree jie belongs to the preceding Gregorian year.
+  const solarYear = new Date(JIE_TIMES[i]!).getUTCFullYear() - (JIE_LONS[i] === 285 ? 1 : 0);
   const y60 = yearIndex60(solarYear);
   const monthBranch = JIE_LON_TO_BRANCH[JIE_LONS[i]!]!;
   const m60 = join60(monthStem(mod(y60, 10), monthBranch), monthBranch);
@@ -217,6 +223,7 @@ export function computeChart(input: ChartInput): ChartResponse {
 
   if (input.time.kind === "unknown") {
     const { groups } = unknownGroups(input.birthDate, input.place, boundary);
+    if (groups.length === 0) return { kind: "invalid_input", reason: "nonexistent_local_time" };
     const defaultIndex = groups.reduce((best, g, i) => (g.minutes > groups[best]!.minutes ? i : best), 0);
     const chosen = input.boundaryChoice !== undefined && groups[input.boundaryChoice] ? input.boundaryChoice : defaultIndex;
     const g = groups[chosen]!;
@@ -252,7 +259,7 @@ export function computeChart(input: ChartInput): ChartResponse {
     policyVersion: POLICY_VERSION, coverageVersion: COVERAGE_VERSION,
     audit: {
       ...baseAudit, utc: iso(utc), offsetMinutes: zoneOf(input.place.tz).offset(utc),
-      stdOffsetMinutes: solar.std, lonCorrectionMin: round3(solar.lonCorr), eotMin: round3(solar.eot),
+      stdOffsetMinutes: round3(solar.std), lonCorrectionMin: round3(solar.lonCorr), eotMin: round3(solar.eot),
       trueSolar: naiveIso(solar.trueSolar), jieBefore: iso(ym.jieBefore), jieAfter: iso(ym.jieAfter),
     },
   };

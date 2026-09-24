@@ -16,3 +16,6 @@ h1 em { color:var(--gold); font-weight:400; }
 .dot { flex-shrink:0; width:7px; height:7px; margin-top:8px; border-radius:50%; background:var(--gold); }
 footer { color:var(--mist); font-size:12px; padding:20px 0; border-top:1px solid var(--line); }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto; } }
+
+a { color:var(--gold); text-underline-offset:4px; }
+a:focus-visible { outline:2px solid var(--gold); outline-offset:4px; }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function Home() {
   return (
     <main>
@@ -11,7 +12,7 @@ export default function Home() {
           <div><strong>Something thoughtful is taking shape.</strong><p>Haeday is in preparation. Readings will be available soon.</p></div>
         </div>
       </section>
-      <footer>Rooted in Korean tradition. Made for reflection.</footer>
+      <footer>Rooted in Korean tradition. Made for reflection. <Link href="/method">How we calculate</Link></footer>
     </main>
   );
 }

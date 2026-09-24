@@ -73,7 +73,7 @@ describe("placeId resolution (server side)", () => {
     };
     // Kiritimati (pop. ~6k) is below the cities15000 cutoff; it stays an engine-only date-line fixture.
     expect(searchPlaces("kiritimati")).toEqual([]);
-    for (const [key, place] of Object.entries(manifest.places).filter(([k]) => k !== "kiritimati")) {
+    for (const [key, place] of Object.entries(manifest.places).filter(([k]) => k in queries)) {
       const hit = searchPlaces(queries[key]!)[0];
       expect(hit, key).toBeDefined();
       const p = resolvePlace(hit!.placeId)!;
