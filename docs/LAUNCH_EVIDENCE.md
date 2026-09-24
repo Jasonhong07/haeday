@@ -27,5 +27,5 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 | 2026-09-24 | GitHub repo | GitHub | Jasonhong07/haeday (private), pushed via GitHub Desktop, HEAD d36de99 | local repo clean, file hashes match cloud copy | PASS | Claude |
 | | GitHub Actions first run | GitHub | push to main | result not yet confirmed by Jason | NOT RUN (unconfirmed) | Jason |
 | 2026-09-24 | Railway staging deploy (web + worker + Postgres) | Railway staging (APP_ENV=staging, PAYMENTS_MODE=test) | deploy from main; `/api/health/ready` | both services Active, ready reported by Jason | PASS | Jason |
-| 2026-09-24 | Sentry test event | cloud-dev → Sentry project (DSN also set on Railway web+worker) | `pnpm sentry:test` | SDK reported sent; appearance in Sentry Issues to be confirmed by Jason | PASS (send) | Claude |
+| 2026-09-24 | Sentry test event | cloud-dev → Sentry project (DSN also set on Railway web+worker) | `pnpm sentry:test` | INVALID: cloud and desktop sandboxes block ingest.us.sentry.io (proxy 403); SDK flush returned true without delivery. Re-test from Jason's PC / Railway | NOT RUN | Jason |
 | 2026-09-24 | Re-check after deploy | cloud-dev | `pnpm typecheck` + `lint` + `test` (with test DB) + `oracle:verify` | 84/84 tests, oracle 33/33 | PASS | Claude |

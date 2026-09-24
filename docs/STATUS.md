@@ -1,7 +1,7 @@
 # Status (2026-09-24)
 
 ## M0 foundation: done and deployed to staging
-GitHub (private) → Railway staging (web + worker + Postgres) ready; Sentry DSN set, test event sent. To confirm: GitHub Actions green, test event visible in Sentry.
+GitHub (private) → Railway staging (web + worker + Postgres) ready; Sentry DSN set on Railway; test event not yet confirmed (sandbox network blocks Sentry). To confirm: GitHub Actions green, test event visible in Sentry.
 
 ## M1 chart engine: engine done, 2 items waiting on Jason
 - Done: canonical jie table 1900–2050, independent Python oracle, TypeScript engine (own implementation), 33 golden fixtures all matching, unit tests, unknown-time enumeration with exact disclosures.
