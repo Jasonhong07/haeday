@@ -15,8 +15,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!allowRequest(clientIp(request), "magic", 10, 3600000)) return json({ error: "rate_limited" }, 429);
   const body = Body.safeParse(await request.json().catch(() => null));
   if (!body.success) return json({ error: "bad_email" }, 400);
-  const r = await requestMagicLink({ db: ctx.db, ring: ctx.ring, email: emailAdapter(ctx.env), origin: new URL(ctx.env.APP_ORIGIN).origin, supportEmail: supportEmail(ctx.env) }, body.data.email);
-  if (r === "throttled") return json({ status: "throttled" }, 429);
-  if (r === "unavailable") return json({ status: "unavailable" }, 503);
-  return json({ status: "ok" }); // "sent" and "not_sent" look identical
+  await requestMagicLink({ db: ctx.db, ring: ctx.ring, email: emailAdapter(ctx.env), origin: new URL(ctx.env.APP_ORIGIN).origin, supportEmail: supportEmail(ctx.env), adminEmails: ctx.env.ADMIN_EMAILS }, body.data.email);
+  // D38: delivery failures and per-address throttling must not reveal whether an address is known.
+  return json({ status: "ok" });
 }

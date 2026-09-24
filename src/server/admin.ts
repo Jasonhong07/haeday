@@ -3,7 +3,7 @@ import { and, count, desc, eq, gte, inArray, lt, sql, sum } from "drizzle-orm";
 import type { PgBoss } from "pg-boss";
 import type { Db } from "./db/client";
 import { adminAudit, chartRevisions, disputes, orders, refunds } from "./db/schema";
-import { QUEUES } from "./queue/boss";
+import { QUEUES, enqueueInTx } from "./queue/boss";
 
 export async function dashboard(db: Db, days: number, now = new Date()) {
   const from = new Date(now.getTime() - days * 86_400_000);
@@ -43,7 +43,7 @@ export async function retryOrder(db: Db, boss: PgBoss, orderId: string, actorId:
     const moved = await tx.update(orders).set({ fulfillmentStatus: "queued", fulfillmentDeadlineAt: new Date(Date.now() + 15 * 60_000), updatedAt: new Date() })
       .where(and(eq(orders.id, orderId), eq(orders.paymentStatus, "paid"), inArray(orders.fulfillmentStatus, ["queued", "generating"]))).returning({ id: orders.id });
     await tx.insert(adminAudit).values({ actorCustomerId: actorId, action: "retry", target: orderId });
-    if (moved.length) await boss.send(QUEUES.generateReading, { orderId }, { singletonKey: orderId });
+    if (moved.length) await enqueueInTx(boss, tx, QUEUES.generateReading, { orderId }, { singletonKey: orderId });
     return moved.length > 0;
   });
 }

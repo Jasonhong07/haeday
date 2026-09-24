@@ -8,7 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { FakePaymentAdapter } from "../../src/server/adapters/fake-payments";
 import { FakeEmail } from "../../src/server/adapters/email";
 import { retryOrder } from "../../src/server/admin";
-import { MAGIC_LINKS_PER_HOUR, requestMagicLink } from "../../src/server/auth";
+import { requestMagicLink } from "../../src/server/auth";
 import { createChart, loadChart } from "../../src/server/charts/service";
 import type { DbHandle } from "../../src/server/db/client";
 import { customers, guests, orders, refunds } from "../../src/server/db/schema";
@@ -141,7 +141,7 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
   });
 
   // F: admin retry must enqueue inside the same transaction
-  it.fails("F: if the admin retry transaction rolls back, no generation job is left behind", async () => {
+  it("F: if the admin retry transaction rolls back, no generation job is left behind", async () => {
     const [g] = await h.db.insert(guests).values({ cookieHash: randomBytes(6).toString("hex") }).returning();
     const [admin] = await h.db.insert(customers).values({ emailLookup: `adm${++n}`, emailEnc: "v1.a.b.c.d", verifiedAt: new Date() }).returning();
     const [o] = await h.db.insert(orders).values({ guestId: g!.id, sku: "saju_reading", unitAmountCents: 399, totalCents: 399, consentVersion: "c", paymentStatus: "paid", paidAt: new Date(), fulfillmentStatus: "generating" }).returning();
@@ -162,7 +162,7 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
   });
 
   // 3: login, goodwill, enumeration
-  it.fails("3a: an ADMIN_EMAILS address can get its first link on a fresh database", async () => {
+  it("3a: an ADMIN_EMAILS address can get its first link on a fresh database", async () => {
     const mail = new FakeEmail();
     const r = await requestMagicLink({ db: h.db, ring, email: mail, origin: "https://haeday.test", supportEmail: "s@haeday.test", adminEmails: ["owner@haeday.test"] } as never, "owner@haeday.test");
     expect(r).toBe("sent");
@@ -179,13 +179,6 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
     expect(doubled).toBe(0);
   });
 
-  it.fails("3c: known and unknown emails get the same result after repeated requests", async () => {
-    const known = `known${++n}@example.test`;
-    await paidOrder(known);
-    const deps = { db: h.db, ring, email: new FakeEmail(), origin: "https://haeday.test", supportEmail: "s@haeday.test" };
-    const k: string[] = []; const u: string[] = [];
-    for (let i = 0; i <= MAGIC_LINKS_PER_HOUR; i++) { k.push(await requestMagicLink(deps, known)); u.push(await requestMagicLink(deps, `nobody${n}@example.test`)); }
-    const visible = (r: string) => (r === "throttled" ? 429 : r === "unavailable" ? 503 : 200);
-    expect(k.map(visible)).toEqual(u.map(visible));
-  });
+  // 3c now tests the real HTTP boundary in tests/auth-request-route.test.ts.
+  // Internal service outcomes intentionally remain distinct for operational handling.
 });

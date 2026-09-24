@@ -45,3 +45,13 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 | 2026-09-24 | E2E after M3–M6 pages | cloud-dev | `pnpm e2e` | 11/11 incl. order processing → delivered → reading (hanji), other browser must sign in, /my, legal pages | PASS | Claude |
 | | Stripe test payment on staging | Railway staging | card 4242… (docs/SETUP_PROVIDERS.md §5) | | NOT RUN (needs Stripe test keys) | Jason |
 | | 15 real sample readings | cloud-dev | `pnpm samples` with LLM key | prompts generated only | NOT RUN (needs Q1 + key) | Jason |
+# Codex CC0 follow-up · 2026-09-24 · base 09a7efd
+
+- Details: `review/CHANGES_CODEX_CC0.md`; next implementation: `review/HANDOFF_CC1_CODEX.md`.
+- Runtime: explicit `C:\Program Files\nodejs\node.exe` v24.18.0 (bundled pnpm selected another runtime, so it was not used for passing checks).
+- `node node_modules/vitest/vitest.mjs run tests/auth-request-route.test.ts tests/auth-bootstrap.test.ts tests/admin-retry-queue.test.ts`: **9 passed / 3 files**. Windows child-process permission required escalation; approved and completed. Mock providers only.
+- `node node_modules/eslint/bin/eslint.js src/server/auth.ts src/server/admin.ts src/app/api/auth/request/route.ts tests/auth-bootstrap.test.ts tests/auth-request-route.test.ts tests/admin-retry-queue.test.ts tests/integration/crosscheck-repro.test.ts`: **PASS**.
+- `git diff --check`: **PASS**.
+- `node node_modules/typescript/bin/tsc --noEmit`: **BLOCKED/FAILED**, installed Stripe package missing (TS2307; derived TS7006). Not represented as a passing full check.
+- TEST_DATABASE_URL absent (presence checked without reading secret values): DB integration **NOT RUN**. Build/E2E/Stripe test contracts **NOT RUN**. No live activation, deployments or actual emails.
+

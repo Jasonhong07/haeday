@@ -22,17 +22,18 @@ const newToken = () => randomBytes(32).toString("base64url");
 export type LinkRequestResult = "sent" | "throttled" | "not_sent" | "unavailable";
 
 /**
- * Sends a link only to addresses we already know (a verified customer or an address used at checkout).
- * Callers must show the same message for "sent" and "not_sent".
+ * Sends a link to known addresses or an explicitly allowlisted administrator (D38).
+ * Public callers must hide all internal outcomes, including throttle and delivery errors.
  */
-export async function requestMagicLink(deps: { db: Db; ring: Keyring; email: EmailAdapter | null; origin: string; supportEmail: string; now?: () => Date }, rawEmail: string): Promise<LinkRequestResult> {
+export async function requestMagicLink(deps: { db: Db; ring: Keyring; email: EmailAdapter | null; origin: string; supportEmail: string; adminEmails?: string[]; now?: () => Date }, rawEmail: string): Promise<LinkRequestResult> {
   const now = deps.now?.() ?? new Date();
   const email = normalizeEmail(rawEmail);
   const lookup = emailLookup(email, deps.ring);
   let customer = await deps.db.query.customers.findFirst({ where: eq(customers.emailLookup, lookup) });
   if (!customer) {
     const bought = await deps.db.query.orders.findFirst({ where: eq(orders.deliveryEmailLookup, lookup), columns: { id: true } });
-    if (!bought) return "not_sent";
+    const allowedAdmin = deps.adminEmails?.some((address) => emailLookup(address, deps.ring) === lookup) ?? false;
+    if (!bought && !allowedAdmin) return "not_sent";
     const id = crypto.randomUUID();
     [customer] = await deps.db.insert(customers).values({ id, emailLookup: lookup, emailEnc: encryptPrivate(email, aad("customers", id, "email"), deps.ring) })
       .onConflictDoNothing().returning();

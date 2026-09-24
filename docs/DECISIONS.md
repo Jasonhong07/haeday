@@ -51,4 +51,14 @@ Agents must not change an `accepted` decision. New choices made during implement
 
 ## Owner-approved additions (2026-09-23)
 
+## Pending clarifications from Codex CC0 (2026-09-24)
+
+These proposals do not override accepted D34–D45. User answers are pending; see `review/PROPOSAL_V2_CODEX.md`.
+
+| ID | Proposal / conflict | Status |
+|---|---|---|
+| D46 | C2: show 2–3 approved day-master sentences as a free preview; keep unapproved content private. Asked Jason whether to adopt. | proposed |
+| D47 | D35 promises delivery within 24h but refunds at 36h. Recommend initiate refund and stop fulfillment at 24h if not delivered; alternative is a consistently disclosed 36h promise. Do not change D35 until answered. | proposed |
+| D48 | D45: a friend's consent alone does not establish a valid business postal address. Keep marketing/recovery OFF until validity is confirmed; transactional mail can proceed independently. Asked Jason to confirm this release split. | proposed |
+
 See APPROVED_CHANGES_2026-09-23.md for D14–D19: delivery email, refund coordination, retention, encryption, error pages and admin analytics. All accepted by Jason in chat.

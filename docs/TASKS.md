@@ -2,6 +2,9 @@
 
 Rules: one milestone at a time, in order. A box is ticked only with evidence recorded in `docs/LAUNCH_EVIDENCE.md` (command, environment, result). Dates are targets (D13).
 
+Current remediation plan (2026-09-24): `review/PROPOSAL_V2_CODEX.md` and `review/HANDOFF_CC1_CODEX.md`.
+F8, F10 HTTP boundary and F5 transaction binding have local changes; see `review/CHANGES_CODEX_CC0.md` for tests and unverified DB integration. Historical checked boxes below do not certify these open payment/refund issues as fixed. D46–D48 remain proposed pending owner answers.
+
 ## M0 · Foundation (9/24)
 - [x] Repo: Next.js App Router + TS strict + pnpm, ESLint, Vitest, Playwright skeleton, GitHub Actions (typecheck, lint, test) · CI file written, first GitHub run pending repo creation
 - [x] Pin versions: Node LTS (record exact), pnpm via `npm i -g pnpm@<ver>`, Python 3.12 for tools/oracle, lockfiles committed; record in DECISIONS D12 · Python choice pending (D12/D21)
