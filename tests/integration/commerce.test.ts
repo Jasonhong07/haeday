@@ -16,7 +16,7 @@ import { buildFacts, selectSnippets } from "../../src/server/fulfillment/prompt"
 import { validReading } from "../helpers/reading";
 import { ensureGuest } from "../../src/server/guest";
 import { startCheckout, type CheckoutDeps, type OrderSnapshot } from "../../src/server/payments/checkout";
-import { reconcileRefunds, requestRefund } from "../../src/server/payments/refunds";
+import { reconcileRefunds, requestRefund, syncOrderRefunds } from "../../src/server/payments/refunds";
 import { handlePaymentEvent, type WebhookDeps } from "../../src/server/payments/webhook";
 import { searchPlaces } from "../../src/server/places";
 import { QUEUES, createBoss, ensureQueues } from "../../src/server/queue/boss";
@@ -138,8 +138,13 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     pay.complete(o.stripeSessionId!, override);
     const res = await handlePaymentEvent(wh, completed(o.stripeSessionId!));
     expect(res).toEqual({ outcome: "rejected", reason });
-    expect((await order(o.id)).paymentStatus).toBe("open");
+    const after = await order(o.id);
+    expect(after.fulfillmentStatus).toBe("none"); // never unlocked
     expect(await jobs(QUEUES.generateReading, o.id)).toBe(0);
+    // D34: money-shape mismatches on a provably linked, paid session are refunded; identity mismatches never are.
+    const linked = ["line_item_mismatch", "subtotal_mismatch", "currency_mismatch"].includes(reason);
+    expect(after.paymentStatus).toBe(linked ? "refund_pending" : "open");
+    expect((await h.db.select().from(refunds).where(eq(refunds.orderId, o.id))).map((x) => x.reason)).toEqual(linked ? ["validation_failure"] : []);
   });
 
   it("an event from the other mode (live vs test) is rejected before touching orders", async () => {
@@ -149,7 +154,7 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
 
   it("a late completion after a refund keeps the order refunded", async () => {
     const { orderId } = await paidOrder("late@example.test");
-    expect((await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" })).ok).toBe(true);
+    expect((await requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" })).ok).toBe(true);
     const o = await order(orderId);
     expect(o.paymentStatus).toBe("refunded");
     const res = await handlePaymentEvent(wh, completed(o.stripeSessionId!));
@@ -169,9 +174,9 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
   it("customer, admin and cron refunding at once make exactly one provider refund", async () => {
     const { orderId } = await paidOrder("race@example.test");
     const results = await Promise.all([
-      requestRefund({ db: h.db, payments: pay }, { orderId, reason: "goodwill", requestedBy: "customer" }),
-      requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" }),
-      requestRefund({ db: h.db, payments: pay }, { orderId, reason: "service_failure", requestedBy: "deadline_cron" }),
+      requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "goodwill", requestedBy: "customer" }),
+      requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" }),
+      requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "service_failure", requestedBy: "deadline_cron" }),
     ]);
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(pay.calls.createRefund).toBe(1);
@@ -182,20 +187,27 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
   it("a pending refund is shown as pending until Stripe confirms it", async () => {
     const { orderId } = await paidOrder("pending@example.test");
     pay.nextRefund = "pending";
-    const r = await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
+    const r = await requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" });
     expect(r).toMatchObject({ ok: true, status: "pending" });
     expect((await order(orderId)).paymentStatus).toBe("refund_pending");
     const row = (await h.db.select().from(refunds).where(eq(refunds.orderId, orderId)))[0]!;
-    await handlePaymentEvent(wh, { id: `evt_ref_${orderId}`, livemode: false, type: "refund.updated", refundId: row.stripeRefundId!, paymentIntentId: (await order(orderId)).stripePaymentIntentId, status: "succeeded", amountCents: 399, orderId });
+    const evtBody = { livemode: false, type: "refund.updated" as const, refundId: row.stripeRefundId!, paymentIntentId: (await order(orderId)).stripePaymentIntentId, status: "succeeded" as const, amountCents: 399, orderId };
+    // The event body alone never changes state: Stripe still says pending, so the order stays pending.
+    await handlePaymentEvent(wh, { id: `evt_ref_a_${orderId}`, ...evtBody });
+    await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
+    expect((await order(orderId)).paymentStatus).toBe("refund_pending");
+    pay.setRefundStatus(row.stripeRefundId!, "succeeded");
+    await handlePaymentEvent(wh, { id: `evt_ref_b_${orderId}`, ...evtBody });
+    await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
     expect((await order(orderId)).paymentStatus).toBe("refunded");
   });
 
   it("a network error leaves the claim 'unknown'; reconciliation finishes it with the same idempotency key", async () => {
     const { orderId } = await paidOrder("net@example.test");
     pay.nextRefund = () => { throw new Error("socket hang up"); };
-    expect(await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" })).toMatchObject({ ok: true, status: "unknown" });
+    expect(await requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" })).toMatchObject({ ok: true, status: "unknown" });
     expect((await order(orderId)).paymentStatus).toBe("refund_pending");
-    expect(await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" })).toEqual({ ok: false, error: "in_progress" });
+    expect(await requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" })).toEqual({ ok: false, error: "in_progress" });
     pay.nextRefund = "succeeded";
     expect(await reconcileRefunds({ db: h.db, payments: pay })).toBeGreaterThanOrEqual(1);
     expect((await order(orderId)).paymentStatus).toBe("refunded");
@@ -207,10 +219,10 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const a = await paidOrder("goodwill@example.test");
     const b = await paidOrder("goodwill@example.test");
     const later = () => new Date(Date.now() + 8 * 86_400_000);
-    expect(await requestRefund({ db: h.db, payments: pay, now: later }, { orderId: a.orderId, reason: "goodwill", requestedBy: "customer" })).toEqual({ ok: false, error: "outside_window" });
-    expect((await requestRefund({ db: h.db, payments: pay }, { orderId: a.orderId, reason: "goodwill", requestedBy: "customer" })).ok).toBe(true);
-    expect(await requestRefund({ db: h.db, payments: pay }, { orderId: b.orderId, reason: "goodwill", requestedBy: "customer" })).toEqual({ ok: false, error: "goodwill_used" });
-    expect((await requestRefund({ db: h.db, payments: pay }, { orderId: b.orderId, reason: "service_failure", requestedBy: "worker" })).ok).toBe(true);
+    expect(await requestRefund({ db: h.db, payments: pay, boss, now: later }, { orderId: a.orderId, reason: "goodwill", requestedBy: "customer" })).toEqual({ ok: false, error: "outside_window" });
+    expect((await requestRefund({ db: h.db, payments: pay, boss }, { orderId: a.orderId, reason: "goodwill", requestedBy: "customer" })).ok).toBe(true);
+    expect(await requestRefund({ db: h.db, payments: pay, boss }, { orderId: b.orderId, reason: "goodwill", requestedBy: "customer" })).toEqual({ ok: false, error: "goodwill_used" });
+    expect((await requestRefund({ db: h.db, payments: pay, boss }, { orderId: b.orderId, reason: "service_failure", requestedBy: "worker" })).ok).toBe(true);
   });
 
   // ---------------- generation ----------------
@@ -270,7 +282,7 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const { orderId } = await paidOrder("late-result@example.test");
     const reading = await queueReading(orderId);
     llm.generate = async () => {
-      await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
+      await requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" });
       return { json: reading, modelId: "fake", inputTokens: 1, outputTokens: 1 };
     };
     expect(await generateReading(gen, orderId)).toBe("skipped");

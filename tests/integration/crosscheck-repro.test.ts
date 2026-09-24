@@ -1,6 +1,8 @@
 // Reproductions for the 2026-09-24 ChatGPT cross-check (docs/review/CROSSCHECK_TRIAGE_2026-09-24.md).
 // Each test states the CORRECT behaviour. A failing test = issue reproduced; it turns green when fixed.
 // Marked it.fails until fixed: CI stays green while the reproduction is kept. Remove ".fails" in the fixing commit.
+// CC1a (2026-09-24): A, B, C1–C5, G and 3b fixed. Their expectations were restated for the new design (atomic
+// failure+claim, provider-truth sync) without weakening the invariant; the deeper cases live in refund-recovery.test.ts.
 import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import type { PgBoss } from "pg-boss";
@@ -11,12 +13,12 @@ import { retryOrder } from "../../src/server/admin";
 import { requestMagicLink } from "../../src/server/auth";
 import { createChart, loadChart } from "../../src/server/charts/service";
 import type { DbHandle } from "../../src/server/db/client";
-import { customers, guests, orders, refunds } from "../../src/server/db/schema";
+import { customers, guests, orders, paymentIssues, refunds } from "../../src/server/db/schema";
 import { failAndRefund, sweepDeadlines } from "../../src/server/fulfillment/generate";
 import { buildFacts, selectSnippets } from "../../src/server/fulfillment/prompt";
 import { ensureGuest } from "../../src/server/guest";
 import { startCheckout, type CheckoutDeps } from "../../src/server/payments/checkout";
-import { reconcileRefunds, requestRefund } from "../../src/server/payments/refunds";
+import { executeRefund, reconcileRefunds, requestRefund, syncOrderRefunds } from "../../src/server/payments/refunds";
 import { handlePaymentEvent, type WebhookDeps } from "../../src/server/payments/webhook";
 import { searchPlaces } from "../../src/server/places";
 import { QUEUES, createBoss, ensureQueues } from "../../src/server/queue/boss";
@@ -61,73 +63,93 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
   const refundEvt = (pi: string, refundId: string, status: "pending" | "succeeded" | "failed", amountCents = 399) =>
     ({ id: `evt_r${++evt}`, livemode: false, type: "refund.updated" as const, refundId, paymentIntentId: pi, status, amountCents, orderId: null });
 
-  // A: crash between "failed" and the refund claim
-  it.fails("A: a crash after marking failed still ends in a refund claim (sweep or reconcile recovers it)", async () => {
+  const rd = () => ({ db: h.db, payments: pay, boss });
+  const issues = async (orderId: string) => (await h.db.select().from(paymentIssues).where(eq(paymentIssues.orderId, orderId))).map((i) => i.kind);
+
+  // A: crash between "failed" and the refund claim → now one transaction; a crash before commit changes nothing
+  it("A: a crash while failing an order leaves it recoverable, and the sweep ends in exactly one refund", async () => {
     const { orderId } = await paidOrder();
-    const crashing = new Proxy(h.db, { get: (t, p) => (p === "transaction" ? () => { throw new Error("process killed"); } : Reflect.get(t, p)) });
-    await expect(failAndRefund({ db: crashing as typeof h.db, ring, boss, payments: pay }, orderId, "deadline")).rejects.toThrow();
-    expect(await order(orderId)).toMatchObject({ paymentStatus: "paid", fulfillmentStatus: "failed" });
+    const killedBeforeCommit = new Proxy(h.db, { get: (t, p) => (p === "transaction"
+      ? (fn: Parameters<typeof h.db.transaction>[0]) => t.transaction(async (tx) => { await fn(tx); throw new Error("process killed before commit"); })
+      : Reflect.get(t, p)) });
+    await expect(failAndRefund({ db: killedBeforeCommit as typeof h.db, ring, boss, payments: pay }, orderId, "deadline", {})).rejects.toThrow();
+    expect(await order(orderId)).toMatchObject({ paymentStatus: "paid", fulfillmentStatus: "queued" }); // rolled back, not stuck
+    expect(await refundRows(orderId)).toHaveLength(0);
     const later = () => new Date(Date.now() + 60 * 60_000);
     await sweepDeadlines({ db: h.db, ring, boss, payments: pay, now: later });
     await reconcileRefunds({ db: h.db, payments: pay, now: later });
     expect(await refundRows(orderId)).toHaveLength(1);
+    expect(await order(orderId)).toMatchObject({ paymentStatus: "refunded", fulfillmentStatus: "failed" });
+    expect(pay.calls.createRefund).toBe(1);
   });
 
   // B: refund webhook arrives before the API response is stored
-  it.fails("B: webhook-first refund merges into the service refund row (no duplicate, no unique-violation)", async () => {
+  it("B: webhook-first refund merges into the service refund row (no duplicate, no unique-violation)", async () => {
     const { orderId, pi } = await paidOrder();
-    const orig = pay.createRefund.bind(pay);
-    pay.createRefund = async (req) => {
-      const r = await orig(req);
+    pay.hooks.afterCreateRefund = async (r) => {
       await handlePaymentEvent(wh, refundEvt(pi, r.id, "succeeded"));
-      return r;
+      await syncOrderRefunds({ db: h.db, payments: pay }, orderId); // the refund.sync job, running first
     };
-    const out = await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
-    expect(out.ok).toBe(true);
-    expect(await refundRows(orderId)).toHaveLength(1);
-  });
-
-  // C: reconciliation and retries
-  it.fails("C1: reconcile applies a confirmed 'failed' result to the order (back to paid)", async () => {
-    const { orderId } = await paidOrder();
-    pay.nextRefund = () => { throw new Error("network"); };
-    await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
-    pay.nextRefund = "failed";
-    await reconcileRefunds({ db: h.db, payments: pay });
-    expect((await order(orderId)).paymentStatus).toBe("paid");
-  });
-
-  it.fails("C2: after a confirmed failed refund, a new refund attempt is possible", async () => {
-    const { orderId } = await paidOrder();
-    pay.nextRefund = "failed";
-    await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
-    pay.nextRefund = "succeeded";
-    const again = await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
-    expect(again).toMatchObject({ ok: true, status: "succeeded" });
-  });
-
-  it.fails("C3: a late 'pending' event does not move a succeeded refund back", async () => {
-    const { orderId, pi } = await paidOrder();
-    await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
-    const [r] = await refundRows(orderId);
-    await handlePaymentEvent(wh, refundEvt(pi, r!.stripeRefundId!, "pending"));
-    expect((await refundRows(orderId))[0]!.status).toBe("succeeded");
-  });
-
-  it.fails("C4: two partial refunds that add up to the total mark the order refunded", async () => {
-    const { orderId, pi } = await paidOrder();
-    await handlePaymentEvent(wh, refundEvt(pi, "re_part1", "succeeded", 200));
-    await handlePaymentEvent(wh, refundEvt(pi, "re_part2", "succeeded", 199));
+    const out = await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
+    expect(out).toMatchObject({ ok: true, status: "succeeded" });
+    const rows = await refundRows(orderId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ source: "service", status: "succeeded" });
     expect((await order(orderId)).paymentStatus).toBe("refunded");
   });
 
-  it.fails("C5: long-pending refunds are looked up by reconciliation", async () => {
+  // C: reconciliation and retries
+  it("C1: a confirmed 'failed' refund returns the order to paid AND opens a refund_failed issue (obligation kept)", async () => {
+    const { orderId } = await paidOrder();
+    pay.nextRefund = () => { throw new Error("network"); };
+    await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
+    pay.nextRefund = "failed";
+    await reconcileRefunds({ db: h.db, payments: pay });
+    expect((await order(orderId)).paymentStatus).toBe("paid");
+    expect(await issues(orderId)).toContain("refund_failed");
+  });
+
+  it("C2: after a confirmed failed refund, a new refund attempt uses a NEW idempotency key", async () => {
+    const { orderId } = await paidOrder();
+    pay.nextRefund = "failed";
+    await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
+    pay.nextRefund = "succeeded";
+    const again = await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
+    expect(again).toMatchObject({ ok: true, status: "succeeded" });
+    expect((await refundRows(orderId)).map((r) => r.idempotencyKey).sort()).toEqual([`refund:${orderId}:1`, `refund:${orderId}:2`]);
+  });
+
+  it("C3: a late 'pending' event does not move a succeeded refund back", async () => {
+    const { orderId, pi } = await paidOrder();
+    await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
+    const [r] = await refundRows(orderId);
+    await handlePaymentEvent(wh, refundEvt(pi, r!.stripeRefundId!, "pending"));
+    await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
+    expect((await refundRows(orderId))[0]!.status).toBe("succeeded");
+    expect((await order(orderId)).paymentStatus).toBe("refunded");
+  });
+
+  it("C4: two partial refunds that add up to the total mark the order refunded", async () => {
+    const { orderId, pi } = await paidOrder();
+    const r1 = pay.dashboardRefund(pi, 200); await handlePaymentEvent(wh, refundEvt(pi, r1, "succeeded", 200));
+    await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
+    expect((await order(orderId)).paymentStatus).toBe("partially_refunded");
+    const r2 = pay.dashboardRefund(pi, 199); await handlePaymentEvent(wh, refundEvt(pi, r2, "succeeded", 199));
+    await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
+    expect((await order(orderId)).paymentStatus).toBe("refunded");
+  });
+
+  it("C5: long-pending refunds are re-read from the provider (no new refund is created)", async () => {
     const { orderId } = await paidOrder();
     pay.nextRefund = "pending";
-    await requestRefund({ db: h.db, payments: pay }, { orderId, reason: "admin", requestedBy: "admin" });
-    const before = pay.calls.createRefund;
+    await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
+    const [r] = await refundRows(orderId);
+    pay.setRefundStatus(r!.stripeRefundId!, "succeeded");
+    const creates = pay.calls.createRefund; const reads = pay.calls.getRefundSummary;
     await reconcileRefunds({ db: h.db, payments: pay, now: () => new Date(Date.now() + 2 * 86_400_000) });
-    expect(pay.calls.createRefund).toBeGreaterThan(before);
+    expect(pay.calls.createRefund).toBe(creates);
+    expect(pay.calls.getRefundSummary).toBeGreaterThan(reads);
+    expect((await order(orderId)).paymentStatus).toBe("refunded");
   });
 
   // E: content gate before checkout
@@ -152,13 +174,26 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
     expect(jobs.n).toBe(0);
   });
 
-  // G: paid at Stripe but our validation rejected it
-  it.fails("G: a paid session that fails validation leaves a recoverable record (not just a rejected event)", async () => {
-    const { orderId, res } = await paidOrder(undefined, { amountSubtotal: 1 });
+  // G: paid at Stripe but our validation rejected it (D34)
+  it("G: a linked paid session that fails validation is refunded (actual captured amount) and never unlocked", async () => {
+    const { orderId, res } = await paidOrder(undefined, { amountSubtotal: 1, amountTotal: 250 });
     expect(res.outcome).toBe("rejected");
-    const o = await order(orderId);
-    const rows = await refundRows(orderId);
-    expect(o.paymentStatus !== "open" || rows.length > 0).toBe(true);
+    expect(await order(orderId)).toMatchObject({ paymentStatus: "refund_pending", fulfillmentStatus: "none" });
+    const [row] = await refundRows(orderId);
+    expect(row).toMatchObject({ reason: "validation_failure", amountCents: 250, status: "requested" });
+    expect(await issues(orderId)).toContain("validation_failure_refund");
+    const jobs = (await h.db.execute(sql`select count(*)::int as n from pgboss.job where name = ${QUEUES.refundExecute} and singleton_key = ${row!.id}`)).rows[0] as { n: number };
+    expect(jobs.n).toBe(1); // committed with the event
+    await executeRefund({ db: h.db, payments: pay }, row!.id); // the job
+    expect(await order(orderId)).toMatchObject({ paymentStatus: "refunded", fulfillmentStatus: "none" });
+  });
+
+  it("G2: a paid session we cannot tie to the order is never refunded automatically (issue only)", async () => {
+    const { orderId, res } = await paidOrder(undefined, { clientReferenceId: "someone-else" });
+    expect(res.outcome).toBe("rejected");
+    expect(await refundRows(orderId)).toHaveLength(0);
+    expect(pay.calls.createRefund).toBe(0);
+    expect(await issues(orderId)).toContain("unlinked_paid_session");
   });
 
   // 3: login, goodwill, enumeration
@@ -168,15 +203,15 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
     expect(r).toBe("sent");
   });
 
-  it.fails("3b: concurrent goodwill refunds on two orders of the same email → only one succeeds", async () => {
-    let doubled = 0;
-    for (let i = 0; i < 5; i++) {
-      const email = `gw${i}-${++n}@example.test`;
-      const a = await paidOrder(email); const b = await paidOrder(email);
-      const res = await Promise.all([a, b].map((x) => requestRefund({ db: h.db, payments: pay }, { orderId: x.orderId, reason: "goodwill", requestedBy: "customer" })));
-      if (res.filter((r) => r.ok).length > 1) doubled++;
-    }
-    expect(doubled).toBe(0);
+  it("3b: concurrent goodwill refunds on two orders of the same email → exactly one succeeds (forced race)", async () => {
+    const email = `gw-${++n}@example.test`;
+    const a = await paidOrder(email); const b = await paidOrder(email);
+    // Barrier: both transactions are open before either checks eligibility, so only the lock can serialize them.
+    let arrived = 0; let release!: () => void; const both = new Promise<void>((r) => { release = r; });
+    const goodwillStart = async () => { if (++arrived === 2) release(); await both; };
+    const res = await Promise.all([a, b].map((x) => requestRefund({ ...rd(), hooks: { goodwillStart } }, { orderId: x.orderId, reason: "goodwill", requestedBy: "customer" })));
+    expect(res.filter((r) => r.ok)).toHaveLength(1);
+    expect(res.filter((r) => !r.ok)).toEqual([{ ok: false, error: "goodwill_used" }]);
   });
 
   // 3c now tests the real HTTP boundary in tests/auth-request-route.test.ts.

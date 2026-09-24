@@ -94,7 +94,7 @@ Brand screens dark, long text on hanji. Pillar tiles: element background + #1213
 ## 12. Legal drafts (Jason reviews; placeholders until D05 checks finish)
 - Terms: seller "Jason Hong, doing business as Haeday" (update if the business form changes), 18+ buyer, entertainment only, AI-generated, one-time digital purchase, refund policy link, contact.
 - Privacy: collect birth date/time/place and email; purposes; processors (Stripe, Railway, Resend, PostHog, Sentry, LLM provider); retention: unpaid charts 30 days, paid readings and their charts 12 months then deleted, payment records kept as legally required; deletion by email.
-- Refunds: automatic if we fail to deliver; any reason within 7 days (one goodwill refund per customer; delivery failures and duplicate charges never count toward it).
+- Refunds: automatic if we fail to deliver; any reason within 7 days (one goodwill refund per customer every 12 months (D50); delivery failures and duplicate charges never count toward it).
 
 ## 13. Analytics (PostHog, allowlisted properties only)
 Events: landing_view, chart_started, chart_completed{kind,timeBasis}, question_answered{type}, offer_viewed, checkout_started, payment_succeeded (server), reading_delivered{latency_s} (server), refund_succeeded{reason} (server). Properties: utm_source/medium/campaign/content (each ≤ 64 chars, allowlisted charset), device class. Never: birth values, email, tokens, full URLs with query, reading text. Session replay and autocapture off on /chart, /order, /r, /my, /admin.

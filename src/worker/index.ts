@@ -7,7 +7,7 @@ import { sendQueuedEmail } from "../server/email/outbox";
 import { getEnv } from "../server/env";
 import { RetryGeneration, generateReading, sweepDeadlines } from "../server/fulfillment/generate";
 import { sentryOptions } from "../server/observability/sentry";
-import { reconcileRefunds } from "../server/payments/refunds";
+import { executeRefund, reconcileRefunds, syncOrderRefunds } from "../server/payments/refunds";
 import { QUEUES, createBoss, ensureQueues } from "../server/queue/boss";
 import { runRetention } from "../server/retention";
 import { loadKeyring } from "../server/security/keyring";
@@ -66,6 +66,17 @@ async function main(): Promise<void> {
     });
     await boss.schedule(QUEUES.reconcileRefunds, "*/15 * * * *");
     await boss.work(QUEUES.reconcileRefunds, async () => { await reconcileRefunds({ db, payments }); });
+    // CC1a: provider calls for committed refund claims, and provider re-reads triggered by refund webhooks.
+    await boss.work<{ refundId: string }>(QUEUES.refundExecute, async ([job]) => {
+      if (!job) return;
+      const status = await executeRefund({ db, payments }, job.data.refundId);
+      if (status === "requested") throw new Error("refund lease busy"); // another executor holds it: retry later
+    });
+    await boss.work<{ orderId: string }>(QUEUES.refundSync, async ([job]) => {
+      if (!job) return;
+      const r = await syncOrderRefunds({ db, payments }, job.data.orderId);
+      if (r === "busy") throw new Error("refund sync busy"); // the holder saw `dirty` or will; retry keeps it certain
+    });
   } else {
     console.warn("[worker] payments or keys not configured: generation, deadlines and refunds are idle");
   }

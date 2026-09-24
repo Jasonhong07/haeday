@@ -55,6 +55,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <section className="card">
         <h2>Refunds pending: {issues.pendingRefunds.length} · Disputes open: {issues.openDisputes.length}</h2>
         {issues.openDisputes.map((x) => <p key={x.id} className="note">Dispute {x.status} · evidence due {x.due?.toISOString().slice(0, 10) ?? "?"}</p>)}
+        <h2>Needs action: {issues.needsAction.length}</h2>
+        {issues.needsAction.map((x) => <p key={x.id} className="note">{x.kind} · {x.nextAction} · order {x.orderId?.slice(0, 8) ?? "none"} · since {x.since.toISOString().slice(0, 16)}{x.occurrences > 1 ? ` · seen ${x.occurrences}×` : ""}</p>)}
       </section>
     </main>
   );

@@ -33,6 +33,29 @@ export interface CheckoutDetails {
 export type RefundStatus = "pending" | "requires_action" | "succeeded" | "failed" | "canceled";
 export interface RefundResult { id: string; status: RefundStatus }
 
+/** One provider refund as currently stored at the provider (CC1a F3: provider state is the source of truth). */
+export interface ProviderRefund {
+  id: string;
+  status: RefundStatus;
+  amountCents: number;
+  currency: string;
+  /** Our refunds.id if WE created it (metadata.refundRowId), else null. */
+  refundRowId: string | null;
+  orderId: string | null;
+  failureReason: string | null;
+}
+
+/** Everything the refund sync needs for one payment, fetched in one go (all pages). */
+export interface PaymentRefundSummary {
+  paymentIntentId: string;
+  livemode: boolean;
+  currency: string;
+  amountCapturedCents: number;
+  /** Provider's charge.amount_refunded (non-failed, non-canceled refunds). Cross-checked against the list. */
+  amountRefundedCents: number;
+  refunds: ProviderRefund[];
+}
+
 export type PaymentEvent =
   | { id: string; livemode: boolean; type: "checkout.completed" | "checkout.async_succeeded" | "checkout.async_failed" | "checkout.expired"; sessionId: string }
   | { id: string; livemode: boolean; type: "refund.updated"; refundId: string; paymentIntentId: string | null; status: RefundStatus; amountCents: number; orderId: string | null }
@@ -42,11 +65,15 @@ export type PaymentEvent =
 
 export interface PaymentAdapter {
   readonly provider: "stripe" | "fake";
+  /** Mode of the configured key (live keys start with sk_live_/rk_live_). Used to label issues. */
+  readonly livemode: boolean;
   createCheckoutSession(req: CheckoutSessionRequest): Promise<CheckoutSessionRef>;
   getCheckoutSession(sessionId: string): Promise<CheckoutSessionRef>;
   getCheckoutDetails(sessionId: string): Promise<CheckoutDetails>;
   expireCheckoutSession(sessionId: string): Promise<void>;
-  createRefund(req: { paymentIntentId: string; amountCents: number; idempotencyKey: string; orderId: string }): Promise<RefundResult>;
+  createRefund(req: { paymentIntentId: string; amountCents: number; idempotencyKey: string; orderId: string; refundRowId: string }): Promise<RefundResult>;
+  /** Current refunds (all pages) and charge totals for one payment. Throws on network/provider error. */
+  getRefundSummary(paymentIntentId: string): Promise<PaymentRefundSummary>;
   /** Throws on a bad signature. */
   parseWebhook(rawBody: string, signature: string | null): PaymentEvent;
 }

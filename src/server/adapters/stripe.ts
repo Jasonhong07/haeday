@@ -1,7 +1,7 @@
 // Stripe implementation of PaymentAdapter. The only file that imports the Stripe SDK.
 import Stripe from "stripe";
 import type {
-  CheckoutDetails, CheckoutSessionRef, CheckoutSessionRequest, PaymentAdapter, PaymentEvent, RefundResult, RefundStatus,
+  CheckoutDetails, CheckoutSessionRef, CheckoutSessionRequest, PaymentAdapter, PaymentEvent, PaymentRefundSummary, RefundResult, RefundStatus,
 } from "../payments/adapter";
 
 const refundStatus = (s: string | null | undefined): RefundStatus =>
@@ -12,8 +12,10 @@ const piId = (v: string | { id: string } | null | undefined) => (typeof v === "s
 export class StripePaymentAdapter implements PaymentAdapter {
   readonly provider = "stripe" as const;
   private readonly stripe: Stripe;
+  readonly livemode: boolean;
   constructor(secretKey: string, private readonly webhookSecret: string | undefined) {
     this.stripe = new Stripe(secretKey, { maxNetworkRetries: 2, timeout: 20_000 });
+    this.livemode = /^(sk|rk)_live_/.test(secretKey);
   }
 
   private ref(s: Stripe.Checkout.Session): CheckoutSessionRef {
@@ -64,12 +66,28 @@ export class StripePaymentAdapter implements PaymentAdapter {
     await this.stripe.checkout.sessions.expire(sessionId);
   }
 
-  async createRefund(req: { paymentIntentId: string; amountCents: number; idempotencyKey: string; orderId: string }): Promise<RefundResult> {
+  async createRefund(req: { paymentIntentId: string; amountCents: number; idempotencyKey: string; orderId: string; refundRowId: string }): Promise<RefundResult> {
     const r = await this.stripe.refunds.create(
-      { payment_intent: req.paymentIntentId, amount: req.amountCents, metadata: { orderId: req.orderId } },
+      { payment_intent: req.paymentIntentId, amount: req.amountCents, metadata: { orderId: req.orderId, refundRowId: req.refundRowId } },
       { idempotencyKey: req.idempotencyKey },
     );
     return { id: r.id, status: refundStatus(r.status) };
+  }
+
+  async getRefundSummary(paymentIntentId: string): Promise<PaymentRefundSummary> {
+    const pi = await this.stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["latest_charge"] });
+    const charge = typeof pi.latest_charge === "object" ? pi.latest_charge : null;
+    // All pages: a payment can carry several partial refunds (dashboard + ours).
+    const list = await this.stripe.refunds.list({ payment_intent: paymentIntentId, limit: 100 }).autoPagingToArray({ limit: 10_000 });
+    return {
+      paymentIntentId, livemode: pi.livemode, currency: pi.currency,
+      amountCapturedCents: charge?.amount_captured ?? 0,
+      amountRefundedCents: charge?.amount_refunded ?? 0,
+      refunds: list.map((r) => ({
+        id: r.id, status: refundStatus(r.status), amountCents: r.amount, currency: r.currency,
+        refundRowId: r.metadata?.refundRowId ?? null, orderId: r.metadata?.orderId ?? null, failureReason: r.failure_reason ?? null,
+      })),
+    };
   }
 
   parseWebhook(rawBody: string, signature: string | null): PaymentEvent {

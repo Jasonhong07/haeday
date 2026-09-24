@@ -6,7 +6,7 @@ const MSG: Record<string, string> = {
   refunded: "Done. Your refund of $3.99 has been started; banks usually show it in 5–10 business days.",
   pending: "Your refund is being processed. We'll email you if anything else is needed.",
   already_refunded: "This order has already been refunded.",
-  outside_window: `This order isn't eligible for a no-questions refund (7 days, one per customer). Please email ${SITE.support} and we'll help.`,
+  outside_window: `This order isn't eligible for a no-questions refund (7 days, one per customer every 12 months). Please email ${SITE.support} and we'll help.`,
   unavailable: "We couldn't find this order in this browser. Please sign in with your checkout email.",
   temporary_failure: "We couldn't process this right now. Please try again in a few minutes.",
 };

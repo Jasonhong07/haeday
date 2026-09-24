@@ -9,6 +9,8 @@ export const QUEUES = {
   sendEmail: "email.send",
   deadlines: "cron.deadlines",
   reconcileRefunds: "cron.reconcile-refunds",
+  refundExecute: "refund.execute", // one provider call attempt per refund row (singletonKey = refund id)
+  refundSync: "refund.sync",       // re-read provider refunds for one order (singletonKey = order id)
   retention: "cron.retention",
 } as const;
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -40,6 +42,8 @@ const POLICIES: Record<QueueName, "standard" | "exclusive"> = {
   [QUEUES.sendEmail]: "exclusive",
   [QUEUES.deadlines]: "standard",
   [QUEUES.reconcileRefunds]: "standard",
+  [QUEUES.refundExecute]: "exclusive",
+  [QUEUES.refundSync]: "exclusive",
   [QUEUES.retention]: "standard",
 };
 
@@ -51,6 +55,8 @@ const RETRY: Record<QueueName, { retryLimit: number; retryDelay: number; retryBa
   [QUEUES.deadlines]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 120 },
   [QUEUES.reconcileRefunds]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 600 },
   [QUEUES.retention]: { retryLimit: 1, retryDelay: 600, retryBackoff: false, expireInSeconds: 900 },
+  [QUEUES.refundExecute]: { retryLimit: 5, retryDelay: 30, retryBackoff: true, expireInSeconds: 120 },
+  [QUEUES.refundSync]: { retryLimit: 5, retryDelay: 30, retryBackoff: true, expireInSeconds: 120 },
 };
 
 export async function ensureQueues(boss: PgBoss): Promise<void> {

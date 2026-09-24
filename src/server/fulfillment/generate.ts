@@ -8,7 +8,7 @@ import { generationAttempts, orders, readings } from "../db/schema";
 import type { LlmAdapter } from "../adapters/llm";
 import type { PaymentAdapter } from "../payments/adapter";
 import type { OrderSnapshot } from "../payments/checkout";
-import { requestRefund } from "../payments/refunds";
+import { claimRefundInTx, executeRefund } from "../payments/refunds";
 import { queueEmailInTx } from "../email/outbox";
 import { decryptPrivate, encryptPrivate, type Keyring } from "../security/encryption";
 import { aad } from "../security/keyring";
@@ -47,12 +47,12 @@ export async function generateReading(deps: GenerateDeps, orderId: string): Prom
     return { order, attemptNo: n + 1, exhausted: false as const };
   });
   if (!claim) return "skipped";
-  if (claim.exhausted) return failAndRefund(deps, orderId, "attempts_exhausted");
+  if (claim.exhausted) return failAndRefund(deps, orderId, "attempts_exhausted", {});
 
   const fail = async (code: string): Promise<GenerateOutcome> => {
     await deps.db.update(generationAttempts).set({ status: "failed", errorCode: code, finishedAt: deps.now?.() ?? new Date() })
       .where(and(eq(generationAttempts.orderId, orderId), eq(generationAttempts.fencingToken, token)));
-    if (claim.attemptNo >= MAX_ATTEMPTS) return failAndRefund(deps, orderId, code);
+    if (claim.attemptNo >= MAX_ATTEMPTS) return failAndRefund(deps, orderId, code, { fencingToken: token });
     throw new RetryGeneration(code);
   };
 
@@ -106,20 +106,32 @@ export async function generateReading(deps: GenerateDeps, orderId: string): Prom
   return saved ? "delivered" : "skipped";
 }
 
-/** Terminal failure: mark failed, refund through the single refund service, then queue the apology email. */
-export async function failAndRefund(deps: Pick<GenerateDeps, "db" | "ring" | "boss" | "payments" | "now">, orderId: string, code: string): Promise<GenerateOutcome> {
+/**
+ * Terminal failure (CC1a F1). ONE transaction: fulfillment → failed, refund claim + `refund.execute` job, apology
+ * email. A crash before commit changes nothing (the deadline sweep retries); after commit the queued job finishes
+ * the refund. Guards stop a stale worker (old fencing token) or a stale sweep from failing an order that moved on.
+ */
+export async function failAndRefund(
+  deps: Pick<GenerateDeps, "db" | "ring" | "boss" | "payments" | "now">, orderId: string, code: string,
+  guard: { fencingToken?: string; deadlineBefore?: Date },
+): Promise<GenerateOutcome> {
   const now = deps.now?.() ?? new Date();
-  const moved = await deps.db.update(orders).set({ fulfillmentStatus: "failed", updatedAt: now })
-    .where(and(eq(orders.id, orderId), inArray(orders.fulfillmentStatus, ["queued", "generating"]))).returning({ id: orders.id, deliveryEmailEnc: orders.deliveryEmailEnc });
-  if (moved.length === 0) return "skipped";
-  console.error(`[fulfillment] order failed code=${code}`);
-  await requestRefund({ db: deps.db, payments: deps.payments, now: deps.now }, { orderId, reason: "service_failure", requestedBy: "worker" });
-  const enc = moved[0]!.deliveryEmailEnc;
-  if (enc) {
-    await deps.db.transaction(async (tx) => {
-      await queueEmailInTx(tx, deps.boss, deps.ring, { kind: "apology", orderId, to: decryptPrivate<string>(enc, aad("orders", orderId, "delivery_email"), deps.ring) });
-    });
-  }
+  const res = await deps.db.transaction(async (tx) => {
+    const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
+    if (!order || !["queued", "generating"].includes(order.fulfillmentStatus)) return null;
+    if (guard.fencingToken && order.currentFencingToken !== guard.fencingToken) return null;
+    if (guard.deadlineBefore && !(order.fulfillmentDeadlineAt && order.fulfillmentDeadlineAt < guard.deadlineBefore)) return null;
+    await tx.update(orders).set({ fulfillmentStatus: "failed", currentFencingToken: null, updatedAt: now }).where(eq(orders.id, orderId));
+    const refund = await claimRefundInTx(tx, deps.boss, { orderId, reason: "service_failure", requestedBy: guard.deadlineBefore ? "deadline_cron" : "worker", now, livemode: deps.payments.livemode });
+    if (order.deliveryEmailEnc && refund.ok) {
+      await queueEmailInTx(tx, deps.boss, deps.ring, { kind: "apology", orderId, to: decryptPrivate<string>(order.deliveryEmailEnc, aad("orders", orderId, "delivery_email"), deps.ring) });
+    }
+    return { refundId: refund.ok ? refund.refundId : null, error: refund.ok ? null : refund.error };
+  });
+  if (!res) return "skipped";
+  console.error(`[fulfillment] order failed code=${code}${res.error ? ` refund=${res.error}` : ""}`);
+  // Best effort now; the committed job and reconciliation finish it otherwise.
+  if (res.refundId) await executeRefund(deps, res.refundId).catch(() => undefined);
   return "failed_refunded";
 }
 
@@ -129,7 +141,7 @@ export async function sweepDeadlines(deps: Pick<GenerateDeps, "db" | "ring" | "b
   const late = await deps.db.select({ id: orders.id }).from(orders)
     .where(and(eq(orders.paymentStatus, "paid"), inArray(orders.fulfillmentStatus, ["queued", "generating"]), lt(orders.fulfillmentDeadlineAt, now)));
   let failed = 0;
-  for (const o of late) if ((await failAndRefund(deps, o.id, "deadline")) === "failed_refunded") failed++;
+  for (const o of late) if ((await failAndRefund(deps, o.id, "deadline", { deadlineBefore: now })) === "failed_refunded") failed++;
   const [{ slow } = { slow: 0 }] = await deps.db.select({ slow: count() }).from(orders)
     .where(and(eq(orders.paymentStatus, "paid"), inArray(orders.fulfillmentStatus, ["queued", "generating"]), lt(orders.paidAt, new Date(now.getTime() - 5 * 60_000))));
   return { failed, slow };

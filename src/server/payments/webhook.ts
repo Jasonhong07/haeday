@@ -3,12 +3,14 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { PgBoss } from "pg-boss";
 import type { Db } from "../db/client";
-import { disputes, orders, paymentEvents, refunds } from "../db/schema";
+import { disputes, orders, paymentEvents } from "../db/schema";
 import { QUEUES, enqueueInTx } from "../queue/boss";
 import { emailLookup, encryptPrivate, type Keyring } from "../security/encryption";
 import { aad } from "../security/keyring";
 import type { CheckoutDetails, PaymentAdapter, PaymentEvent } from "./adapter";
 import { FULFILLMENT_DEADLINE_MIN, SKUS } from "./sku";
+import { openIssue } from "./issues";
+import { claimRefundInTx, markRefundSyncInTx } from "./refunds";
 
 export interface WebhookDeps {
   db: Db;
@@ -63,7 +65,25 @@ export async function handlePaymentEvent(deps: WebhookDeps, event: PaymentEvent)
         const [order] = orderId ? await tx.select().from(orders).where(eq(orders.id, orderId)).for("update") : [];
         const reason = order ? validatePaid(details, order, deps) : "unknown_order";
         if (reason) {
-          await tx.update(paymentEvents).set({ handledAt: now, type: `rejected:${reason}` }).where(eq(paymentEvents.id, ins[0]!.id));
+          await tx.update(paymentEvents).set({ handledAt: now, type: `rejected:${reason}`, orderId: order?.id ?? null }).where(eq(paymentEvents.id, ins[0]!.id));
+          // D34: money taken but validation failed. Refund ONLY when this payment provably belongs to this order;
+          // the reading is never unlocked (fulfillment stays "none"). Everything else is an alert, never a refund.
+          const identityReasons = ["livemode_mismatch", "session_mismatch", "order_reference_mismatch", "not_paid", "missing_payment_intent"];
+          const linked = order && !identityReasons.includes(reason) && order.paymentStatus === "open"
+            && order.stripeSessionId === details.id && details.clientReferenceId === order.id && details.metadataOrderId === order.id
+            && details.livemode === (deps.paymentsMode === "live") && details.paymentStatus === "paid" && details.paymentIntentId
+            && details.amountTotal !== null && details.amountTotal > 0;
+          if (linked) {
+            await tx.update(orders).set({
+              paymentStatus: "paid", paidAt: now, stripePaymentIntentId: details.paymentIntentId,
+              subtotalCents: details.amountSubtotal, taxCents: details.amountTax ?? 0, totalCents: details.amountTotal, updatedAt: now,
+            }).where(eq(orders.id, order!.id));
+            // Refund what was actually captured (provider value), not our list price.
+            const claim = await claimRefundInTx(tx, deps.boss, { orderId: order!.id, reason: "validation_failure", requestedBy: "webhook", now, livemode: event.livemode, amountCents: details.amountTotal! });
+            await openIssue(tx, { kind: "validation_failure_refund", objectId: details.id, livemode: event.livemode, orderId: order!.id, nextAction: claim.ok ? `refund_started:${reason}` : `refund_${claim.error}:${reason}` });
+          } else if (details.paymentStatus === "paid") {
+            await openIssue(tx, { kind: "unlinked_paid_session", objectId: details.id, livemode: event.livemode, orderId: order?.id ?? null, nextAction: `review_no_auto_refund:${reason}` });
+          }
           return { outcome: "rejected" as const, reason };
         }
         const email = details.customerEmail;
@@ -103,32 +123,14 @@ export async function handlePaymentEvent(deps: WebhookDeps, event: PaymentEvent)
           .onConflictDoNothing().returning({ id: paymentEvents.id });
         if (ins.length === 0) return { outcome: "duplicate" as const };
         if (!event.paymentIntentId) return { outcome: "ignored" as const };
-        const [order] = await tx.select().from(orders).where(eq(orders.stripePaymentIntentId, event.paymentIntentId)).for("update");
+        // No order row lock here: the sync takes order → refund_syncs; this path only touches refund_syncs.
+        const [order] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.stripePaymentIntentId, event.paymentIntentId));
         if (!order) return { outcome: "ignored" as const, reason: "unknown_payment_intent" };
         await tx.update(paymentEvents).set({ orderId: order.id }).where(eq(paymentEvents.id, ins[0]!.id));
 
-        if (event.type === "refund.updated") {
-          const [mine] = await tx.select().from(refunds).where(eq(refunds.stripeRefundId, event.refundId));
-          if (mine) {
-            await tx.update(refunds).set({ status: event.status, updatedAt: now }).where(eq(refunds.id, mine.id));
-          } else {
-            // Created outside the app (Stripe dashboard): recorded, never blocked by the one-claim rule (D22).
-            await tx.insert(refunds).values({
-              orderId: order.id, source: "provider", reason: "admin", idempotencyKey: `provider:${event.refundId}`,
-              amountCents: event.amountCents, stripeRefundId: event.refundId, status: event.status, requestedBy: "stripe_dashboard",
-            }).onConflictDoNothing();
-          }
-          if (event.status === "failed" || event.status === "canceled") {
-            await tx.update(orders).set({ paymentStatus: "paid", updatedAt: now }).where(and(eq(orders.id, order.id), eq(orders.paymentStatus, "refund_pending")));
-          }
-          if (event.status !== "succeeded") return { outcome: "refund_updated" as const };
-        }
-        // Money actually returned: derive the order status from what Stripe reports.
-        const refunded = event.type === "charge.refunded" ? event.amountRefundedCents : event.amountCents;
-        const total = order.totalCents ?? order.unitAmountCents;
-        const status = refunded >= total ? "refunded" : "partially_refunded";
-        await tx.update(orders).set({ paymentStatus: status, updatedAt: now })
-          .where(and(eq(orders.id, order.id), inArray(orders.paymentStatus, ["paid", "refund_pending", "partially_refunded"])));
+        // CC1a F3: the event body is only a trigger. The provider's current refund list decides the state,
+        // read by the `refund.sync` job under a per-order lease (no ordering bugs, no lost webhook-first rows).
+        await markRefundSyncInTx(tx, deps.boss, order.id);
         return { outcome: "refund_updated" as const };
       });
     }

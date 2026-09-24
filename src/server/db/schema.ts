@@ -12,10 +12,11 @@ const ts = (name: string) => timestamp(name, { withTimezone: true });
 export const paymentStatus = pgEnum("payment_status", ["open", "paid", "expired", "refund_pending", "refunded", "partially_refunded"]);
 export const fulfillmentStatus = pgEnum("fulfillment_status", ["none", "queued", "generating", "delivered", "failed"]);
 export const refundStatus = pgEnum("refund_status", ["requested", "pending", "requires_action", "succeeded", "failed", "canceled", "unknown"]);
-export const refundReason = pgEnum("refund_reason", ["service_failure", "goodwill", "duplicate", "admin"]);
+export const refundReason = pgEnum("refund_reason", ["service_failure", "goodwill", "duplicate", "admin", "validation_failure"]);
 export const attemptStatus = pgEnum("attempt_status", ["running", "succeeded", "failed", "abandoned"]);
 export const emailStatus = pgEnum("email_status", ["pending", "sending", "sent", "failed", "bounced"]);
 export const refundSource = pgEnum("refund_source", ["service", "provider"]);
+export const issueStatus = pgEnum("issue_status", ["open", "acknowledged", "resolved"]);
 
 /** Runtime settings such as sales_enabled (ARCHITECTURE §5). */
 export const settings = pgTable("settings", {
@@ -153,6 +154,12 @@ export const refunds = pgTable("refunds", {
   stripeRefundId: text("stripe_refund_id").unique(),
   status: refundStatus("status").notNull().default("requested"),
   requestedBy: text("requested_by").notNull(), // customer | admin | worker | deadline_cron
+  attemptNo: integer("attempt_no").notNull().default(1), // new provider attempt only after a confirmed failure (CC1a F3)
+  leaseToken: uuid("lease_token"),          // held while one executor calls the provider (never inside a DB transaction)
+  leaseExpiresAt: ts("lease_expires_at"),
+  failureReason: text("failure_reason"),    // provider code only, no free text
+  firstSentAt: ts("first_sent_at"),         // first provider call; the idempotency window is measured from here
+  lastCheckedAt: ts("last_checked_at"),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -160,6 +167,34 @@ export const refunds = pgTable("refunds", {
     .where(sql`${t.source} = 'service' and ${t.status} in ('requested', 'pending', 'requires_action', 'unknown', 'succeeded')`),
   index("refunds_order_idx").on(t.orderId),
 ]);
+
+/**
+ * Per-order refund sync lease (CC1a F3). Provider state is fetched outside any transaction and saved only while
+ * the token still matches, so an older fetch can never overwrite a newer one. `dirty` = re-fetch after saving.
+ */
+export const refundSyncs = pgTable("refund_syncs", {
+  orderId: uuid("order_id").primaryKey().references(() => orders.id),
+  leaseToken: uuid("lease_token"),
+  leaseExpiresAt: ts("lease_expires_at"),
+  dirty: boolean("dirty").notNull().default(false),
+  lastSyncedAt: ts("last_synced_at"),
+});
+
+/** Payment problems a person must look at (D34). Ids and codes only: no email, birth data or provider payloads. */
+export const paymentIssues = pgTable("payment_issues", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: text("kind").notNull(),
+  dedupeKey: text("dedupe_key").notNull().unique(), // kind:provider object:mode
+  orderId: uuid("order_id").references(() => orders.id),
+  providerObjectId: text("provider_object_id"),
+  livemode: boolean("livemode").notNull(),
+  status: issueStatus("status").notNull().default("open"),
+  nextAction: text("next_action").notNull(),
+  occurrences: integer("occurrences").notNull().default(1),
+  createdAt: createdAt(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+  resolvedAt: ts("resolved_at"),
+}, (t) => [index("payment_issues_status_idx").on(t.status, t.createdAt)]);
 
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),

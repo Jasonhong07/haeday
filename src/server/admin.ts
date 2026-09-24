@@ -2,7 +2,7 @@
 import { and, count, desc, eq, gte, inArray, lt, sql, sum } from "drizzle-orm";
 import type { PgBoss } from "pg-boss";
 import type { Db } from "./db/client";
-import { adminAudit, chartRevisions, disputes, orders, refunds } from "./db/schema";
+import { adminAudit, chartRevisions, disputes, orders, paymentIssues, refunds } from "./db/schema";
 import { QUEUES, enqueueInTx } from "./queue/boss";
 
 export async function dashboard(db: Db, days: number, now = new Date()) {
@@ -34,7 +34,10 @@ export async function openIssues(db: Db) {
     .where(inArray(refunds.status, ["requested", "pending", "requires_action", "unknown"])).limit(50);
   const openDisputes = await db.select({ id: disputes.id, orderId: disputes.orderId, status: disputes.status, due: disputes.evidenceDueBy }).from(disputes)
     .where(sql`${disputes.status} not in ('won', 'lost', 'warning_closed')`).limit(50);
-  return { pendingRefunds, openDisputes };
+  // D34/CC1a: payment problems a person must act on (ids and codes only).
+  const needsAction = await db.select({ id: paymentIssues.id, kind: paymentIssues.kind, orderId: paymentIssues.orderId, nextAction: paymentIssues.nextAction, occurrences: paymentIssues.occurrences, since: paymentIssues.createdAt })
+    .from(paymentIssues).where(inArray(paymentIssues.status, ["open", "acknowledged"])).orderBy(desc(paymentIssues.createdAt)).limit(50);
+  return { pendingRefunds, openDisputes, needsAction };
 }
 
 /** Retry a stuck order: back to queued with a fresh deadline and a new job (same singleton key). */

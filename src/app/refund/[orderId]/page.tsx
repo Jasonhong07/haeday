@@ -21,7 +21,7 @@ export default async function RefundPage({ params }: { params: Promise<{ orderId
       <h1>Request a refund</h1>
       {view.state === "refunded" || view.state === "failed_refunded" ? <p className="lede" role="status">This order has already been refunded (or the refund is on its way).</p> : (
         <>
-          <p className="lede">Not what you hoped for? Within 7 days of purchase we refund one reading per customer, no questions asked. Banks usually show it in 5–10 business days.</p>
+          <p className="lede">Not what you hoped for? Within 7 days of purchase we refund one reading per customer every 12 months, no questions asked. Banks usually show it in 5–10 business days.</p>
           <RefundButton orderId={orderId} />
         </>
       )}
