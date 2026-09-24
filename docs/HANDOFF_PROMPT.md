@@ -39,14 +39,8 @@ payments/production. When every M{n} box has PASS evidence, stop and report: fil
 and results, anything I must do by hand (click-by-click), risks/TODOs, suggested commit message.
 ```
 
-## M1 추가 지시 (엔진, 붙여넣기)
-```text
-For M1: build tools/oracle first (Python 3.12 + Skyfield + pinned tzdata), generate
-data/jie_1900_2100.json with `pnpm oracle:update`, and show me the summary diff to approve.
-Then implement the TypeScript engine until `pnpm oracle:verify` passes F01–F30.
-Prepare docs/crosscheck.md with 10 cases (inputs + our pillars + blank columns for two Korean apps)
-so I can fill in the app results myself.
-```
+## M1 (완료)
+M1은 완료되었습니다. 교차검증은 `docs/REVIEW_M1.md`의 Review prompt를 쓰세요.
 
 ## M5 추가 지시 (품질)
 ```text

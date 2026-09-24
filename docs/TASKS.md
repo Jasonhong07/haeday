@@ -9,18 +9,18 @@ Rules: one milestone at a time, in order. A box is ticked only with evidence rec
 - [x] Drizzle schema v1 (all ARCHITECTURE §2 tables) + migration committed
 - [x] pg-boss worker with heartbeat; **transaction proof test**: insert row + enqueue inside one Drizzle transaction, throw → both rolled back; commit → job exists
 - [x] Health endpoints live/ready
-- [ ] (Jason accounts needed) Railway `staging` deployed (web + worker + Postgres), Sentry test event received, landing placeholder at staging URL
+- [x] Railway `staging` deployed (web + worker + Postgres), Sentry test event received, landing placeholder at staging URL · confirmed by Jason 2026-09-24 (GitHub Actions green too)
 - [x] `settings` table + SALES_ENABLED read path
 
 ## M1 · Chart engine (9/24–9/26) · release gate 9/27 23:59 CT
 - [x] Engine approach decided: own implementation, no calendar library (D24)
-- [x] tools/oracle (Python 3.14 + Skyfield + tzdata pinned) → `data/jie_1900_2050.json` (+ ephemeris name/hash) via `pnpm oracle:update` · Jason approval of the table pending
-- [ ] Bundled GeoNames cities15000 subset with lat/lon/tz; `GET /api/places?q=` autocomplete; server-side placeId resolution · BLOCKED: download.geonames.org is blocked from our build network; Jason downloads cities15000.zip (docs/STATUS.md)
+- [x] tools/oracle (Python 3.14 + Skyfield + tzdata pinned) → `data/jie_1900_2050.json` (+ ephemeris name/hash) via `pnpm oracle:update` · Jason approval of the table pending (sign-off line in docs/STATUS.md)
+- [x] Bundled GeoNames cities15000 subset with lat/lon/tz; `GET /api/places?q=` autocomplete; server-side placeId resolution (D27)
 - [x] Engine implements ENGINE_SPEC §2–§4 exactly, returns the §3 union
 - [x] `fixtures/manifest.json` with F01–F30 (+F12z, F28b, F31 = 33 cases); `pnpm oracle:verify` in CI compares every step (utc, offsets, jie neighbors, trueSolar within tolerance, pillars, warnings)
 - [x] Unit tests: 五虎遁, 五鼠遁, ten-god tables, visible counts with 6/8 denominators, day anchor continuity 1900–2050
 - [x] Unknown-time minute enumeration: day-split (disclosure text exact), DST date, month-split (question)
-- [ ] Jason: `docs/crosscheck.md` with 10 cases vs two Korean apps; every difference explained · table prepared, Jason fills app results
+- [ ] `docs/crosscheck.md`: Part A third-party library check done by Claude (3,000/3,000 match); Part B two Korean apps, Jason enters results, Claude explains differences
 - Gate: all fixtures pass and crosscheck explained → paid sales may open later. If not, keep building; sales stay off (D10).
 
 ## M2 · Input + free chart (9/27)
