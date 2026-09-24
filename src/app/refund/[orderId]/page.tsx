@@ -5,6 +5,7 @@ import { serverContext } from "@/server/http";
 import { loadOrderView } from "@/server/orders";
 import { currentViewer } from "@/server/viewer";
 import { RefundButton } from "./RefundButton";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Refund · Haeday", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function RefundPage({ params }: { params: Promise<{ orderId
           <RefundButton orderId={orderId} />
         </>
       )}
-      <p className="fine"><Link href="/refunds">Refund policy</Link> · Questions? hello@haeday.com</p>
+      <p className="fine"><Link href="/refunds">Refund policy</Link> · Questions? {SITE.support}</p>
     </main>
   );
 }

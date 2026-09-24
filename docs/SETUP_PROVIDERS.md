@@ -30,7 +30,7 @@ railway.app → haeday 프로젝트 → **web** 서비스 → **Variables** → 
 | `STRIPE_PRICE_SAJU` | `price_...` |
 | `LLM_API_KEY` | `sk-ant-...` |
 | `LLM_MODEL` | 모델 ID (Q1) |
-| `LLM_DAILY_CAP` | `50` |
+| `LLM_DAILY_CAP` | `100` (출시 때 `1000`) |
 
 저장하면 자동 재배포됩니다.
 
@@ -46,6 +46,9 @@ railway.app → haeday 프로젝트 → **web** 서비스 → **Variables** → 
 - 1분 안에 주문 화면이 "Your reading is ready"로 바뀌면 성공. 이메일은 5번(Resend) 연결 후부터 발송됩니다.
 - **실제 카드로 결제하지 마세요** (D08, Stripe 정책).
 
-## 6. 이메일 (Resend) — 도메인(Q3) 정한 뒤
+## 6. 도메인 반영 (Q3 구매 후)
+web 서비스 Variables: `NEXT_PUBLIC_SITE_DOMAIN` = `haeday.net`(산 도메인), `NEXT_PUBLIC_SUPPORT_EMAIL` = `hello@haeday.net`. 공유 이미지·약관·안내 문구가 모두 이 값으로 바뀝니다.
+
+## 7. 이메일 (Resend) — 도메인(Q3) 정한 뒤
 resend.com 가입 → Domains → Add domain → 알려주는 DNS 레코드(SPF/DKIM)를 도메인 회사에 입력 → Verified 확인 → API Keys → `re_...` 복사.
 Railway 변수(web, worker): `RESEND_API_KEY`, `EMAIL_FROM` = `Haeday <hello@도메인>`, `SUPPORT_EMAIL` = `hello@도메인`, `ADMIN_EMAILS` = 관리자 이메일(Q10).

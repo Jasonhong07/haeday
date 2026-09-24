@@ -9,7 +9,7 @@
 | M2 input + free chart | done | not yet | Jason phone check |
 | M3 payments (Stripe test) | done: checkout, webhook, refunds, disputes | no | Stripe test keys (docs/SETUP_PROVIDERS.md) |
 | M4 AI reading | done: prompt, gate, worker, fencing, deadline, reading page | no | Q1 model choice + API key |
-| M5 content + quality | draft library (51 entries) + sample script | no | Q7 approval, 15 samples scored |
+| M5 content + quality | draft library (72 entries, Korean review sheet) + sample script | no | Q7 approval, 15 samples scored |
 | M6 email, identity, refunds, ops | done: outbox, magic link, /my, refunds page, /admin, crons | no | Q3 domain → Resend, Q10 admin email |
 | M7 legal, analytics, launch | legal drafts done; PostHog, CSP, landing, production env pending | no | Q9, Q14, domain |
 

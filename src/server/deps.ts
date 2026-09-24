@@ -1,5 +1,6 @@
 // Builds provider adapters from the environment. The only place that decides which implementation runs.
 import type { Env } from "./env";
+import { SITE } from "@/lib/site";
 import { StripePaymentAdapter } from "./adapters/stripe";
 import { AnthropicLlm, type LlmAdapter } from "./adapters/llm";
 import { ResendEmail, type EmailAdapter } from "./adapters/email";
@@ -19,4 +20,4 @@ export function emailAdapter(env: Env): EmailAdapter | null {
   return env.RESEND_API_KEY && env.EMAIL_FROM ? new ResendEmail(env.RESEND_API_KEY, env.EMAIL_FROM, env.SUPPORT_EMAIL) : null;
 }
 
-export const supportEmail = (env: Env) => env.SUPPORT_EMAIL ?? "hello@haeday.com";
+export const supportEmail = (env: Env) => env.SUPPORT_EMAIL ?? SITE.support;

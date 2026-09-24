@@ -6,6 +6,7 @@ import { serverContext } from "@/server/http";
 import { loadOrderView } from "@/server/orders";
 import { currentViewer } from "@/server/viewer";
 import { AutoRefresh } from "./AutoRefresh";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Your reading · Haeday", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
       {waiting && <AutoRefresh seconds={4} />}
       {view.state === "delivered" && view.readingId && <Link className="btn btn-primary" href={`/r/${view.readingId}`}>Open my reading</Link>}
       {view.state === "expired" && view.chartRevisionId && <Link className="btn btn-primary" href={`/chart/${view.chartRevisionId}`}>Back to my chart</Link>}
-      <p className="fine">Questions? hello@haeday.com · <Link href="/login">Open your readings on another device</Link></p>
+      <p className="fine">Questions? {SITE.support} · <Link href="/login">Open your readings on another device</Link></p>
     </main>
   );
 }

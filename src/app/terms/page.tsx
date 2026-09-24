@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
+import { SITE } from "@/lib/site";
 export const metadata: Metadata = { title: "Terms · Haeday" };
 // PRD §12 draft. Seller per D04; D05 checks (assumed name, residency) may change this text.
 export default function Terms() {
   return (
     <LegalPage title="Terms of Service" updated="September 24, 2026">
-      <h2>Who we are</h2><p>Haeday is operated by Jason Hong, doing business as Haeday (&quot;we&quot;). Contact: hello@haeday.com.</p>
+      <h2>Who we are</h2><p>Haeday is operated by Jason Hong, doing business as Haeday (&quot;we&quot;). Contact: {SITE.support}.</p>
       <h2>What we offer</h2><p>A free Korean saju (Four Pillars) birth chart and an optional personal reading sold as a one-time digital purchase ($3.99 USD plus any applicable tax). Readings are written with the help of artificial intelligence, grounded in a curated interpretation library.</p>
       <h2>Entertainment and reflection only</h2><p>Saju is a cultural tradition, not a science. Our content is for entertainment and self-reflection. It is not a prediction and not medical, legal, financial, psychological or other professional advice. Do not make important decisions based on it.</p>
       <h2>Who can buy</h2><p>You must be 18 or older to make a purchase.</p>

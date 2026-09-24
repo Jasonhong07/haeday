@@ -2,6 +2,7 @@
 // Interactive parts of the free chart: question answers (new revision) and the share image (PRD §4, §8).
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { SITE } from "@/lib/site";
 
 interface Choice { label: string; body: { foldChoice: "earlier" | "later" } | { boundaryChoice: number } }
 
@@ -60,7 +61,7 @@ async function drawShare(d: ShareData): Promise<string> {
       g.fillStyle = "#12132A"; g.font = "500 120px 'Noto Serif KR', serif"; g.fillText(ch, x + tw / 2, y0 + j * 205 + 140);
     }
   });
-  g.fillStyle = "#D9B26A"; g.font = "400 54px Fraunces, Georgia, serif"; g.fillText("haeday.com", W / 2, 1760);
+  g.fillStyle = "#D9B26A"; g.font = "400 54px Fraunces, Georgia, serif"; g.fillText(SITE.domain, W / 2, 1760);
   g.fillStyle = "#A7A3BE"; g.font = "400 30px 'Plus Jakarta Sans', sans-serif"; g.fillText("Korean saju · for reflection", W / 2, 1820);
   return c.toDataURL("image/png");
 }

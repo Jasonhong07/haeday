@@ -6,6 +6,7 @@ import { DAY_MASTERS } from "@/content/library";
 import { serverContext } from "@/server/http";
 import { loadReadingView } from "@/server/orders";
 import { currentViewer } from "@/server/viewer";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Your reading · Haeday", robots: { index: false, follow: false }, referrer: "no-referrer" };
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ export default async function ReadingPage({ params }: { params: Promise<{ readin
             {r[key].split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)}
           </section>
         ))}
-        <p className="reading-fine">{r.disclaimer} Questions? hello@haeday.com</p>
+        <p className="reading-fine">{r.disclaimer} Questions? {SITE.support}</p>
       </article>
     </main>
   );
