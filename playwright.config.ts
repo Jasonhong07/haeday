@@ -4,6 +4,7 @@ export const DB = process.env.E2E_DATABASE_URL ?? process.env.TEST_DATABASE_URL;
 
 export default defineConfig({
   testDir: "tests/e2e",
+  globalSetup: "./tests/e2e/global-setup.ts",
   use: {
     baseURL: "http://127.0.0.1:3000", ...devices["iPhone 13"], browserName: "chromium",
     // Optional override for sandboxes with a preinstalled Chromium; CI and local use Playwright's own browser.

@@ -10,7 +10,9 @@ import { formatClock, type Pillar, type Pillars } from "@/server/engine";
 import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { findGuest, GUEST_COOKIE } from "@/server/guest";
 import { serverContext } from "@/server/http";
-import { buildFacts, contentReady } from "@/server/fulfillment/prompt";
+import { buildFacts, contentReady, freePreview } from "@/server/fulfillment/prompt";
+import { MARKETING_CONSENT_TEXT } from "@/server/email/capture";
+import { ChartEmailForm } from "./ChartEmailForm";
 import { isSalesEnabled } from "@/server/settings";
 import { QuestionCard, ShareButton, type ShareData } from "./ChartClient";
 
@@ -70,6 +72,7 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
   await markChartViewed(ctx.db, chart.id);
   const r = chart.response;
   // D37: a chart whose reading still needs unapproved content is shown as "opening soon", never sold.
+  const preview = r.kind === "computed" ? freePreview(r.chart.dayMaster.stem) : null;
   const salesOpen = r.kind === "computed" && contentReady(buildFacts(r.chart), ctx.env.APP_ENV === "production")
     && paymentsConfigured(ctx.env) && llmConfigured(ctx.env) && (await isSalesEnabled(ctx.db));
 
@@ -103,6 +106,16 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
           <h2 id="dm">{dm.name} · {dm.image}</h2>
           <p style={{ margin: 0 }}>{dm.line}</p>
         </section>
+        {preview && (
+          // C2 / D46: approved day-master text only. The paid sections are listed by title; their text is not on this page.
+          <section className="card" aria-labelledby="preview">
+            <p className="eyebrow">A PREVIEW FROM YOUR READING</p>
+            <h2 id="preview">{dm.name}, in depth</h2>
+            <p>{preview}</p>
+            <p className="note" style={{ marginBottom: 4 }}>Also in your personal reading:</p>
+            <ul className="locked">{OFFER_ITEMS.filter((i) => !/Day Master/.test(i)).map((i) => <li key={i}>{i}</li>)}</ul>
+          </section>
+        )}
         <section className="card" aria-labelledby="el">
           <h2 id="el">Your visible elements</h2>
           <div className="bars">
@@ -157,6 +170,7 @@ function Shell({ chart, salesOpen, share, children }: { chart: LoadedChart; sale
         </section>
       )}
       {share && <ShareButton data={share} />}
+      {chart.response.kind === "computed" && <ChartEmailForm chartId={chart.id} consentText={MARKETING_CONSENT_TEXT} />}
       <p className="fine">AI-assisted · For entertainment and reflection · Not advice · <Link href="/method">How we calculate</Link></p>
     </main>
   );

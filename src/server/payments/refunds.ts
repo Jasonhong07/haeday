@@ -20,6 +20,8 @@ type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 export type RefundReason = "service_failure" | "goodwill" | "duplicate" | "admin" | "validation_failure";
 export type RequestedBy = "customer" | "admin" | "worker" | "deadline_cron" | "webhook";
+// Jason 2026-09-24: one goodwill refund per customer (email) per rolling 12 months.
+export const GOODWILL_RESET_DAYS = 365;
 export const GOODWILL_DAYS = 7;
 export const LEASE_MS = 120_000;
 /** Stripe keeps idempotency keys for at least 24 h; after this we look a refund up instead of re-sending. */
@@ -77,7 +79,7 @@ export async function claimRefundInTx(
     if (order.deliveryEmailLookup) {
       const [used] = await tx.select({ n: sql<number>`count(*)::int` }).from(refunds).innerJoin(orders, eq(refunds.orderId, orders.id))
         .where(and(eq(orders.deliveryEmailLookup, order.deliveryEmailLookup), eq(refunds.reason, "goodwill"), ne(refunds.orderId, order.id),
-          inArray(refunds.status, [...CLAIM_ACTIVE])));
+          inArray(refunds.status, [...CLAIM_ACTIVE]), gt(refunds.createdAt, new Date(input.now.getTime() - GOODWILL_RESET_DAYS * 86_400_000))));
       if ((used?.n ?? 0) > 0) return { ok: false, error: "goodwill_used" };
     }
   }

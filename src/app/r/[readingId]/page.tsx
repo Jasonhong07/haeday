@@ -16,6 +16,9 @@ const SECTIONS = [
   ["love", "Love and relationships"], ["workMoney", "Work and money"], ["year2027", "Your 2027 energy"], ["reflection", "A question to reflect on"],
 ] as const;
 
+import { ShareButton } from "@/app/chart/[id]/ChartClient";
+import { shareData } from "@/lib/share";
+
 export default async function ReadingPage({ params }: { params: Promise<{ readingId: string }> }) {
   const { readingId } = await params;
   const ctx = serverContext();
@@ -53,6 +56,13 @@ export default async function ReadingPage({ params }: { params: Promise<{ readin
             {r[key].split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)}
           </section>
         ))}
+        {dm && view.pillars && (
+          <section className="reading-share" aria-label="Share">
+            {/* C6: same private, in-browser image as the chart page. No public link to this reading exists. */}
+            <p className="reading-fine">Share your Day Master (no birth details, no reading text):</p>
+            <ShareButton data={shareData(dm, view.pillars)} />
+          </section>
+        )}
         <p className="reading-fine">{r.disclaimer} Questions? {SITE.support}</p>
       </article>
     </main>

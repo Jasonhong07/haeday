@@ -45,3 +45,14 @@ export function magicLinkEmail(link: string, support: string) {
   const text = `Sign in to Haeday: ${link}\n\nThe link works once and expires in 15 minutes. If you didn't ask for this, ignore this email.`;
   return { subject, html, text };
 }
+
+/** C4: the free chart, emailed at the visitor's request (transactional; no marketing content). */
+export function chartEmail(c: { dayMaster: string; image: string; pillars: string }, origin: string, support: string) {
+  const esc = (x: string) => x.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]!));
+  const subject = "Your Haeday birth chart";
+  const html = wrap("Your birth chart", `<p style="font-size:16px;line-height:1.6">Your Day Master: <b>${esc(c.dayMaster)}</b>, ${esc(c.image)}.</p>
+<p style="font-size:16px;line-height:1.6">Your four pillars (hour · day · month · year): <b>${esc(c.pillars)}</b></p>
+<p style="font-size:16px;line-height:1.6"><a href="${origin}/saju">Open Haeday</a> to see your chart again or get your personal reading.</p>`, support);
+  const text = `Your Day Master: ${c.dayMaster}, ${c.image}.\nYour four pillars (hour · day · month · year): ${c.pillars}\n\nOpen Haeday: ${origin}/saju\n\nQuestions? ${support}`;
+  return { subject, html, text };
+}

@@ -78,3 +78,9 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 # CC2 launch protection · 2026-09-24 · on top of CC1c
 - Details: `review/CHANGES_CC2.md`. `pnpm check` → **289 passed**, 3 skipped. `pnpm e2e` (CSP **enforced**, iPhone 13) → **13/13**, incl. full chart → pay → reading flow with dev-only fakes. `pnpm build` OK, no Google font references.
 - NOT RUN: staging CSP report-only soak, production-with-test-keys smoke, DB restore drill, ChatGPT review.
+
+# CC3 conversion · 2026-09-24 · on top of CC2
+- Details: `review/CHANGES_CC3.md`. `TEST_DATABASE_URL=…/haeday_test pnpm check` → **295 passed**, 3 skipped. `pnpm build` OK. `pnpm e2e` (CSP enforced, iPhone 13, fresh DB) → **13/13**.
+- Mutation check: D50 12-month window → new goodwill-reset test fails.
+- Independent review: Claude sub-agent (read-only) ×1 on the CC3 diff; 2 major + 5 minor fixed. CC2 was not separately re-reviewed. ChatGPT review: **NOT RUN**.
+- NOT RUN: real Resend send + List-Unsubscribe header (domain/key pending); marketing sending stays OFF until D48.

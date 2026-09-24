@@ -15,7 +15,7 @@ async function fill(page: Page, date: string, mode: "I know it" | "Roughly" | "I
 
 test("exact time: landing → input → chart with pillars, Day Master, details and share preview", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "See my birth chart · Free" }).click();
+  await page.getByRole("link", { name: "See my birth chart · Free" }).first().click();
   await expect(page).toHaveURL(/\/saju$/);
   await fill(page, "1990-05-12", "I know it", "09:30", "seoul", /^Seoul, South Korea$/);
   await expect(page).toHaveURL(/\/chart\/[0-9a-f-]{36}$/);
@@ -24,7 +24,8 @@ test("exact time: landing → input → chart with pillars, Day Master, details 
   await expect(page.getByRole("heading", { name: /Yin Fire/ })).toBeVisible();
   await expect(page.getByText("Out of 8 characters")).toBeVisible();
   await expect(page.getByText(/Your details: May 12, 1990, 9:30 AM, Seoul, South Korea\. Solar time adjusted\./)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Unlock my reading · $3.99" })).toBeDisabled();
+  // Sales are opened by global-setup (fake providers); the closed state is covered by the integration tests.
+  await expect(page.getByRole("link", { name: "Unlock my reading · $3.99" })).toBeVisible();
   await page.getByRole("button", { name: "Share my Day Master" }).click();
   await expect(page.getByRole("img", { name: /Share image: Day Master 丁 Yin Fire/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

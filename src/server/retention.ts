@@ -2,7 +2,7 @@
 // and every such change is stamped with pii_deleted_at.
 import { and, eq, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import type { Db } from "./db/client";
-import { chartRevisions, emailOutbox, magicLinks, orders, readings, sessions } from "./db/schema";
+import { chartRevisions, emailOutbox, magicLinks, marketingContacts, orders, readings, sessions } from "./db/schema";
 
 export const PAID_RETENTION_DAYS = 365;
 export const UNPAID_ORDER_DAYS = 30;
@@ -38,10 +38,18 @@ export async function runRetention(db: Db, now = new Date()) {
       await tx.update(chartRevisions).set({ inputEnc: null, responseEnc: null, piiDeletedAt: now }).where(inArray(chartRevisions.id, chartIds));
     }
 
+    // 3b) C4: free-chart emails keep their address and chart summary 30 days (enough for retries), then only ids.
+    const chartMail = await tx.update(emailOutbox).set({ toEmailEnc: null, payloadEnc: null, toLookup: null, piiDeletedAt: now })
+      .where(and(eq(emailOutbox.kind, "chart"), lt(emailOutbox.createdAt, unpaidCutoff), isNull(emailOutbox.piiDeletedAt))).returning({ id: emailOutbox.id });
+
+    // 3c) Safety net: unsubscribe() already drops the address; unsubscribed contacts keep only the keyed lookup.
+    const contacts = await tx.update(marketingContacts).set({ emailEnc: null })
+      .where(and(sql`${marketingContacts.unsubscribedAt} is not null`, sql`${marketingContacts.emailEnc} is not null`)).returning({ id: marketingContacts.id });
+
     // 4) Expired or used login artefacts.
     const links = await tx.delete(magicLinks).where(or(lt(magicLinks.expiresAt, now), lt(magicLinks.createdAt, new Date(now.getTime() - 86_400_000)))).returning({ id: magicLinks.id });
     const sess = await tx.delete(sessions).where(lt(sessions.expiresAt, now)).returning({ id: sessions.id });
 
-    return { chartsDeleted: charts.length, unpaidOrdersScrubbed: unpaid.length, paidOrdersScrubbed: ids.length, magicLinksDeleted: links.length, sessionsDeleted: sess.length };
+    return { chartsDeleted: charts.length, unpaidOrdersScrubbed: unpaid.length, paidOrdersScrubbed: ids.length, chartEmailsScrubbed: chartMail.length, unsubscribedContactsScrubbed: contacts.length, magicLinksDeleted: links.length, sessionsDeleted: sess.length };
   });
 }

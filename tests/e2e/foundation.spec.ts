@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
-test("mobile placeholder stays honest and exposes no checkout", async ({ page }) => {
+test("landing on a phone: honest, one free CTA, no checkout on the landing page itself", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Find your heyday");
-  await expect(page.getByRole("status")).toContainText("Full readings open soon");
+  await expect(page.getByRole("link", { name: "See my birth chart · Free" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Questions" })).toBeVisible();
+  await expect(page.getByText(/testimonial|reviews|★/i)).toHaveCount(0); // D42: no fabricated social proof
   await expect(page.getByRole("button", { name: /pay|buy|checkout/i })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

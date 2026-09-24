@@ -163,7 +163,10 @@ export const emailOutbox = pgTable("email_outbox", {
   id: uuid("id").primaryKey().defaultRandom(),
   kind: text("kind").notNull(),
   toEmailEnc: text("to_email_enc"), // nulled by retention (D16)
+  payloadEnc: text("payload_enc"),   // C4: encrypted per-email content (e.g. the free chart summary); null for order mail
   orderId: uuid("order_id").references(() => orders.id),
+  guestId: uuid("guest_id"),         // C4 chart mail: requesting browser (abuse cap); null for order mail
+  toLookup: text("to_lookup"),       // C4 chart mail: keyed recipient lookup (per-recipient cap); nulled by retention
   dedupeKey: text("dedupe_key").notNull().unique(),
   status: emailStatus("status").notNull().default("pending"),
   attempts: integer("attempts").notNull().default(0),
@@ -172,7 +175,11 @@ export const emailOutbox = pgTable("email_outbox", {
   nextAttemptAt: ts("next_attempt_at").notNull().defaultNow(),
   piiDeletedAt: ts("pii_deleted_at"),
   createdAt: createdAt(),
-}, (t) => [index("email_outbox_due_idx").on(t.status, t.nextAttemptAt)]);
+}, (t) => [
+  index("email_outbox_due_idx").on(t.status, t.nextAttemptAt),
+  index("email_outbox_guest_idx").on(t.guestId, t.createdAt),
+  index("email_outbox_to_lookup_idx").on(t.toLookup, t.createdAt),
+]);
 
 // D15: one active/successful refund claim per order regardless of reason, for refunds WE start.
 // Refunds created outside the app (Stripe dashboard) are recorded with source=provider and never blocked.
@@ -229,6 +236,23 @@ export const attemptGrants = pgTable("attempt_grants", {
 export const emailBudget = pgTable("email_budget", {
   day: text("day").primaryKey(), // YYYY-MM-DD (UTC)
   sent: integer("sent").notNull().default(0),
+});
+
+/**
+ * C4 / D41: marketing consent from the free chart (separate from any transactional email). Email is encrypted, looked
+ * up by HMAC. Sending marketing stays OFF until the postal address question (D48) is settled.
+ */
+export const marketingContacts = pgTable("marketing_contacts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  emailLookup: text("email_lookup").notNull().unique(),
+  emailEnc: text("email_enc"),                       // null after unsubscribe (lookup stays as suppression)
+  source: text("source").notNull(),                 // free_chart
+  consentVersion: text("consent_version").notNull(),
+  consentedAt: ts("consented_at").notNull(),
+  consentGuestId: uuid("consent_guest_id"),          // which browser ticked the box (evidence; the address is unverified)
+  unsubscribedAt: ts("unsubscribed_at"),
+  unsubscribeTokenHash: text("unsubscribe_token_hash").unique(),
+  createdAt: createdAt(),
 });
 
 /**

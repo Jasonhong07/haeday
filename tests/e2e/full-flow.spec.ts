@@ -24,8 +24,10 @@ test("chart → checkout → pay → reading, with CSP enforced", async ({ page 
   await expect(page).toHaveURL(/\/chart\/[0-9a-f-]{36}$/);
 
   await page.getByRole("link", { name: /Unlock my reading/ }).click();
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: /Continue to payment/ }).click();
+  // A tap that lands before hydration is dropped by React's controlled input; retry until the button enables.
+  const pay = page.getByRole("button", { name: /Continue to payment/ });
+  await expect(async () => { await page.getByRole("checkbox").check(); await expect(pay).toBeEnabled({ timeout: 1000 }); }).toPass({ timeout: 15000 });
+  await pay.click();
   await expect(page).toHaveURL(/\/dev\/pay\?s=cs_test_/);
   await page.getByRole("button", { name: /Pay \$3\.99 \(test\)/ }).click();
   await expect(page).toHaveURL(/\/order\/[0-9a-f-]{36}$/);

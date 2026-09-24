@@ -116,3 +116,12 @@ export function buildUserMessage(facts: ReadingFacts, snippets: Array<Pick<Snipp
 }
 
 export const PROMPT_META = { promptVersion: PROMPT_VERSION, snippetsVersion: SNIPPETS_VERSION };
+
+/**
+ * C2 / D46 free preview: the day master's core text, ONLY if Jason approved it. Returns null otherwise (nothing
+ * unapproved is ever shown, and nothing from the paid reading is sent to the page).
+ */
+export function freePreview(stem: string): string | null {
+  const core = (DAY_MASTER_SNIPPETS[stem] ?? []).find((s) => s.id.endsWith(".core"));
+  return core && core.approvedBy === "jason" ? core.text : null;
+}

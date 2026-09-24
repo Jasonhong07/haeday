@@ -9,10 +9,10 @@ import { QUEUES, enqueueInTx } from "../queue/boss";
 import { decryptPrivate, encryptPrivate, type Keyring } from "../security/encryption";
 import { aad } from "../security/keyring";
 import { EmailError, type EmailAdapter } from "../adapters/email";
-import { apologyEmail, apologyFreeEmail, deliveryEmail } from "./templates";
+import { apologyEmail, apologyFreeEmail, chartEmail, deliveryEmail } from "./templates";
 import { nextBudgetWindow, reserveEmail, type BudgetLimits, type MailClass } from "./budget";
 
-export type EmailKind = "delivery" | "apology" | "apology_free";
+export type EmailKind = "delivery" | "apology" | "apology_free" | "chart";
 export const MAX_EMAIL_ATTEMPTS = 6;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -32,7 +32,7 @@ export interface SendDeps {
   /** L7: provider plan limits. Absent = no budget check (tests of unrelated behaviour). */
   limits?: BudgetLimits; onAlert?: (sentToday: number) => void; now?: () => Date;
 }
-const CLASS: Record<string, MailClass> = { delivery: "delivery", apology: "apology", apology_free: "apology" };
+const CLASS: Record<string, MailClass> = { delivery: "delivery", apology: "apology", apology_free: "apology", chart: "chart" };
 
 /** Returns "sent" | "skipped" | "failed" | "deferred" (over the daily/monthly budget); throws to ask pg-boss for a retry. */
 export async function sendQueuedEmail(deps: SendDeps, dedupeKey: string): Promise<"sent" | "skipped" | "failed" | "deferred"> {
@@ -46,6 +46,9 @@ export async function sendQueuedEmail(deps: SendDeps, dedupeKey: string): Promis
     const reading = row.orderId ? await deps.db.query.readings.findFirst({ where: eq(readings.orderId, row.orderId), columns: { id: true } }) : undefined;
     if (!reading) { await deps.db.update(emailOutbox).set({ status: "failed", lastError: "no_reading" }).where(eq(emailOutbox.id, row.id)); return "failed"; }
     content = deliveryEmail(`${deps.origin}/r/${reading.id}`, deps.supportEmail);
+  } else if (row.kind === "chart") {
+    if (!row.payloadEnc) { await deps.db.update(emailOutbox).set({ status: "failed", lastError: "no_payload" }).where(eq(emailOutbox.id, row.id)); return "failed"; }
+    content = chartEmail(decryptPrivate(row.payloadEnc, aad("email_outbox", row.id, "payload"), deps.ring), deps.origin, deps.supportEmail);
   } else if (row.kind === "apology_free") {
     content = apologyFreeEmail(deps.supportEmail);
   } else {

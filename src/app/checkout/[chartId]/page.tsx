@@ -35,6 +35,15 @@ export default async function CheckoutPage({ params }: { params: Promise<{ chart
         <p style={{ margin: "0 0 8px" }}>One personal reading for the chart you just made: about 900 words on your Day Master, elements, love, work and money, and your 2027 energy.</p>
         <p className="note" style={{ margin: 0 }}>$3.99 one-time · No subscription · AI-assisted, grounded in a curated interpretation library · {capacity === "paused" ? "Opening again soon" : delayed ? "Delivered within 24 hours" : "Delivered in about a minute"}</p>
       </section>
+      <section className="card" aria-label="Before you pay">
+        {/* C3: exact terms, stated before payment. */}
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <li>Pay by card on Stripe&apos;s secure page. Apple Pay or Google Pay appear there if your device and browser support them.</li>
+          <li>Have a promotion code? Enter it on the Stripe page.</li>
+          <li>If we can&apos;t deliver your reading, you&apos;re refunded automatically. Within 7 days you can also ask for a refund for any reason, once per customer every 12 months.</li>
+          <li>We email you the link and it stays on your order page. Sales tax, if any, is shown by Stripe before you pay.</li>
+        </ul>
+      </section>
       {open && delayed && <p className="notice card" role="status">{DELAY_NOTICE}</p>}
       {open && capacity === "paused"
         ? <p className="card" role="status">We&apos;re at capacity for new readings right now. Your free chart is saved in this browser: please come back in a few hours.</p>

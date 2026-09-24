@@ -83,3 +83,7 @@ dialog.sheet img { width:100%; border-radius:var(--r1); display:block; margin:0 
 .reading a { color:var(--gold-on-hanji); }
 .reading-disclosure { border-left:3px solid var(--gold-on-hanji); background:#EADFCB; padding:10px 14px; font-size:15px; border-radius:0 12px 12px 0; }
 .reading-fine { font-size:13px; color:#6b6358; margin-top:40px; }
+/* C1 landing */
+.steps { padding-left:20px; } .steps li { margin:0 0 10px; }
+details.faq { border-top:1px solid var(--line); padding:12px 0; } details.faq summary { cursor:pointer; font-weight:500; } details.faq p { color:var(--mist); margin:8px 0 0; }
+.locked li { color:var(--mist); }

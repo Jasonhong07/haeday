@@ -36,6 +36,13 @@
       "when": 1790288988250,
       "tag": "0004_funnel",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790290785228,
+      "tag": "0005_email_capture",
+      "breakpoints": true
     }
   ]
 }

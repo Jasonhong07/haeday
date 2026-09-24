@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     const privateNoStore = [{ key: "Cache-Control", value: "private, no-store, max-age=0" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }];
     return [
       { source: "/:path*", headers: securityHeaders },
-      ...["/chart/:path*", "/order/:path*", "/r/:path*", "/refund/:path*", "/checkout/:path*", "/admin/:path*", "/admin", "/login/:path*", "/login", "/my"].map((source) => ({ source, headers: privateNoStore })),
+      ...["/chart/:path*", "/order/:path*", "/r/:path*", "/refund/:path*", "/checkout/:path*", "/admin/:path*", "/admin", "/login/:path*", "/login", "/my", "/unsubscribe"].map((source) => ({ source, headers: privateNoStore })),
     ];
   },
 };

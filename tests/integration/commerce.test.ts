@@ -225,6 +225,15 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     expect((await requestRefund({ db: h.db, payments: pay, boss }, { orderId: b.orderId, reason: "service_failure", requestedBy: "worker" })).ok).toBe(true);
   });
 
+  it("goodwill resets after 12 months (Jason 2026-09-24): an older goodwill refund no longer blocks", async () => {
+    const a = await paidOrder("reset@example.test");
+    const b = await paidOrder("reset@example.test");
+    expect((await requestRefund({ db: h.db, payments: pay, boss }, { orderId: a.orderId, reason: "goodwill", requestedBy: "customer" })).ok).toBe(true);
+    expect(await requestRefund({ db: h.db, payments: pay, boss }, { orderId: b.orderId, reason: "goodwill", requestedBy: "customer" })).toEqual({ ok: false, error: "goodwill_used" });
+    await h.db.update(refunds).set({ createdAt: new Date(Date.now() - 366 * 86_400_000) }).where(eq(refunds.orderId, a.orderId));
+    expect((await requestRefund({ db: h.db, payments: pay, boss }, { orderId: b.orderId, reason: "goodwill", requestedBy: "customer" })).ok).toBe(true);
+  });
+
   // ---------------- generation ----------------
   async function queueReading(orderId: string) {
     const o = await order(orderId);
