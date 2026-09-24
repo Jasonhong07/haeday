@@ -22,8 +22,10 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 | 2026-09-24 | M1 table unit tests | cloud-dev | `pnpm vitest run tests/engine/tables.test.ts` | 五虎遁, 五鼠遁, hour branches, day cycle continuity 1900–2050, ten gods, gap/fold, EoT extremes, disclosure text, 6/8 denominators | PASS | Claude |
 | 2026-09-24 | Full check after M1 | cloud-dev | `pnpm check` + `oracle:verify` + `pnpm build` | 11 files / 84 tests passed; golden matches oracle; build OK | PASS | Claude |
 | 2026-09-24 | Unknown-time performance | cloud-dev | 1,440-minute enumeration, NYC 立春 day | 91 ms | PASS | Claude |
-| | City dataset + /api/places | | needs GeoNames file from Jason | | NOT RUN (blocked) | |
+| | City dataset + /api/places | | cities15000.txt received from Jason (not in git) | | NOT RUN (next) | |
 | | Korean app cross-check (docs/crosscheck.md) | Jason's phone | 10 cases in two apps | | NOT RUN | Jason |
-| | GitHub Actions first run | GitHub | push to main | | NOT RUN (repo not created yet) | |
-| | Railway staging deploy (web + worker + Postgres) | Railway | see docs/SETUP_ACCOUNTS.md | | NOT RUN (project not created yet) | |
-| | Sentry test event | Sentry | `pnpm sentry:test` | | NOT RUN (account not created yet) | |
+| 2026-09-24 | GitHub repo | GitHub | Jasonhong07/haeday (private), pushed via GitHub Desktop, HEAD d36de99 | local repo clean, file hashes match cloud copy | PASS | Claude |
+| | GitHub Actions first run | GitHub | push to main | result not yet confirmed by Jason | NOT RUN (unconfirmed) | Jason |
+| 2026-09-24 | Railway staging deploy (web + worker + Postgres) | Railway staging (APP_ENV=staging, PAYMENTS_MODE=test) | deploy from main; `/api/health/ready` | both services Active, ready reported by Jason | PASS | Jason |
+| 2026-09-24 | Sentry test event | cloud-dev → Sentry project (DSN also set on Railway web+worker) | `pnpm sentry:test` | SDK reported sent; appearance in Sentry Issues to be confirmed by Jason | PASS (send) | Claude |
+| 2026-09-24 | Re-check after deploy | cloud-dev | `pnpm typecheck` + `lint` + `test` (with test DB) + `oracle:verify` | 84/84 tests, oracle 33/33 | PASS | Claude |
