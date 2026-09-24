@@ -6,13 +6,14 @@ export default function Home() {
       <section aria-labelledby="welcome">
         <p className="eyebrow">KOREAN SAJU · A MOMENT FOR REFLECTION</p>
         <h1 id="welcome">Find your heyday,<br /><em>by moonlight.</em></h1>
-        <p className="intro">A little perspective on your nature, your connections, and the year ahead.</p>
-        <div className="notice" role="status">
+        <p className="intro">Your Korean birth chart (saju) shows your nature and your timing. Free chart in under a minute. Full reading $3.99, never a subscription.</p>
+        <Link className="btn btn-primary" href="/saju" style={{ maxWidth: 420 }}>See my birth chart · Free</Link>
+        <div className="notice" role="status" style={{ marginTop: 20 }}>
           <span className="dot" aria-hidden="true" />
-          <div><strong>Something thoughtful is taking shape.</strong><p>Haeday is in preparation. Readings will be available soon.</p></div>
+          <div><strong>Full readings open soon.</strong><p>The free chart is ready now. Paid readings are not yet available.</p></div>
         </div>
       </section>
-      <footer>Rooted in Korean tradition. Made for reflection. <Link href="/method">How we calculate</Link></footer>
+      <footer>AI-assisted · For entertainment and reflection · Not advice · <Link href="/method">How we calculate</Link></footer>
     </main>
   );
 }

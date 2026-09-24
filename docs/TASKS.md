@@ -20,16 +20,16 @@ Rules: one milestone at a time, in order. A box is ticked only with evidence rec
 - [x] `fixtures/manifest.json` with F01–F30 (+F12z, F28b, F31 = 33 cases); `pnpm oracle:verify` in CI compares every step (utc, offsets, jie neighbors, trueSolar within tolerance, pillars, warnings)
 - [x] Unit tests: 五虎遁, 五鼠遁, ten-god tables, visible counts with 6/8 denominators, day anchor continuity 1900–2050
 - [x] Unknown-time minute enumeration: day-split (disclosure text exact), DST date, month-split (question)
-- [ ] `docs/crosscheck.md`: Part A third-party library check done by Claude (3,000/3,000 match); Part B two Korean apps, Jason enters results, Claude explains differences
+- [x] `docs/crosscheck.md`: Part A lunar_python 3,000/3,000 (414 places); Part B 천을귀인 (Jason) + 포스텔러 web (Claude): zero unexplained differences. Open policy question D28 (균시차)
 - Gate: all fixtures pass and crosscheck explained → paid sales may open later. If not, keep building; sales stay off (D10).
 
 ## M2 · Input + free chart (9/27)
-- [ ] /saju per PRD §3 (three time modes), /chart/[id] per PRD §4 (fold, gap, boundary questions; disclosure; details-confirm; already-owned state)
-- [ ] Edit creates a new chart revision; old revision unchanged
-- [ ] Share image 1080×1920 (no birth data) with preview
-- [ ] /method page with policy explanation and GeoNames attribution
-- [ ] Mobile 360–430 px, keyboard, focus ring, screen-reader text for element bars, reduced motion
-- [ ] E2E: fold case (1995-10-29 01:30 New York), gap case (1995-04-02 02:30), unknown time with day split
+- [x] /saju per PRD §3 (three time modes), /chart/[id] per PRD §4 (fold, gap, boundary questions; disclosure; details-confirm; already-owned state)
+- [x] Edit creates a new chart revision; old revision unchanged
+- [x] Share image 1080×1920 (no birth data) with preview (drawn in the browser, never uploaded)
+- [x] /method page with policy explanation and GeoNames attribution
+- [x] Mobile 360–430 px, keyboard, focus ring, screen-reader text for element bars, reduced motion
+- [x] E2E: fold case (1995-10-29 01:30 New York), gap case (1995-04-02 02:30), unknown time with day split (+ 立春 window question, edit, cross-browser 404)
 
 ## M3 · Payments in test mode (9/28)
 - [ ] PaymentAdapter + Stripe Checkout (card + wallets), consent checkbox, snapshot on order creation, reuse open session, "already owned"
