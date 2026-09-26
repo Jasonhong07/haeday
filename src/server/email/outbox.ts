@@ -9,10 +9,10 @@ import { QUEUES, enqueueInTx } from "../queue/boss";
 import { decryptPrivate, encryptPrivate, type Keyring } from "../security/encryption";
 import { aad } from "../security/keyring";
 import { EmailError, type EmailAdapter } from "../adapters/email";
-import { apologyEmail, apologyFreeEmail, chartEmail, deliveryEmail } from "./templates";
+import { adminAlertEmail, apologyEmail, apologyFreeEmail, chartEmail, deliveryEmail } from "./templates";
 import { nextBudgetWindow, reserveEmail, type BudgetLimits, type MailClass } from "./budget";
 
-export type EmailKind = "delivery" | "apology" | "apology_free" | "chart";
+export type EmailKind = "delivery" | "apology" | "apology_free" | "chart" | "admin_alert";
 export const MAX_EMAIL_ATTEMPTS = 6;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -29,10 +29,12 @@ export async function queueEmailInTx(tx: Tx, boss: PgBoss, ring: Keyring, input:
 
 export interface SendDeps {
   db: Db; ring: Keyring; email: EmailAdapter; origin: string; supportEmail: string;
+  /** Shown in operator alert subjects outside production, e.g. "staging". */
+  envLabel?: string;
   /** L7: provider plan limits. Absent = no budget check (tests of unrelated behaviour). */
   limits?: BudgetLimits; onAlert?: (sentToday: number) => void; now?: () => Date;
 }
-const CLASS: Record<string, MailClass> = { delivery: "delivery", apology: "apology", apology_free: "apology", chart: "chart" };
+const CLASS: Record<string, MailClass> = { delivery: "delivery", apology: "apology", apology_free: "apology", chart: "chart", admin_alert: "alert" };
 
 /** Returns "sent" | "skipped" | "failed" | "deferred" (over the daily/monthly budget); throws to ask pg-boss for a retry. */
 export async function sendQueuedEmail(deps: SendDeps, dedupeKey: string): Promise<"sent" | "skipped" | "failed" | "deferred"> {
@@ -49,6 +51,9 @@ export async function sendQueuedEmail(deps: SendDeps, dedupeKey: string): Promis
   } else if (row.kind === "chart") {
     if (!row.payloadEnc) { await deps.db.update(emailOutbox).set({ status: "failed", lastError: "no_payload" }).where(eq(emailOutbox.id, row.id)); return "failed"; }
     content = chartEmail(decryptPrivate(row.payloadEnc, aad("email_outbox", row.id, "payload"), deps.ring), deps.origin, deps.supportEmail);
+  } else if (row.kind === "admin_alert") {
+    if (!row.payloadEnc) { await deps.db.update(emailOutbox).set({ status: "failed", lastError: "no_payload" }).where(eq(emailOutbox.id, row.id)); return "failed"; }
+    content = adminAlertEmail(decryptPrivate(row.payloadEnc, aad("email_outbox", row.id, "payload"), deps.ring), deps.origin, deps.envLabel);
   } else if (row.kind === "apology_free") {
     content = apologyFreeEmail(deps.supportEmail);
   } else {

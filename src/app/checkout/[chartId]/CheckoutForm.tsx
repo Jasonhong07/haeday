@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const ERRORS: Record<string, string> = {
   sales_closed: "Full readings aren't open right now. Please try again later.",
@@ -14,6 +14,9 @@ const ERRORS: Record<string, string> = {
 export function CheckoutForm({ chartId, consentText, promise }: { chartId: string; consentText: string; promise: "minutes" | "24h" }) {
   const router = useRouter();
   const [consent, setConsent] = useState(false);
+  // A tap that lands before hydration ticks the real checkbox but not React state: pick it up once hydrated.
+  const box = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (box.current?.checked) setConsent(true); }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function go() {
@@ -30,7 +33,7 @@ export function CheckoutForm({ chartId, consentText, promise }: { chartId: strin
     <section className="card">
       {error && <p className="error" role="alert">{error}</p>}
       <label style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 16, cursor: "pointer" }}>
-        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: 22, height: 22, marginTop: 2, accentColor: "#D9B26A" }} />
+        <input ref={box} type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: 22, height: 22, marginTop: 2, accentColor: "#D9B26A" }} />
         <span>{consentText}</span>
       </label>
       <button className="btn btn-primary" type="button" disabled={!consent || busy} onClick={go}>{busy ? "Opening secure checkout…" : "Continue to payment · $3.99"}</button>

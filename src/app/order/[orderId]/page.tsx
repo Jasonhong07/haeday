@@ -6,6 +6,7 @@ import { serverContext } from "@/server/http";
 import { loadOrderView } from "@/server/orders";
 import { currentViewer } from "@/server/viewer";
 import { AutoRefresh } from "./AutoRefresh";
+import { ResendButton } from "./ResendButton";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Your reading · Haeday", robots: { index: false, follow: false } };
@@ -38,6 +39,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
       {body && <p className="lede" role="status">{body}</p>}
       {waiting && !(view.state === "processing" && view.delayed) && <AutoRefresh seconds={4} />}
       {view.state === "delivered" && view.readingId && <Link className="btn btn-primary" href={`/r/${view.readingId}`}>Open my reading</Link>}
+      {view.state === "delivered" && view.readingId && <ResendButton orderId={view.id} />}
       {view.state === "expired" && view.chartRevisionId && <Link className="btn btn-primary" href={`/chart/${view.chartRevisionId}`}>Back to my chart</Link>}
       <p className="fine">Questions? {SITE.support} · <Link href="/login">Open your readings on another device</Link></p>
     </main>

@@ -15,6 +15,7 @@ import { QUEUES, createBoss, ensureQueues } from "../server/queue/boss";
 import { runRetention } from "../server/retention";
 import { purgeOldEvents } from "../server/analytics";
 import { loadKeyring } from "../server/security/keyring";
+import { checkAlerts, raiseAlert } from "../server/alerts";
 
 function errorCode(err: unknown): string {
   if (err && typeof err === "object") {
@@ -112,7 +113,12 @@ async function main(): Promise<void> {
     const send = {
       db, ring, email: mail, origin: new URL(env.APP_ORIGIN).origin, supportEmail: supportEmail(env),
       limits: { daily: env.EMAIL_DAILY_LIMIT, monthly: env.EMAIL_MONTHLY_LIMIT, alertAt: env.EMAIL_ALERT_AT },
-      onAlert: (n: number) => Sentry.captureMessage(`Email volume reached ${n} today (plan limit ${env.EMAIL_DAILY_LIMIT}): upgrade the email plan`, "warning"),
+      envLabel: env.APP_ENV,
+      onAlert: (n: number) => {
+        Sentry.captureMessage(`Email volume reached ${n} today (plan limit ${env.EMAIL_DAILY_LIMIT}): upgrade the email plan`, "warning");
+        void raiseAlert({ db, boss, ring: ring!, adminEmails: env.ADMIN_EMAILS }, { kind: "email_volume", subjects: ["daily"], daily: true, summary: () => `Emails sent today reached ${n} (plan limit ${env.EMAIL_DAILY_LIMIT}). Lower-priority mail stops first; upgrade the email plan if this repeats.` })
+          .catch((e) => Sentry.captureException(e));
+      },
     };
     await boss.schedule(QUEUES.emailDue, "*/5 * * * *");
     await boss.work(QUEUES.emailDue, async () => { await requeueDueEmails(db, boss); });
@@ -120,6 +126,17 @@ async function main(): Promise<void> {
       if (!job) return;
       const r = await sendQueuedEmail(send, job.data.dedupeKey);
       if (r === "failed") Sentry.captureMessage("Email permanently failed", "warning");
+    });
+  }
+
+  // CC4a: operator alerts (email to ADMIN_EMAILS once a day per problem, plus Sentry).
+  if (ring) {
+    const alertDeps = { db, boss, ring, adminEmails: env.ADMIN_EMAILS };
+    if (!env.ADMIN_EMAILS.length) console.warn("[worker] ADMIN_EMAILS empty: alerts are recorded on /admin only");
+    await boss.schedule(QUEUES.alerts, "*/5 * * * *");
+    await boss.work(QUEUES.alerts, async () => {
+      const raised = await checkAlerts(alertDeps);
+      for (const k of raised) Sentry.captureMessage(`Operator alert raised: ${k}`, "warning");
     });
   }
 

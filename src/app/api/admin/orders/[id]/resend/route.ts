@@ -1,16 +1,15 @@
+// CC4a: admin re-sends the delivery email to the checkout address (max 3 per order).
 import { requireAdmin } from "@/server/admin-guard";
-import { retryOrder } from "@/server/admin";
-import { getWebBoss } from "@/server/queue/boss";
 import { adminBack } from "@/server/admin-redirect";
+import { getWebBoss } from "@/server/queue/boss";
+import { resendDelivery } from "@/server/support";
 
 export const runtime = "nodejs";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const a = await requireAdmin(request);
   if (!a) return new Response(null, { status: 404 });
   const form = await request.formData().catch(() => null);
-  const requestId = String(form?.get("requestId") ?? "");
-  if (!/^[0-9a-f-]{36}$/i.test(requestId)) return new Response(null, { status: 400 });
   const id = (await params).id;
-  const r = await retryOrder(a.ctx.db, await getWebBoss(a.ctx.env.DATABASE_URL!), id, a.actorId, requestId);
-  return adminBack(a.ctx, form, id, `retry_${r}`);
+  const r = await resendDelivery({ db: a.ctx.db, boss: await getWebBoss(a.ctx.env.DATABASE_URL!), ring: a.ctx.ring }, id, "admin", a.actorId);
+  return adminBack(a.ctx, form, id, `resend_${r}`);
 }

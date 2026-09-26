@@ -314,6 +314,18 @@ export const sessions = pgTable("sessions", {
   revokedAt: ts("revoked_at"),
 }, (t) => [index("sessions_customer_idx").on(t.customerId)]);
 
+/**
+ * CC4a: operator alerts. One row per alert kind + subject + UTC day, so a lasting problem mails Jason once a day,
+ * not every 5 minutes. The summary holds counts and codes only (never birth data, emails or reading text).
+ */
+export const adminAlerts = pgTable("admin_alerts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  dedupeKey: text("dedupe_key").notNull().unique(), // kind:subject:YYYY-MM-DD
+  kind: text("kind").notNull(),
+  summary: text("summary").notNull(),
+  createdAt: createdAt(),
+});
+
 export const adminAudit = pgTable("admin_audit", {
   id: uuid("id").primaryKey().defaultRandom(),
   actorCustomerId: uuid("actor_customer_id").notNull().references(() => customers.id),

@@ -1,10 +1,11 @@
 // Owner dashboard data (D19). Money comes from orders/refunds, never from client analytics. UTC throughout.
-import { and, count, desc, eq, gt, gte, inArray, isNull, lt, ne, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, isNull, lt, ne, notInArray, sql, sum } from "drizzle-orm";
 import type { PgBoss } from "pg-boss";
 import type { Db } from "./db/client";
 import { randomUUID } from "node:crypto";
 import { adminAudit, attemptGrants, chartRevisions, disputes, generationAttempts, orders, paymentIssues, refunds } from "./db/schema";
 import { MAX_ATTEMPTS } from "./fulfillment/generate";
+import { CLOSED_DISPUTE_STATUSES } from "./alerts";
 import { QUEUES, enqueueInTx } from "./queue/boss";
 
 export async function dashboard(db: Db, days: number, now = new Date()) {
@@ -49,9 +50,9 @@ export async function openIssues(db: Db) {
   const pendingRefunds = await db.select({ id: refunds.id, orderId: refunds.orderId, status: refunds.status }).from(refunds)
     .where(inArray(refunds.status, ["requested", "pending", "requires_action", "unknown"])).limit(50);
   const openDisputes = await db.select({ id: disputes.id, orderId: disputes.orderId, status: disputes.status, due: disputes.evidenceDueBy }).from(disputes)
-    .where(sql`${disputes.status} not in ('won', 'lost', 'warning_closed')`).limit(50);
+    .where(notInArray(disputes.status, [...CLOSED_DISPUTE_STATUSES])).limit(50);
   // D34/CC1a: payment problems a person must act on (ids and codes only).
-  const needsAction = await db.select({ id: paymentIssues.id, kind: paymentIssues.kind, orderId: paymentIssues.orderId, nextAction: paymentIssues.nextAction, occurrences: paymentIssues.occurrences, since: paymentIssues.createdAt })
+  const needsAction = await db.select({ id: paymentIssues.id, status: paymentIssues.status, kind: paymentIssues.kind, orderId: paymentIssues.orderId, nextAction: paymentIssues.nextAction, occurrences: paymentIssues.occurrences, since: paymentIssues.createdAt })
     .from(paymentIssues).where(inArray(paymentIssues.status, ["open", "acknowledged"])).orderBy(desc(paymentIssues.createdAt)).limit(50);
   return { pendingRefunds, openDisputes, needsAction };
 }
@@ -154,4 +155,10 @@ export async function funnel(db: Db, days: number, now = new Date()) {
   const refundedN = await one(sql`select count(*)::int n from orders o where o.paid_at >= ${from} and ${sale} and o.payment_status in ('refunded','refund_pending','partially_refunded')`);
   const failedN = await one(sql`select count(*)::int n from orders o where o.paid_at >= ${from} and ${sale} and o.fulfillment_status = 'failed'`);
   return { from, activity, cohort, byChannel, refundRate: paidAll ? refundedN / paidAll : 0, failureRate: paidAll ? failedN / paidAll : 0 };
+}
+
+/** The worker writes a heartbeat every minute; older than 5 minutes = jobs, refunds, emails and alerts are paused. */
+export function heartbeatStale(value: unknown, now = new Date()): boolean {
+  const at = typeof value === "string" ? new Date(value) : null;
+  return !at || Number.isNaN(at.getTime()) || now.getTime() - at.getTime() > 5 * 60_000;
 }

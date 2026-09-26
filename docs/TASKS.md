@@ -38,7 +38,7 @@ F8, F10 HTTP boundary and F5 transaction binding have local changes; see `review
 - [x] PaymentAdapter + Stripe Checkout (card + wallets), consent checkbox, snapshot on order creation, reuse open session, "already owned" · code + tests; staging run needs Stripe test keys (docs/SETUP_PROVIDERS.md)
 - [x] Webhook per ARCHITECTURE §4.3 with the same-transaction enqueue
 - [x] Tests: duplicate event; completed after refund (stays refunded); wrong livemode; wrong amount/price; session not matching order; success URL opened without payment; double-click checkout (one order); edit during checkout (paid order keeps its snapshot); SALES soft stop; tax present (subtotal validated, total stored)
-- [ ] Reconciliation function shared with webhook validation · refund reconciliation done; Stripe session reconciliation (§4.10) pending
+- [x] Reconciliation function shared with webhook validation · refunds (CC1a) + Stripe sessions every 3/30 min (CC1b)
 
 ## M4 · Reading generation (9/29)
 - [ ] D11: pick LLM + model with structured output; record cost per reading from 5 real test calls · adapter built (Anthropic), waiting for Q1 + key
@@ -57,14 +57,14 @@ F8, F10 HTTP boundary and F5 transaction binding have local changes; see `review
 - [x] Magic link per ARCHITECTURE §4.7; /my; guest→customer linking on verification
 - [x] Refund service §4.8 + /refund/[orderId] POST + /admin actions; disputes table from webhooks
 - [x] Tests: attacker pays with admin's email → no admin access; attacker enters victim email → cannot see victim's past orders; two concurrent token uses → one succeeds; cron + admin + customer refund at once → one Stripe refund; refund pending shown as pending
-- [x] Crons: 5-min alert, 15-min deadline, reconciliation, retention; hard stop button · Stripe session reconciliation pending
-- [ ] Restore drill (ARCHITECTURE §8) on staging
+- [x] Crons: 5-min alert, 15-min deadline, reconciliation, retention; hard stop button · alerts emailed to ADMIN_EMAILS once a day per problem (CC4a)
+- [ ] Restore drill (ARCHITECTURE §8) on staging · `pnpm restore:verify` built and rehearsed locally (CC4a); staging run NOT RUN (needs Railway)
 
 ## M7 · Legal, analytics, SEO, launch readiness (10/1–10/2 AM)
 - [x] /privacy /terms /refunds from PRD §12 (Jason edits); seller name per D04 · drafts, marked "Draft for review"
-- [ ] PostHog allowlisted events; test that sends sample birth data/email through the flow and asserts none reaches PostHog/Sentry/logs
-- [ ] /go with bounded UTM, sitemap, metadata, OG image, PWA manifest, security headers
-- [ ] Production environment created with TEST keys first; smoke test
+- [x] ~~PostHog~~ first-party funnel events (CC2); test that sends sample birth data/email through the flow and asserts none reaches logs or plaintext storage (`tests/integration/pii-leak.test.ts`, CC4a) + Sentry scrub test
+- [x] /go with bounded UTM, sitemap, metadata, OG image, PWA manifest, security headers (CC2)
+- [ ] Production environment created with TEST keys first; smoke test · `pnpm smoke <url>` and the /admin launch checklist built (CC4a); run NOT RUN (needs Railway)
 - [ ] Launch checklist (Runbook §7) filled with evidence
 - [ ] Switch to live ONLY after Jason sets LIVE_PAYMENTS_APPROVED=true. No real-card self test in live mode (D08). First real customer order is observed and recorded.
 

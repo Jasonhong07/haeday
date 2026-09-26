@@ -16,6 +16,7 @@ export const QUEUES = {
   refundExecute: "refund.execute", // one provider call attempt per refund row (singletonKey = refund id)
   refundSync: "refund.sync",       // re-read provider refunds for one order (singletonKey = order id)
   retention: "cron.retention",
+  alerts: "cron.alerts",           // CC4a: operator alert checks, every 5 min
 } as const;
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
 
@@ -53,6 +54,7 @@ const POLICIES: Record<QueueName, "standard" | "exclusive"> = {
   [QUEUES.refundExecute]: "exclusive",
   [QUEUES.refundSync]: "exclusive",
   [QUEUES.retention]: "standard",
+  [QUEUES.alerts]: "standard",
 };
 
 /** Retries (ARCHITECTURE §4.4/§4.5): generation 3 attempts total (~0 s, 20 s, 40–80 s); email 6 attempts with backoff. */
@@ -69,6 +71,7 @@ const RETRY: Record<QueueName, { retryLimit: number; retryDelay: number; retryBa
   [QUEUES.emailDue]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 240 },
   [QUEUES.refundExecute]: { retryLimit: 5, retryDelay: 30, retryBackoff: true, expireInSeconds: 120 },
   [QUEUES.refundSync]: { retryLimit: 5, retryDelay: 30, retryBackoff: true, expireInSeconds: 120 },
+  [QUEUES.alerts]: { retryLimit: 0, retryDelay: 0, retryBackoff: false, expireInSeconds: 240 },
 };
 
 export async function ensureQueues(boss: PgBoss): Promise<void> {

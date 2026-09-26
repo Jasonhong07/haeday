@@ -24,7 +24,10 @@
     "samples": "tsx scripts/generate-samples.ts",
     "oracle:update": "python tools/oracle/gen_jie.py && python tools/oracle/build_golden.py",
     "oracle:lunar": "python tools/oracle/crosscheck_lunar.py",
-    "oracle:verify": "python tools/oracle/verify.py && vitest run tests/engine"
+    "oracle:verify": "python tools/oracle/verify.py && vitest run tests/engine",
+    "preflight": "tsx scripts/preflight.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "restore:verify": "tsx scripts/restore-verify.ts"
   },
   "dependencies": {
     "@fontsource/fraunces": "5.3.0",

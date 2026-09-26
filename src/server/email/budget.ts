@@ -1,14 +1,14 @@
 // Email volume guard (L7, D45). Every send (outbox and sign-in links) reserves one slot atomically before calling
 // the provider. Lower-priority mail stops earlier so sign-in links and deliveries keep working on a small plan:
-//   magic link: up to the limit · delivery/apology: limit − 20 · chart email: limit − 40 · marketing: limit − 60
+//   magic link and operator alerts: up to the limit · delivery/apology: limit − 20 · chart email: limit − 40 · marketing: limit − 60
 // The same tiers apply to the monthly limit. A reservation is never given back (a failed send may still have been
 // accepted by the provider), so counting errs on the safe side.
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { emailBudget } from "../db/schema";
 
-export type MailClass = "magic" | "delivery" | "apology" | "chart" | "marketing";
-const RESERVE: Record<MailClass, number> = { magic: 0, delivery: 20, apology: 20, chart: 40, marketing: 60 };
+export type MailClass = "magic" | "alert" | "delivery" | "apology" | "chart" | "marketing";
+const RESERVE: Record<MailClass, number> = { magic: 0, alert: 0, delivery: 20, apology: 20, chart: 40, marketing: 60 };
 export interface BudgetLimits { daily: number; monthly: number; alertAt: number }
 export type Reservation = { ok: true; sentToday: number; alert: boolean } | { ok: false; reason: "daily" | "monthly" };
 

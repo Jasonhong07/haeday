@@ -1,13 +1,13 @@
 // Transactional email copy (US English). All dynamic values are escaped; no birth data in email bodies.
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-function wrap(title: string, bodyHtml: string, support: string): string {
+function wrap(title: string, bodyHtml: string, support: string, footerHtml?: string): string {
   return `<!doctype html><html><body style="margin:0;background:#F3EBDD;font-family:Georgia,serif;color:#1E1B16">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
 <p style="font-size:20px;margin:0 0 24px">&#9790; Haeday</p>
 <h1 style="font-weight:400;font-size:26px;margin:0 0 16px">${esc(title)}</h1>
 ${bodyHtml}
-<p style="font-size:13px;color:#6b6358;margin-top:32px">Questions? Reply to this email or write to ${esc(support)}.<br>For entertainment and reflection. Not a prediction or professional advice.</p>
+<p style="font-size:13px;color:#6b6358;margin-top:32px">${footerHtml ?? `Questions? Reply to this email or write to ${esc(support)}.<br>For entertainment and reflection. Not a prediction or professional advice.`}</p>
 </div></body></html>`;
 }
 
@@ -54,5 +54,22 @@ export function chartEmail(c: { dayMaster: string; image: string; pillars: strin
 <p style="font-size:16px;line-height:1.6">Your four pillars (hour · day · month · year): <b>${esc(c.pillars)}</b></p>
 <p style="font-size:16px;line-height:1.6"><a href="${origin}/saju">Open Haeday</a> to see your chart again or get your personal reading.</p>`, support);
   const text = `Your Day Master: ${c.dayMaster}, ${c.image}.\nYour four pillars (hour · day · month · year): ${c.pillars}\n\nOpen Haeday: ${origin}/saju\n\nQuestions? ${support}`;
+  return { subject, html, text };
+}
+
+const ALERT_TITLE: Record<string, string> = {
+  payment_issue: "Payment issue needs you", late_delivery: "Paid orders not delivered in time", dispute: "Open dispute",
+  email_failed: "Customer emails failed", email_volume: "Email volume near the plan limit",
+};
+
+/** CC4a operator alert (to ADMIN_EMAILS only). Counts, short ids and codes; never customer data. */
+export function adminAlertEmail(a: { kind: string; summary: string }, origin: string, envLabel?: string) {
+  const title = ALERT_TITLE[a.kind] ?? "Haeday alert";
+  const tag = envLabel && envLabel !== "production" ? `[${envLabel}] ` : "";
+  const subject = `${tag}[Haeday] ${title}`;
+  const html = wrap(title, `<p style="font-size:16px;line-height:1.6">${esc(a.summary)}</p>
+<p><a href="${esc(origin)}/admin" style="display:inline-block;background:#12132A;color:#F2ECE0;padding:14px 22px;border-radius:12px;text-decoration:none">Open admin</a></p>
+`, "", "Operator alert from your Haeday worker. You get this at most once a day per problem while it lasts.");
+  const text = `${title}\n\n${a.summary}\n\nOpen admin: ${origin}/admin\n\nYou get this at most once a day per problem while it lasts.`;
   return { subject, html, text };
 }
