@@ -54,9 +54,9 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
     const r = await startCheckout(co, guestId, chartId, true);
     if (!r.ok) throw new Error(r.error);
     const o = (await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!;
-    pay.complete(o.stripeSessionId!, { customerEmail: email, ...override });
-    const res = await handlePaymentEvent(wh, { id: `evt_x${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.stripeSessionId! });
-    return { orderId: r.orderId, res, pi: `pi_${o.stripeSessionId!.slice(8, 24)}` };
+    pay.complete(o.providerCheckoutId!, { customerEmail: email, ...override });
+    const res = await handlePaymentEvent(wh, { id: `evt_x${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.providerCheckoutId! });
+    return { orderId: r.orderId, res, pi: `pi_${o.providerCheckoutId!.slice(8, 24)}` };
   }
   const order = async (id: string) => (await h.db.query.orders.findFirst({ where: eq(orders.id, id) }))!;
   const refundRows = (orderId: string) => h.db.select().from(refunds).where(eq(refunds.orderId, orderId));
@@ -123,7 +123,7 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
     const { orderId, pi } = await paidOrder();
     await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
     const [r] = await refundRows(orderId);
-    await handlePaymentEvent(wh, refundEvt(pi, r!.stripeRefundId!, "pending"));
+    await handlePaymentEvent(wh, refundEvt(pi, r!.providerRefundId!, "pending"));
     await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
     expect((await refundRows(orderId))[0]!.status).toBe("succeeded");
     expect((await order(orderId)).paymentStatus).toBe("refunded");
@@ -144,7 +144,7 @@ describe.skipIf(!hasDb)("cross-check reproductions", () => {
     pay.nextRefund = "pending";
     await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
     const [r] = await refundRows(orderId);
-    pay.setRefundStatus(r!.stripeRefundId!, "succeeded");
+    pay.setRefundStatus(r!.providerRefundId!, "succeeded");
     const creates = pay.calls.createRefund; const reads = pay.calls.getRefundSummary;
     await reconcileRefunds({ db: h.db, payments: pay, now: () => new Date(Date.now() + 2 * 86_400_000) });
     expect(pay.calls.createRefund).toBe(creates);

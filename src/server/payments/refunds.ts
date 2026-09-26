@@ -69,9 +69,9 @@ export async function claimRefundInTx(
   const active = rows.find((r) => r.source === "service" && (CLAIM_ACTIVE as readonly string[]).includes(r.status));
   if (active) return { ok: false, error: active.status === "succeeded" ? "already_refunded" : "in_progress" };
   if (order.paymentStatus === "refunded") return { ok: false, error: "already_refunded" };
-  if (!["paid", "partially_refunded"].includes(order.paymentStatus) || !order.stripePaymentIntentId) return { ok: false, error: "not_paid" };
+  if (!["paid", "partially_refunded"].includes(order.paymentStatus) || !order.providerPaymentId) return { ok: false, error: "not_paid" };
   if (await openDisputeFor(tx, order.id)) {
-    await openIssue(tx, { kind: "refund_blocked_dispute", objectId: order.stripePaymentIntentId, livemode: input.livemode, orderId: order.id, nextAction: "answer_dispute_no_refund" });
+    await openIssue(tx, { kind: "refund_blocked_dispute", objectId: order.providerPaymentId, livemode: input.livemode, orderId: order.id, nextAction: "answer_dispute_no_refund" });
     return { ok: false, error: "disputed" };
   }
   if (input.reason === "goodwill") {
@@ -144,15 +144,15 @@ export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "
     if (!(NOT_AT_PROVIDER as readonly string[]).includes(row.status)) return { row, skip: true as const };
     if (row.leaseToken && row.leaseExpiresAt && row.leaseExpiresAt > now) return { row, skip: true as const };
     const [order] = await tx.select().from(orders).where(eq(orders.id, row.orderId));
-    if (!order?.stripePaymentIntentId) return { row, skip: true as const };
+    if (!order?.providerPaymentId) return { row, skip: true as const };
     if (await openDisputeFor(tx, order.id)) {
-      await openIssue(tx, { kind: "refund_blocked_dispute", objectId: order.stripePaymentIntentId, livemode: deps.payments.livemode, orderId: order.id, nextAction: "answer_dispute_no_refund" });
+      await openIssue(tx, { kind: "refund_blocked_dispute", objectId: order.providerPaymentId, livemode: deps.payments.livemode, orderId: order.id, nextAction: "answer_dispute_no_refund" });
       return { row, skip: true as const };
     }
     // Past the idempotency window (measured from the FIRST provider call) we look up instead of sending.
     const expired = row.firstSentAt !== null && now.getTime() - row.firstSentAt.getTime() > IDEMPOTENCY_SAFE_MS;
     await tx.update(refunds).set({ leaseToken: token, leaseExpiresAt: new Date(now.getTime() + LEASE_MS), ...(row.firstSentAt || expired ? {} : { firstSentAt: now }) }).where(eq(refunds.id, row.id));
-    return { row, skip: false as const, paymentIntentId: order.stripePaymentIntentId, expired };
+    return { row, skip: false as const, paymentIntentId: order.providerPaymentId, expired };
   });
   if (!taken) return "unknown";
   if (taken.skip) return taken.row.status;
@@ -163,11 +163,11 @@ export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "
     await releaseLease(deps.db, row.id, token);
     const synced = await syncOrderRefunds(deps, row.orderId);
     const [after] = await deps.db.select().from(refunds).where(eq(refunds.id, row.id));
-    if (synced === "synced" && after && !after.stripeRefundId && (NOT_AT_PROVIDER as readonly string[]).includes(after.status)) {
+    if (synced === "synced" && after && !after.providerRefundId && (NOT_AT_PROVIDER as readonly string[]).includes(after.status)) {
       // The provider's full refund list for this payment has no refund carrying our row id: it was never created.
       // Close the attempt (frees the one-claim index for a deliberate new attempt) and keep the obligation visible.
       await deps.db.update(refunds).set({ status: "failed", failureReason: "never_created", updatedAt: now })
-        .where(and(eq(refunds.id, row.id), inArray(refunds.status, [...NOT_AT_PROVIDER]), isNull(refunds.stripeRefundId)));
+        .where(and(eq(refunds.id, row.id), inArray(refunds.status, [...NOT_AT_PROVIDER]), isNull(refunds.providerRefundId)));
       await openIssue(deps.db, { kind: "refund_unknown_stale", objectId: row.id, livemode: deps.payments.livemode, orderId: row.orderId, nextAction: "never_created_start_new_refund" });
       await syncOrderRefunds(deps, row.orderId);
       return "failed";
@@ -185,7 +185,7 @@ export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "
     if (!cur || cur.leaseToken !== token) return; // lease lost: a newer executor owns the row
     const set: Partial<typeof refunds.$inferInsert> = { leaseToken: null, leaseExpiresAt: null, lastCheckedAt: now, updatedAt: now };
     if (result) {
-      if (!cur.stripeRefundId) set.stripeRefundId = result.id;
+      if (!cur.providerRefundId) set.providerRefundId = result.id;
       // A sync may already have stored a newer provider status; only fill in while we are still "not at provider".
       if ((NOT_AT_PROVIDER as readonly string[]).includes(cur.status)) {
         set.status = result.status;
@@ -205,8 +205,8 @@ export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "
     await deps.db.transaction(async (tx) => {
       const [cur] = await tx.select().from(refunds).where(eq(refunds.id, row.id)).for("update");
       if (!cur || cur.leaseToken !== token) return;
-      await tx.delete(refunds).where(and(eq(refunds.stripeRefundId, result!.id), eq(refunds.source, "provider"), eq(refunds.orderId, row.orderId)));
-      await tx.update(refunds).set({ stripeRefundId: result!.id, status: result!.status, leaseToken: null, leaseExpiresAt: null, lastCheckedAt: now, updatedAt: now }).where(eq(refunds.id, row.id));
+      await tx.delete(refunds).where(and(eq(refunds.providerRefundId, result!.id), eq(refunds.source, "provider"), eq(refunds.orderId, row.orderId)));
+      await tx.update(refunds).set({ providerRefundId: result!.id, status: result!.status, leaseToken: null, leaseExpiresAt: null, lastCheckedAt: now, updatedAt: now }).where(eq(refunds.id, row.id));
     });
   });
   if (result) await syncOrderRefunds(deps, row.orderId).catch(() => undefined); // order status from provider truth
@@ -236,7 +236,7 @@ export async function syncOrderRefunds(deps: Pick<RefundDeps, "db" | "payments" 
       await deps.db.update(refundSyncs).set({ dirty: true }).where(eq(refundSyncs.orderId, orderId));
       return "busy";
     }
-    const [order] = await deps.db.select({ pi: orders.stripePaymentIntentId }).from(orders).where(eq(orders.id, orderId));
+    const [order] = await deps.db.select({ pi: orders.providerPaymentId }).from(orders).where(eq(orders.id, orderId));
     if (!order?.pi) { await releaseSync(deps.db, orderId, token, now); return "no_payment"; }
 
     let summary: PaymentRefundSummary;
@@ -271,7 +271,7 @@ async function applySummary(deps: Pick<RefundDeps, "db" | "now">, orderId: strin
     const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
     const [lease] = await tx.select().from(refundSyncs).where(and(eq(refundSyncs.orderId, orderId), eq(refundSyncs.leaseToken, token), gt(refundSyncs.leaseExpiresAt, now))).for("update");
     if (!lease) return "stale" as const; // lease expired and was taken over: this fetch is older, discard it
-    if (!order || order.stripePaymentIntentId !== summary.paymentIntentId) return "stale" as const;
+    if (!order || order.providerPaymentId !== summary.paymentIntentId) return "stale" as const;
     const rows = await tx.select().from(refunds).where(eq(refunds.orderId, orderId));
 
     for (const pr of summary.refunds) {
@@ -280,8 +280,8 @@ async function applySummary(deps: Pick<RefundDeps, "db" | "now">, orderId: strin
         continue;
       }
       // Our row: by provider id, else by the row id we put in metadata — only if that row belongs to THIS order.
-      const mine = rows.find((r) => r.stripeRefundId === pr.id)
-        ?? (pr.refundRowId ? rows.find((r) => r.id === pr.refundRowId && r.source === "service" && !r.stripeRefundId) : undefined);
+      const mine = rows.find((r) => r.providerRefundId === pr.id)
+        ?? (pr.refundRowId ? rows.find((r) => r.id === pr.refundRowId && r.source === "service" && !r.providerRefundId) : undefined);
       const endedNow = (pr.status === "failed" || pr.status === "canceled") && (!mine || (mine.status !== "failed" && mine.status !== "canceled"));
       if (endedNow) { // ours, or a dashboard refund that bounced: either way a person must look
         // Our refund failed (or money came back after "succeeded", e.g. closed card): the customer is still owed
@@ -289,13 +289,13 @@ async function applySummary(deps: Pick<RefundDeps, "db" | "now">, orderId: strin
         await openIssue(tx, { kind: "refund_failed", objectId: pr.id, livemode: summary.livemode, orderId, nextAction: "contact_customer_then_new_refund" });
       }
       if (mine) {
-        await tx.update(refunds).set({ stripeRefundId: pr.id, status: pr.status, failureReason: pr.failureReason, lastCheckedAt: now, updatedAt: now }).where(eq(refunds.id, mine.id));
-        mine.stripeRefundId = pr.id; mine.status = pr.status;
+        await tx.update(refunds).set({ providerRefundId: pr.id, status: pr.status, failureReason: pr.failureReason, lastCheckedAt: now, updatedAt: now }).where(eq(refunds.id, mine.id));
+        mine.providerRefundId = pr.id; mine.status = pr.status;
       } else {
         // Created outside the app (Stripe dashboard): recorded, never blocked by the one-claim rule (D22).
         const [ins] = await tx.insert(refunds).values({
           orderId, source: "provider", reason: "admin", idempotencyKey: `provider:${pr.id}`, amountCents: pr.amountCents,
-          stripeRefundId: pr.id, status: pr.status, failureReason: pr.failureReason, requestedBy: "stripe_dashboard", lastCheckedAt: now,
+          providerRefundId: pr.id, status: pr.status, failureReason: pr.failureReason, requestedBy: "stripe_dashboard", lastCheckedAt: now,
         }).onConflictDoNothing().returning();
         if (ins) rows.push(ins);
       }

@@ -64,7 +64,7 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     expect(r).toMatchObject({ ok: true, orderId: o!.id });
     const sent = [...pay.sessions.values()][0]!.req;
     expect(sent).toMatchObject({ priceId: PRICE, successUrl: `https://haeday.test/order/${o!.id}`, automaticTax: false, allowPromotionCodes: true });
-    expect((await order(o!.id)).stripeSessionId).toBe([...pay.sessions.keys()][0]);
+    expect((await order(o!.id)).providerCheckoutId).toBe([...pay.sessions.keys()][0]);
   });
 
   it("CO01b: an ADAPTER change between attempts (new provider body) still replays the frozen body (no idempotency error)", async () => {
@@ -108,11 +108,11 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     pay.nextSession = "lost";
     await startCheckout(co, guestId, chartId, true);
     const [o] = await ordersOf(chartId);
-    expect(o!.stripeSessionId).toBeNull();
+    expect(o!.providerCheckoutId).toBeNull();
     const [sid] = [...pay.sessions.keys()].slice(-1);
     pay.complete(sid!);
     await reconcileStripeSessions(wh);
-    expect(await order(o!.id)).toMatchObject({ paymentStatus: "paid", fulfillmentStatus: "queued", stripeSessionId: sid });
+    expect(await order(o!.id)).toMatchObject({ paymentStatus: "paid", fulfillmentStatus: "queued", providerCheckoutId: sid });
     expect(await jobs(o!.id)).toBe(1);
   });
 
@@ -145,8 +145,8 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
     await h.db.update(orders).set({ paymentStatus: "expired" }).where(eq(orders.id, o.id)); // e.g. hard stop marked it
-    pay.complete(o.stripeSessionId!);
-    expect((await handlePaymentEvent(wh, completed(o.stripeSessionId!))).outcome).toBe("paid");
+    pay.complete(o.providerCheckoutId!);
+    expect((await handlePaymentEvent(wh, completed(o.providerCheckoutId!))).outcome).toBe("paid");
     expect(await order(o.id)).toMatchObject({ paymentStatus: "paid", fulfillmentStatus: "queued" });
   });
 
@@ -156,8 +156,8 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const first = await order(r1.orderId);
     await h.db.update(orders).set({ paymentStatus: "expired" }).where(eq(orders.id, first.id));
     const r2 = await startCheckout(co, guestId, chartId, true) as { orderId: string };
-    pay.complete(first.stripeSessionId!);
-    expect((await handlePaymentEvent(wh, completed(first.stripeSessionId!))).outcome).toBe("paid");
+    pay.complete(first.providerCheckoutId!);
+    expect((await handlePaymentEvent(wh, completed(first.providerCheckoutId!))).outcome).toBe("paid");
     expect((await order(r2.orderId)).paymentStatus).toBe("expired");
     expect((await ordersOf(chartId)).filter((x) => x.paymentStatus === "paid")).toHaveLength(1);
   });
@@ -169,10 +169,10 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     await h.db.update(orders).set({ paymentStatus: "expired" }).where(eq(orders.id, first.id));
     const r2 = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const second = await order(r2.orderId);
-    pay.complete(second.stripeSessionId!);
-    await handlePaymentEvent(wh, completed(second.stripeSessionId!));
-    pay.complete(first.stripeSessionId!);
-    expect(await handlePaymentEvent(wh, completed(first.stripeSessionId!))).toEqual({ outcome: "rejected", reason: "duplicate_purchase" });
+    pay.complete(second.providerCheckoutId!);
+    await handlePaymentEvent(wh, completed(second.providerCheckoutId!));
+    pay.complete(first.providerCheckoutId!);
+    expect(await handlePaymentEvent(wh, completed(first.providerCheckoutId!))).toEqual({ outcome: "rejected", reason: "duplicate_purchase" });
     expect(await order(first.id)).toMatchObject({ paymentStatus: "refund_pending", fulfillmentStatus: "none" });
     expect((await h.db.select().from(refunds).where(eq(refunds.orderId, first.id)))[0]!.reason).toBe("duplicate");
     expect(await jobs(first.id)).toBe(0);
@@ -185,10 +185,10 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     await h.db.update(orders).set({ paymentStatus: "expired" }).where(eq(orders.id, first.id));
     const r2 = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const second = await order(r2.orderId);
-    pay.complete(second.stripeSessionId!);
-    await handlePaymentEvent(wh, completed(second.stripeSessionId!)); // sibling is paid
-    pay.complete(first.stripeSessionId!, { amountSubtotal: 100, amountTotal: 100 });
-    expect(await handlePaymentEvent(wh, completed(first.stripeSessionId!))).toEqual({ outcome: "rejected", reason: "subtotal_mismatch" });
+    pay.complete(second.providerCheckoutId!);
+    await handlePaymentEvent(wh, completed(second.providerCheckoutId!)); // sibling is paid
+    pay.complete(first.providerCheckoutId!, { amountSubtotal: 100, amountTotal: 100 });
+    expect(await handlePaymentEvent(wh, completed(first.providerCheckoutId!))).toEqual({ outcome: "rejected", reason: "subtotal_mismatch" });
     expect(await order(first.id)).toMatchObject({ paymentStatus: "refund_pending", fulfillmentStatus: "none", duplicateOfOrderId: second.id });
   });
 
@@ -197,9 +197,9 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!, { paymentStatus: "no_payment_required", paymentIntentId: null, amountDiscount: 399, amountTotal: 0, promotionCodeId: "promo_free1", customerEmail: "free@example.test" });
-    expect((await handlePaymentEvent(wh, completed(o.stripeSessionId!))).outcome).toBe("paid");
-    expect(await order(o.id)).toMatchObject({ paymentStatus: "paid", totalCents: 0, discountCents: 399, promotionCodeId: "promo_free1", stripePaymentIntentId: null });
+    pay.complete(o.providerCheckoutId!, { paymentStatus: "no_payment_required", paymentIntentId: null, amountDiscount: 399, amountTotal: 0, promotionCodeId: "promo_free1", customerEmail: "free@example.test" });
+    expect((await handlePaymentEvent(wh, completed(o.providerCheckoutId!))).outcome).toBe("paid");
+    expect(await order(o.id)).toMatchObject({ paymentStatus: "paid", totalCents: 0, discountCents: 399, promotionCodeId: "promo_free1", providerPaymentId: null });
     expect(await requestRefund({ db: h.db, payments: pay, boss }, { orderId: o.id, reason: "goodwill", requestedBy: "customer" })).toEqual({ ok: false, error: "not_paid" });
     const d = await dashboard(h.db, 1);
     expect(d.freeOrders).toBeGreaterThanOrEqual(1);
@@ -214,8 +214,8 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!, { amountDiscount: 200, amountTotal: 199 });
-    expect((await handlePaymentEvent(wh, completed(o.stripeSessionId!))).outcome).toBe("paid");
+    pay.complete(o.providerCheckoutId!, { amountDiscount: 200, amountTotal: 199 });
+    expect((await handlePaymentEvent(wh, completed(o.providerCheckoutId!))).outcome).toBe("paid");
     expect(await order(o.id)).toMatchObject({ totalCents: 199, discountCents: 200 });
   });
 
@@ -228,8 +228,8 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!, override);
-    expect(await handlePaymentEvent(wh, completed(o.stripeSessionId!))).toEqual({ outcome: "rejected", reason });
+    pay.complete(o.providerCheckoutId!, override);
+    expect(await handlePaymentEvent(wh, completed(o.providerCheckoutId!))).toEqual({ outcome: "rejected", reason });
     expect((await order(o.id)).fulfillmentStatus).toBe("none");
     expect(await jobs(o.id)).toBe(0);
   });
@@ -238,8 +238,8 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!, { amountShipping: 50, amountTotal: 449 });
-    await handlePaymentEvent(wh, completed(o.stripeSessionId!));
+    pay.complete(o.providerCheckoutId!, { amountShipping: 50, amountTotal: 449 });
+    await handlePaymentEvent(wh, completed(o.providerCheckoutId!));
     expect((await h.db.select().from(refunds).where(eq(refunds.orderId, o.id)))[0]).toMatchObject({ reason: "validation_failure", amountCents: 449 });
     // The refunded, never-unlocked payment is not a purchase: a new checkout opens a new order.
     const again = await startCheckout(co, guestId, chartId, true);
@@ -259,8 +259,8 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     snap.content!.snippets.forEach((x) => { x.approvedBy = "jason"; }); // as if checked out from an approved library
     const { encryptPrivate } = await import("../../src/server/security/encryption");
     await h.db.update(orders).set({ snapshotEnc: encryptPrivate(snap, aad("orders", o.id, "snapshot"), ring) }).where(eq(orders.id, o.id));
-    pay.complete(o.stripeSessionId!);
-    await handlePaymentEvent(wh, completed(o.stripeSessionId!));
+    pay.complete(o.providerCheckoutId!);
+    await handlePaymentEvent(wh, completed(o.providerCheckoutId!));
     const llm = new FakeLlm();
     const facts = buildFacts((snap.response as { chart: Parameters<typeof buildFacts>[0] }).chart);
     llm.queue.push(validReading(facts, snap.content!.snippets.map((s) => s.id)));
@@ -274,8 +274,8 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string }; // staging checkout: drafts frozen
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!);
-    await handlePaymentEvent(wh, completed(o.stripeSessionId!));
+    pay.complete(o.providerCheckoutId!);
+    await handlePaymentEvent(wh, completed(o.providerCheckoutId!));
     const llm = new FakeLlm();
     await expect(generateReading({ db: h.db, ring, boss, llm, payments: pay, approvedSnippetsOnly: true, dailyCap: 100 }, o.id)).rejects.toThrow(/content_not_approved/);
     expect(llm.calls).toHaveLength(0);
@@ -302,11 +302,11 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!);
+    pay.complete(o.providerCheckoutId!);
     await h.db.update(orders).set({ updatedAt: new Date(Date.now() - 5 * 60_000) }).where(eq(orders.id, o.id));
     expect((await reconcileOpenSessions(wh)).paid).toBeGreaterThanOrEqual(1);
     expect(await order(o.id)).toMatchObject({ paymentStatus: "paid", fulfillmentStatus: "queued" });
-    expect((await handlePaymentEvent(wh, completed(o.stripeSessionId!))).outcome).toBe("no_transition");
+    expect((await handlePaymentEvent(wh, completed(o.providerCheckoutId!))).outcome).toBe("no_transition");
     expect(await jobs(o.id)).toBe(1);
   });
 
@@ -314,11 +314,11 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!);
+    pay.complete(o.providerCheckoutId!);
     // 120 other completed sessions (pagination), all older noise from another integration.
     for (let i = 0; i < 120; i++) {
       const id = `cs_test_noise_${i}`;
-      pay.sessions.set(id, { ref: { id, url: null, status: "complete" }, req: { ...pay.sessions.get(o.stripeSessionId!)!.req, orderId: "not-a-uuid" }, details: { paymentStatus: "paid", clientReferenceId: "not-a-uuid", metadataOrderId: "not-a-uuid" }, created: Math.floor(Date.now() / 1000) - 3600 });
+      pay.sessions.set(id, { ref: { id, url: null, status: "complete" }, req: { ...pay.sessions.get(o.providerCheckoutId!)!.req, orderId: "not-a-uuid" }, details: { paymentStatus: "paid", clientReferenceId: "not-a-uuid", metadataOrderId: "not-a-uuid" }, created: Math.floor(Date.now() / 1000) - 3600 });
     }
     const threeDaysAgo = Math.floor(Date.now() / 1000) - 72 * 3600;
     await h.db.insert(settings).values({ key: CURSOR_KEY, value: threeDaysAgo, updatedBy: "test" }).onConflictDoUpdate({ target: settings.key, set: { value: threeDaysAgo } });
@@ -337,10 +337,10 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!);
-    const d = await pay.getCheckoutDetails(o.stripeSessionId!);
+    pay.complete(o.providerCheckoutId!);
+    const d = await pay.getCheckoutDetails(o.providerCheckoutId!);
     const res = await Promise.all([
-      handlePaymentEvent(wh, completed(o.stripeSessionId!)),
+      handlePaymentEvent(wh, completed(o.providerCheckoutId!)),
       applyPaidSession(wh, d, { eventId: `reconcile:${d.id}`, type: "reconcile.completed", livemode: false }),
     ]);
     expect(res.map((x) => x.outcome).sort()).toEqual(["no_transition", "paid"]);
@@ -351,14 +351,14 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const a = await newChart(); const b = await newChart();
     const broken = await order(((await startCheckout(co, a.guestId, a.chartId, true)) as { orderId: string }).orderId);
     const good = await order(((await startCheckout(co, b.guestId, b.chartId, true)) as { orderId: string }).orderId);
-    pay.complete(broken.stripeSessionId!); pay.complete(good.stripeSessionId!); // same second, broken listed first
+    pay.complete(broken.providerCheckoutId!); pay.complete(good.providerCheckoutId!); // same second, broken listed first
     const real = pay.getCheckoutDetails.bind(pay);
-    pay.getCheckoutDetails = async (id) => { if (id === broken.stripeSessionId) throw new Error("always broken"); return real(id); };
+    pay.getCheckoutDetails = async (id) => { if (id === broken.providerCheckoutId) throw new Error("always broken"); return real(id); };
     const seen: string[] = [];
     for (let i = 0; i < 3; i++) { await reconcileStripeSessions(wh); seen.push((await order(good.id)).paymentStatus); }
     pay.getCheckoutDetails = real;
     expect(seen).toEqual(["open", "open", "paid"]); // blocked on runs 1–2; on run 3 the issue takes over and the scan moves on
-    const [issue] = await h.db.select().from(paymentIssues).where(eq(paymentIssues.providerObjectId, broken.stripeSessionId!));
+    const [issue] = await h.db.select().from(paymentIssues).where(eq(paymentIssues.providerObjectId, broken.providerCheckoutId!));
     expect(issue).toMatchObject({ kind: "reconcile_session_failed", status: "open", occurrences: 3 });
   });
 
@@ -379,13 +379,13 @@ describe.skipIf(!hasDb)("checkout intake (CC1b)", () => {
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true) as { orderId: string };
     const o = await order(r.orderId);
-    pay.complete(o.stripeSessionId!);
+    pay.complete(o.providerCheckoutId!);
     const real = pay.getCheckoutDetails.bind(pay);
     pay.getCheckoutDetails = async () => { throw new Error("provider down"); };
     const res = await reconcileStripeSessions(wh);
     pay.getCheckoutDetails = real;
     expect((await order(o.id)).paymentStatus).toBe("open");
-    expect(res.cursor).toBeLessThanOrEqual(Math.max(before, [...pay.sessions.values()].find((s) => s.ref.id === o.stripeSessionId)!.created));
+    expect(res.cursor).toBeLessThanOrEqual(Math.max(before, [...pay.sessions.values()].find((s) => s.ref.id === o.providerCheckoutId)!.created));
     await reconcileStripeSessions(wh);
     expect((await order(o.id)).paymentStatus).toBe("paid");
   });

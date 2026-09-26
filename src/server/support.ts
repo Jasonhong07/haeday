@@ -35,7 +35,7 @@ export async function findOrders(db: Db, ring: Keyring, query: string): Promise<
   const q = query.trim();
   let where;
   if (z.email().safeParse(normalizeEmail(q)).success) where = eq(orders.deliveryEmailLookup, emailLookup(normalizeEmail(q), ring));
-  else if (/^(cs|pi)_(test|live)_[A-Za-z0-9]+$/.test(q)) where = or(eq(orders.stripeSessionId, q), eq(orders.stripePaymentIntentId, q));
+  else if (/^(cs|pi)_(test|live)_[A-Za-z0-9]+$/.test(q)) where = or(eq(orders.providerCheckoutId, q), eq(orders.providerPaymentId, q));
   else if (/^[0-9a-f-]{8,36}$/i.test(q)) where = like(sql`${orders.id}::text`, `${q.toLowerCase()}%`);
   else return [];
   const rows = await db.select(rowCols).from(orders).leftJoin(readings, eq(readings.orderId, orders.id)).where(where).orderBy(desc(orders.createdAt)).limit(25);
@@ -49,7 +49,7 @@ export async function orderDetail(db: Db, orderId: string) {
   if (!o) return null;
   const [full] = await db.select({
     deadline: orders.fulfillmentDeadlineAt, notBefore: orders.fulfillmentNotBefore, discount: orders.discountCents, tax: orders.taxCents,
-    hasEmail: sql<boolean>`${orders.deliveryEmailEnc} is not null`, session: orders.stripeSessionId, intent: orders.stripePaymentIntentId,
+    hasEmail: sql<boolean>`${orders.deliveryEmailEnc} is not null`, session: orders.providerCheckoutId, intent: orders.providerPaymentId,
     duplicateOf: orders.duplicateOfOrderId, piiDeleted: orders.piiDeletedAt,
   }).from(orders).where(eq(orders.id, orderId));
   const [refundRows, attempts, emails, issues, disputeRows] = await Promise.all([

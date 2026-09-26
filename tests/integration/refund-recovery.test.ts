@@ -41,9 +41,9 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     const r = await startCheckout(co, g.id, c.id, true);
     if (!r.ok) throw new Error(r.error);
     const o = (await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!;
-    pay.complete(o.stripeSessionId!, { customerEmail: `rf${++n}@example.test` });
-    await handlePaymentEvent(wh, { id: `evt_rf${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.stripeSessionId! });
-    return { orderId: r.orderId, pi: `pi_${o.stripeSessionId!.slice(8, 24)}` };
+    pay.complete(o.providerCheckoutId!, { customerEmail: `rf${++n}@example.test` });
+    await handlePaymentEvent(wh, { id: `evt_rf${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.providerCheckoutId! });
+    return { orderId: r.orderId, pi: `pi_${o.providerCheckoutId!.slice(8, 24)}` };
   }
   const rd = () => ({ db: h.db, payments: pay, boss });
   const order = async (id: string) => (await h.db.query.orders.findFirst({ where: eq(orders.id, id) }))!;
@@ -59,7 +59,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     expect((await order(orderId)).paymentStatus).toBe("refund_pending");
     await reconcileRefunds({ db: h.db, payments: pay });
     expect(providerRefunds(pi)).toHaveLength(1);
-    expect((await rows(orderId))[0]).toMatchObject({ status: "succeeded", stripeRefundId: providerRefunds(pi)[0]!.id });
+    expect((await rows(orderId))[0]).toMatchObject({ status: "succeeded", providerRefundId: providerRefunds(pi)[0]!.id });
     expect((await order(orderId)).paymentStatus).toBe("refunded");
   });
 
@@ -102,7 +102,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     let once = true;
     pay.hooks.beforeSummaryReturn = async () => {
       if (!once) return; once = false;
-      pay.setRefundStatus(row!.stripeRefundId!, "succeeded"); // provider moves on while A's snapshot says pending
+      pay.setRefundStatus(row!.providerRefundId!, "succeeded"); // provider moves on while A's snapshot says pending
       expect(await syncOrderRefunds({ db: h.db, payments: pay }, orderId)).toBe("busy"); // B marks dirty
     };
     expect(await syncOrderRefunds({ db: h.db, payments: pay }, orderId)).toBe("synced"); // A saves, sees dirty, re-reads
@@ -118,7 +118,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     let once = true;
     pay.hooks.beforeSummaryReturn = async () => {
       if (!once) return; once = false;
-      pay.setRefundStatus(row!.stripeRefundId!, "succeeded");
+      pay.setRefundStatus(row!.providerRefundId!, "succeeded");
       expect(await syncOrderRefunds({ db: h.db, payments: pay, now: after(LEASE_MS + 1000) }, orderId)).toBe("synced"); // B
     };
     expect(await syncOrderRefunds({ db: h.db, payments: pay }, orderId)).toBe("stale"); // A: its token was replaced
@@ -160,8 +160,8 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     const { orderId, pi } = await paidOrder();
     await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
     const [row] = await rows(orderId);
-    pay.setRefundStatus(row!.stripeRefundId!, "failed", "lost_or_stolen_card");
-    await handlePaymentEvent(wh, { id: `evt_rf${++evt}`, livemode: false, type: "refund.updated", refundId: row!.stripeRefundId!, paymentIntentId: pi, status: "failed", amountCents: 399, orderId: null });
+    pay.setRefundStatus(row!.providerRefundId!, "failed", "lost_or_stolen_card");
+    await handlePaymentEvent(wh, { id: `evt_rf${++evt}`, livemode: false, type: "refund.updated", refundId: row!.providerRefundId!, paymentIntentId: pi, status: "failed", amountCents: 399, orderId: null });
     // The sync job runs during a provider outage and every retry fails (this used to clear `dirty`).
     const real = pay.getRefundSummary.bind(pay);
     pay.getRefundSummary = async () => { throw new Error("provider outage"); };
@@ -206,7 +206,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
     const ours = (await rows(orderId)).find((r) => r.source === "service")!;
     expect(ours.amountCents).toBe(299);
-    pay.setRefundStatus(ours.stripeRefundId!, "failed", "expired_or_canceled_card");
+    pay.setRefundStatus(ours.providerRefundId!, "failed", "expired_or_canceled_card");
     await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
     expect((await order(orderId)).paymentStatus).toBe("partially_refunded");
     expect((await rows(orderId)).find((r) => r.id === ours.id)).toMatchObject({ status: "failed", failureReason: "expired_or_canceled_card" });
@@ -218,7 +218,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     await requestRefund(rd(), { orderId, reason: "admin", requestedBy: "admin" });
     expect((await order(orderId)).paymentStatus).toBe("refunded");
     const [row] = await rows(orderId);
-    pay.setRefundStatus(row!.stripeRefundId!, "failed", "lost_or_stolen_card");
+    pay.setRefundStatus(row!.providerRefundId!, "failed", "lost_or_stolen_card");
     await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
     expect((await order(orderId)).paymentStatus).toBe("paid");
     // Fulfillment was stopped when the refund was claimed, so the sweep cannot open a new claim by itself.
@@ -231,7 +231,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
 
   it("RF08: an open dispute blocks automatic refunds (before claim and between claim and execute)", async () => {
     const a = await paidOrder();
-    await h.db.insert(disputes).values({ orderId: a.orderId, stripeDisputeId: `dp_${++evt}`, status: "needs_response" });
+    await h.db.insert(disputes).values({ orderId: a.orderId, providerDisputeId: `dp_${++evt}`, status: "needs_response" });
     expect(await requestRefund(rd(), { orderId: a.orderId, reason: "goodwill", requestedBy: "customer" })).toEqual({ ok: false, error: "disputed" });
     expect(await issues(a.orderId)).toContain("refund_blocked_dispute");
 
@@ -240,7 +240,7 @@ describe.skipIf(!hasDb)("refund recovery (CC1a RF01–RF08)", () => {
     await requestRefund(rd(), { orderId: b.orderId, reason: "admin", requestedBy: "admin" });
     const [row] = await rows(b.orderId);
     await h.db.update(refunds).set({ status: "requested" }).where(eq(refunds.id, row!.id));
-    await h.db.insert(disputes).values({ orderId: b.orderId, stripeDisputeId: `dp_${++evt}`, status: "needs_response" });
+    await h.db.insert(disputes).values({ orderId: b.orderId, providerDisputeId: `dp_${++evt}`, status: "needs_response" });
     pay.nextRefund = "succeeded";
     const calls = pay.calls.createRefund;
     await executeRefund({ db: h.db, payments: pay }, row!.id);

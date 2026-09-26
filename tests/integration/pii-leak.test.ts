@@ -61,9 +61,9 @@ describe.skipIf(!hasDb)("no birth data or email in logs or plaintext storage (ru
     const r = await startCheckout({ db: h.db, ring, payments: pay, priceId: PRICE, origin: "https://haeday.test", automaticTax: false, approvedSnippetsOnly: false }, g.id, chart.id, true);
     if (!r.ok) throw new Error(r.error);
     const o = (await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!;
-    pay.complete(o.stripeSessionId!, { customerEmail: EMAIL });
+    pay.complete(o.providerCheckoutId!, { customerEmail: EMAIL });
     const wh = { db: h.db, ring, boss, payments: pay, paymentsMode: "test" as const, priceId: PRICE };
-    expect((await handlePaymentEvent(wh, { id: "evt_leak_1", livemode: false, type: "checkout.completed", sessionId: o.stripeSessionId! })).outcome).toBe("paid");
+    expect((await handlePaymentEvent(wh, { id: "evt_leak_1", livemode: false, type: "checkout.completed", sessionId: o.providerCheckoutId! })).outcome).toBe("paid");
     const snap = decryptPrivate<OrderSnapshot>((await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!.snapshotEnc!, aad("orders", r.orderId, "snapshot"), ring);
     const facts = buildFacts((snap.response as { chart: Parameters<typeof buildFacts>[0] }).chart);
     llm.queue.push(validReading(facts, selectSnippets(facts, false).map((s) => s.id)));

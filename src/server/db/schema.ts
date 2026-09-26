@@ -85,8 +85,11 @@ export const orders = pgTable("orders", {
   deliveryEmailEnc: text("delivery_email_enc"),     // D14
   deliveryEmailLookup: text("delivery_email_lookup"),
   consentVersion: text("consent_version").notNull(),
-  stripeSessionId: text("stripe_session_id").unique(),
-  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  // CC4c: "stripe" | "paypal". Checkout id = Stripe Checkout Session / PayPal order; payment id = Stripe
+  // PaymentIntent / PayPal capture (the object refunds and disputes point at).
+  paymentProvider: text("payment_provider").notNull().default("stripe"),
+  providerCheckoutId: text("provider_checkout_id").unique(),
+  providerPaymentId: text("provider_payment_id"),
   paymentStatus: paymentStatus("payment_status").notNull().default("open"),
   fulfillmentStatus: fulfillmentStatus("fulfillment_status").notNull().default("none"),
   currentFencingToken: uuid("current_fencing_token"), // only the holder may save a reading (ARCHITECTURE §4.4)
@@ -109,7 +112,7 @@ export const orders = pgTable("orders", {
     .where(sql`${t.paymentStatus} in ('open', 'paid', 'refund_pending', 'partially_refunded') and ${t.duplicateOfOrderId} is null and (${t.paymentStatus} = 'open' or ${t.fulfillmentStatus} <> 'none')`),
   index("orders_delivery_email_lookup_idx").on(t.deliveryEmailLookup),
   index("orders_customer_idx").on(t.customerId),
-  index("orders_payment_intent_idx").on(t.stripePaymentIntentId),
+  index("orders_payment_intent_idx").on(t.providerPaymentId),
   index("orders_status_paid_at_idx").on(t.paymentStatus, t.paidAt),
   index("orders_fulfillment_deadline_idx").on(t.fulfillmentStatus, t.fulfillmentDeadlineAt),
   check("orders_amount_positive", sql`${t.unitAmountCents} > 0`),
@@ -190,7 +193,7 @@ export const refunds = pgTable("refunds", {
   reason: refundReason("reason").notNull(),
   idempotencyKey: text("idempotency_key").notNull().unique(),
   amountCents: integer("amount_cents").notNull(),
-  stripeRefundId: text("stripe_refund_id").unique(),
+  providerRefundId: text("provider_refund_id").unique(),
   status: refundStatus("status").notNull().default("requested"),
   requestedBy: text("requested_by").notNull(), // customer | admin | worker | deadline_cron
   attemptNo: integer("attempt_no").notNull().default(1), // new provider attempt only after a confirmed failure (CC1a F3)
@@ -286,7 +289,7 @@ export const paymentIssues = pgTable("payment_issues", {
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),
   orderId: uuid("order_id").references(() => orders.id),
-  stripeDisputeId: text("stripe_dispute_id").notNull().unique(),
+  providerDisputeId: text("provider_dispute_id").notNull().unique(),
   status: text("status").notNull(),
   reason: text("reason"),
   evidenceDueBy: ts("evidence_due_by"),

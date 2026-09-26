@@ -57,8 +57,8 @@ describe.skipIf(!hasDb)("delivery capacity, AI cost, email budget (CC1c)", () =>
     const r = await startCheckout(co, g.id, c.id, true, "saju_reading", promise);
     if (!r.ok) throw new Error(r.error);
     const o = (await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!;
-    pay.complete(o.stripeSessionId!, { customerEmail: `dc${++evt}@example.test` });
-    await handlePaymentEvent(wh, { id: `evt_dc${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.stripeSessionId! });
+    pay.complete(o.providerCheckoutId!, { customerEmail: `dc${++evt}@example.test` });
+    await handlePaymentEvent(wh, { id: `evt_dc${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.providerCheckoutId! });
     return (await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!;
   }
   async function readingFor(orderId: string) {
@@ -96,7 +96,7 @@ describe.skipIf(!hasDb)("delivery capacity, AI cost, email budget (CC1c)", () =>
   it("D47: a 24h order's deadline is 24 h after the PROVIDER's payment time; missed → refunded, generation stops", async () => {
     await useSlots(9);
     const o = await paid("24h");
-    const created = [...pay.sessions.values()].find((s) => s.ref.id === o.stripeSessionId)!.created;
+    const created = [...pay.sessions.values()].find((s) => s.ref.id === o.providerCheckoutId)!.created;
     expect(o.fulfillmentDeadlineAt!.getTime()).toBe((created * 1000) + 24 * 3_600_000);
     await sweepDeadlines({ db: h.db, ring, boss, payments: pay, now: () => new Date(o.fulfillmentDeadlineAt!.getTime() + 60_000) });
     expect(await order(o.id)).toMatchObject({ fulfillmentStatus: "failed", paymentStatus: "refunded" });
@@ -257,7 +257,7 @@ describe.skipIf(!hasDb)("delivery capacity, AI cost, email budget (CC1c)", () =>
     const r2 = await startCheckout(co, g.id, c.id, true, "saju_reading", "24h") as { orderId: string };
     expect(r2.orderId).not.toBe(first.id);
     expect((await order(first.id)).paymentStatus).toBe("expired");
-    expect([...pay.sessions.values()].find((x) => x.ref.id === first.stripeSessionId)!.ref.status).toBe("expired");
+    expect([...pay.sessions.values()].find((x) => x.ref.id === first.providerCheckoutId)!.ref.status).toBe("expired");
     expect((await order(r2.orderId)).deliveryPromise).toBe("24h");
   });
 

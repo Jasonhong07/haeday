@@ -15,7 +15,7 @@ export async function POST(request: Request): Promise<Response> {
   await setSalesEnabled(a.ctx.db, mode === "on", `admin:${a.actorId}`);
   if (mode === "hard_stop") {
     const payments = paymentAdapter(a.ctx.env);
-    const open = await a.ctx.db.select({ s: orders.stripeSessionId }).from(orders).where(and(eq(orders.paymentStatus, "open"), isNotNull(orders.stripeSessionId)));
+    const open = await a.ctx.db.select({ s: orders.providerCheckoutId }).from(orders).where(and(eq(orders.paymentStatus, "open"), isNotNull(orders.providerCheckoutId)));
     for (const o of open) { try { await payments?.expireCheckoutSession(o.s!); } catch { /* already expired or completed */ } }
   }
   await audit(a.ctx.db, a.actorId, `sales:${mode}`, null);

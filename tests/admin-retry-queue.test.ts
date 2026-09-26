@@ -22,7 +22,7 @@ describe.skipIf(!hasDb)("admin retry (D36)", () => {
 
   async function mk(fulfillment: "queued" | "generating" | "failed", attempts = 0) {
     const [g] = await h.db.insert(guests).values({ cookieHash: randomBytes(6).toString("hex") }).returning();
-    const [o] = await h.db.insert(orders).values({ guestId: g!.id, sku: "saju_reading", unitAmountCents: 399, totalCents: 399, consentVersion: "c", paymentStatus: "paid", paidAt: new Date(), fulfillmentStatus: fulfillment, stripePaymentIntentId: `pi_${randomBytes(4).toString("hex")}`, currentFencingToken: randomUUID() }).returning();
+    const [o] = await h.db.insert(orders).values({ guestId: g!.id, sku: "saju_reading", unitAmountCents: 399, totalCents: 399, consentVersion: "c", paymentStatus: "paid", paidAt: new Date(), fulfillmentStatus: fulfillment, providerPaymentId: `pi_${randomBytes(4).toString("hex")}`, currentFencingToken: randomUUID() }).returning();
     for (let i = 1; i <= attempts; i++) await h.db.insert(generationAttempts).values({ orderId: o!.id, attemptNo: i, status: "failed" });
     return o!;
   }
@@ -54,7 +54,7 @@ describe.skipIf(!hasDb)("admin retry (D36)", () => {
     await h.db.update(refunds).set({ status: "failed" }).where(eq(refunds.orderId, a.id));
     expect(await retryOrder(h.db, boss, a.id, admin)).toBe("granted_and_queued");
     const b = await mk("generating");
-    await h.db.insert(disputes).values({ orderId: b.id, stripeDisputeId: `dp_${randomBytes(4).toString("hex")}`, status: "needs_response" });
+    await h.db.insert(disputes).values({ orderId: b.id, providerDisputeId: `dp_${randomBytes(4).toString("hex")}`, status: "needs_response" });
     expect(await retryOrder(h.db, boss, b.id, admin)).toBe("not_allowed");
   });
 

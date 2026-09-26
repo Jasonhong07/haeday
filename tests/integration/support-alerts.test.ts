@@ -61,9 +61,9 @@ describe.skipIf(!hasDb)("CC4a support tools and operator alerts", () => {
     const r = await startCheckout(co, g.id, c.id, true);
     if (!r.ok) throw new Error(r.error);
     const o = (await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!;
-    pay.complete(o.stripeSessionId!, { customerEmail: email });
-    expect((await handlePaymentEvent(wh, { id: `evt_s${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.stripeSessionId! })).outcome).toBe("paid");
-    return { orderId: r.orderId, sessionId: o.stripeSessionId! };
+    pay.complete(o.providerCheckoutId!, { customerEmail: email });
+    expect((await handlePaymentEvent(wh, { id: `evt_s${++evt}`, livemode: false, type: "checkout.completed", sessionId: o.providerCheckoutId! })).outcome).toBe("paid");
+    return { orderId: r.orderId, sessionId: o.providerCheckoutId! };
   }
   async function delivered(email: string) {
     const p = await paidOrder(email);

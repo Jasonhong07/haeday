@@ -166,7 +166,7 @@ export async function failAndRefund(
     await tx.update(orders).set({ fulfillmentStatus: "failed", currentFencingToken: null, updatedAt: now }).where(eq(orders.id, orderId));
     const refund = await claimRefundInTx(tx, deps.boss, { orderId, reason: "service_failure", requestedBy: guard.deadlineBefore ? "deadline_cron" : "worker", now, livemode: deps.payments.livemode });
     // Free (100% code) orders have nothing to refund: a different apology that promises no refund.
-    const free = (order.totalCents ?? 0) === 0 && !order.stripePaymentIntentId;
+    const free = (order.totalCents ?? 0) === 0 && !order.providerPaymentId;
     if (order.deliveryEmailEnc && (refund.ok || free)) {
       await queueEmailInTx(tx, deps.boss, deps.ring, { kind: free ? "apology_free" : "apology", orderId, to: decryptPrivate<string>(order.deliveryEmailEnc, aad("orders", orderId, "delivery_email"), deps.ring) });
     }

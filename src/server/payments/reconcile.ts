@@ -25,8 +25,8 @@ const source = (d: CheckoutDetails) => ({ eventId: `reconcile:${d.id}`, type: "r
 
 export async function reconcileOpenSessions(deps: WebhookDeps): Promise<{ checked: number; paid: number; expired: number }> {
   const now = deps.now?.() ?? new Date();
-  const open = await deps.db.select({ id: orders.id, sessionId: orders.stripeSessionId }).from(orders)
-    .where(and(eq(orders.paymentStatus, "open"), isNotNull(orders.stripeSessionId), lt(orders.updatedAt, new Date(now.getTime() - OPEN_CHECK_MIN_AGE_MS))))
+  const open = await deps.db.select({ id: orders.id, sessionId: orders.providerCheckoutId }).from(orders)
+    .where(and(eq(orders.paymentStatus, "open"), isNotNull(orders.providerCheckoutId), lt(orders.updatedAt, new Date(now.getTime() - OPEN_CHECK_MIN_AGE_MS))))
     .orderBy(asc(orders.updatedAt)).limit(OPEN_CHECK_BATCH);
   let paid = 0; let expired = 0;
   for (const o of open) {

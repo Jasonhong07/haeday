@@ -59,8 +59,8 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const r = await startCheckout(co, guestId, chartId, true);
     if (!r.ok) throw new Error(r.error);
     const order = (await h.db.query.orders.findFirst({ where: eq(orders.id, r.orderId) }))!;
-    pay.complete(order.stripeSessionId!, { customerEmail: email });
-    expect((await handlePaymentEvent(wh, completed(order.stripeSessionId!))).outcome).toBe("paid");
+    pay.complete(order.providerCheckoutId!, { customerEmail: email });
+    expect((await handlePaymentEvent(wh, completed(order.providerCheckoutId!))).outcome).toBe("paid");
     return { guestId, chartId, orderId: r.orderId };
   }
   const jobs = async (queue: string, key: string) =>
@@ -101,7 +101,7 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const { guestId, chartId } = await newChart();
     const first = await startCheckout(co, guestId, chartId, true);
     const o = await order((first as { orderId: string }).orderId);
-    await pay.expireCheckoutSession(o.stripeSessionId!);
+    await pay.expireCheckoutSession(o.providerCheckoutId!);
     const second = await startCheckout(co, guestId, chartId, true);
     expect((second as { orderId: string }).orderId).not.toBe(o.id);
     expect((await order(o.id)).paymentStatus).toBe("expired");
@@ -112,8 +112,8 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true);
     const o = await order((r as { orderId: string }).orderId);
-    pay.complete(o.stripeSessionId!, { amountTax: 31, amountTotal: 430 });
-    const e = completed(o.stripeSessionId!);
+    pay.complete(o.providerCheckoutId!, { amountTax: 31, amountTotal: 430 });
+    const e = completed(o.providerCheckoutId!);
     expect((await handlePaymentEvent(wh, e)).outcome).toBe("paid");
     expect((await handlePaymentEvent(wh, e)).outcome).toBe("duplicate");
     const after = await order(o.id);
@@ -135,8 +135,8 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true);
     const o = await order((r as { orderId: string }).orderId);
-    pay.complete(o.stripeSessionId!, override);
-    const res = await handlePaymentEvent(wh, completed(o.stripeSessionId!));
+    pay.complete(o.providerCheckoutId!, override);
+    const res = await handlePaymentEvent(wh, completed(o.providerCheckoutId!));
     expect(res).toEqual({ outcome: "rejected", reason });
     const after = await order(o.id);
     expect(after.fulfillmentStatus).toBe("none"); // never unlocked
@@ -157,7 +157,7 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     expect((await requestRefund({ db: h.db, payments: pay, boss }, { orderId, reason: "admin", requestedBy: "admin" })).ok).toBe(true);
     const o = await order(orderId);
     expect(o.paymentStatus).toBe("refunded");
-    const res = await handlePaymentEvent(wh, completed(o.stripeSessionId!));
+    const res = await handlePaymentEvent(wh, completed(o.providerCheckoutId!));
     expect(res.outcome).toBe("no_transition");
     expect((await order(orderId)).paymentStatus).toBe("refunded");
   });
@@ -166,7 +166,7 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     const { guestId, chartId } = await newChart();
     const r = await startCheckout(co, guestId, chartId, true);
     const o = await order((r as { orderId: string }).orderId);
-    expect((await handlePaymentEvent(wh, { id: `evt_exp_${o.id}`, livemode: false, type: "checkout.expired", sessionId: o.stripeSessionId! })).outcome).toBe("expired");
+    expect((await handlePaymentEvent(wh, { id: `evt_exp_${o.id}`, livemode: false, type: "checkout.expired", sessionId: o.providerCheckoutId! })).outcome).toBe("expired");
     expect((await order(o.id)).paymentStatus).toBe("expired");
   });
 
@@ -191,12 +191,12 @@ describe.skipIf(!hasDb)("commerce core (checkout → webhook → generation → 
     expect(r).toMatchObject({ ok: true, status: "pending" });
     expect((await order(orderId)).paymentStatus).toBe("refund_pending");
     const row = (await h.db.select().from(refunds).where(eq(refunds.orderId, orderId)))[0]!;
-    const evtBody = { livemode: false, type: "refund.updated" as const, refundId: row.stripeRefundId!, paymentIntentId: (await order(orderId)).stripePaymentIntentId, status: "succeeded" as const, amountCents: 399, orderId };
+    const evtBody = { livemode: false, type: "refund.updated" as const, refundId: row.providerRefundId!, paymentIntentId: (await order(orderId)).providerPaymentId, status: "succeeded" as const, amountCents: 399, orderId };
     // The event body alone never changes state: Stripe still says pending, so the order stays pending.
     await handlePaymentEvent(wh, { id: `evt_ref_a_${orderId}`, ...evtBody });
     await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
     expect((await order(orderId)).paymentStatus).toBe("refund_pending");
-    pay.setRefundStatus(row.stripeRefundId!, "succeeded");
+    pay.setRefundStatus(row.providerRefundId!, "succeeded");
     await handlePaymentEvent(wh, { id: `evt_ref_b_${orderId}`, ...evtBody });
     await syncOrderRefunds({ db: h.db, payments: pay }, orderId);
     expect((await order(orderId)).paymentStatus).toBe("refunded");

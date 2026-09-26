@@ -94,16 +94,16 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
 
     if (existing && existing.deliveryPromise !== promise) {
       // An open order made under a different promise: never charge under a promise this page did not show.
-      if (existing.stripeSessionId) {
-        try { await deps.payments.expireCheckoutSession(existing.stripeSessionId); } catch { return { ok: false, error: "provider_error" }; }
+      if (existing.providerCheckoutId) {
+        try { await deps.payments.expireCheckoutSession(existing.providerCheckoutId); } catch { return { ok: false, error: "provider_error" }; }
       }
       await deps.db.update(orders).set({ paymentStatus: "expired", updatedAt: new Date() }).where(and(eq(orders.id, existing.id), eq(orders.paymentStatus, "open")));
       continue;
     }
     if (existing) {
-      if (existing.stripeSessionId) {
+      if (existing.providerCheckoutId) {
         let session;
-        try { session = await deps.payments.getCheckoutSession(existing.stripeSessionId); } catch { return { ok: false, error: "provider_error" }; }
+        try { session = await deps.payments.getCheckoutSession(existing.providerCheckoutId); } catch { return { ok: false, error: "provider_error" }; }
         if (session.status === "open" && session.url) return { ok: true, url: session.url, orderId: existing.id };
         if (session.status === "complete") return { ok: false, error: "processing", orderId: existing.id };
         // Expired at Stripe: close this order and start a fresh one on the next loop.
@@ -210,8 +210,8 @@ async function sendFrozen(deps: CheckoutDeps, orderId: string): Promise<Checkout
 export async function linkSession(db: Db, orderId: string, sessionId: string, now: Date): Promise<boolean> {
   return db.transaction(async (tx) => {
     await tx.update(checkoutAttempts).set({ status: "linked", sessionId }).where(and(eq(checkoutAttempts.orderId, orderId), isNull(checkoutAttempts.sessionId)));
-    await tx.update(orders).set({ stripeSessionId: sessionId, updatedAt: now }).where(and(eq(orders.id, orderId), isNull(orders.stripeSessionId)));
-    const [o] = await tx.select({ status: orders.paymentStatus, sid: orders.stripeSessionId }).from(orders).where(eq(orders.id, orderId));
+    await tx.update(orders).set({ providerCheckoutId: sessionId, updatedAt: now }).where(and(eq(orders.id, orderId), isNull(orders.providerCheckoutId)));
+    const [o] = await tx.select({ status: orders.paymentStatus, sid: orders.providerCheckoutId }).from(orders).where(eq(orders.id, orderId));
     return o?.status === "open" && o.sid === sessionId;
   });
 }

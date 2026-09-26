@@ -31,9 +31,9 @@ export type WebhookOutcome =
  * A 100% promotion code yields payment_status "no_payment_required", total 0 and no PaymentIntent: allowed only
  * when the discount equals the subtotal exactly.
  */
-export function validatePaid(d: CheckoutDetails, order: { id: string; stripeSessionId: string | null; unitAmountCents: number; currency: string }, deps: Pick<WebhookDeps, "paymentsMode" | "priceId">): string | null {
+export function validatePaid(d: CheckoutDetails, order: { id: string; providerCheckoutId: string | null; unitAmountCents: number; currency: string }, deps: Pick<WebhookDeps, "paymentsMode" | "priceId">): string | null {
   if (d.livemode !== (deps.paymentsMode === "live")) return "livemode_mismatch";
-  if (order.stripeSessionId !== d.id) return "session_mismatch";
+  if (order.providerCheckoutId !== d.id) return "session_mismatch";
   if (d.clientReferenceId !== order.id || d.metadataOrderId !== order.id) return "order_reference_mismatch";
   const free = d.paymentStatus === "no_payment_required";
   if (d.paymentStatus !== "paid" && !free) return "not_paid";
@@ -86,21 +86,21 @@ export async function applyPaidSession(deps: WebhookDeps, details: CheckoutDetai
 
     // F4/F12: the session was created but we never stored its id (response lost, DB save failed). Adopt it only
     // with full proof: both references, mode, a frozen attempt for this order, and created after the order.
-    if (order && !order.stripeSessionId && (order.paymentStatus === "open" || order.paymentStatus === "expired")
+    if (order && !order.providerCheckoutId && (order.paymentStatus === "open" || order.paymentStatus === "expired")
       && details.clientReferenceId === order.id && details.metadataOrderId === order.id
       && details.livemode === (deps.paymentsMode === "live") && details.created >= Math.floor(order.createdAt.getTime() / 1000) - 60) {
       const [att] = await tx.select({ id: checkoutAttempts.id }).from(checkoutAttempts).where(eq(checkoutAttempts.orderId, order.id));
       if (att) {
-        await tx.update(orders).set({ stripeSessionId: details.id, updatedAt: now }).where(eq(orders.id, order.id));
+        await tx.update(orders).set({ providerCheckoutId: details.id, updatedAt: now }).where(eq(orders.id, order.id));
         await tx.update(checkoutAttempts).set({ status: "linked", sessionId: details.id }).where(eq(checkoutAttempts.id, att.id));
-        order = { ...order, stripeSessionId: details.id };
+        order = { ...order, providerCheckoutId: details.id };
       }
     }
 
     const reason = order ? validatePaid(details, order, deps) : "unknown_order";
     const markEvent = (type: string) => tx.update(paymentEvents).set({ handledAt: now, type, orderId: order?.id ?? null }).where(eq(paymentEvents.id, ins[0]!.id));
     const moneyFacts = {
-      paidAt: now, stripePaymentIntentId: details.paymentIntentId,
+      paidAt: now, providerPaymentId: details.paymentIntentId,
       subtotalCents: details.amountSubtotal, taxCents: details.amountTax ?? 0, totalCents: details.amountTotal,
       discountCents: details.amountDiscount, promotionCodeId: details.promotionCodeId, updatedAt: now,
     };
@@ -109,7 +109,7 @@ export async function applyPaidSession(deps: WebhookDeps, details: CheckoutDetai
       // D34: money taken but validation failed. Refund ONLY when this payment provably belongs to this order;
       // the reading is never unlocked (fulfillment stays "none"). Everything else is an alert, never a refund.
       const linked = order && !IDENTITY_REASONS.includes(reason) && (order.paymentStatus === "open" || order.paymentStatus === "expired")
-        && order.stripeSessionId === details.id && details.clientReferenceId === order.id && details.metadataOrderId === order.id
+        && order.providerCheckoutId === details.id && details.clientReferenceId === order.id && details.metadataOrderId === order.id
         && details.livemode === (deps.paymentsMode === "live") && details.paymentStatus === "paid" && details.paymentIntentId
         && details.amountTotal !== null && details.amountTotal > 0;
       if (linked) {
@@ -140,7 +140,7 @@ export async function applyPaidSession(deps: WebhookDeps, details: CheckoutDetai
       }
       if (other) {
         await tx.update(orders).set({ paymentStatus: "expired", updatedAt: now }).where(and(eq(orders.id, other.id), eq(orders.paymentStatus, "open")));
-        if (other.stripeSessionId) toExpire = other.stripeSessionId; // closed at Stripe after commit, so it cannot be paid too
+        if (other.providerCheckoutId) toExpire = other.providerCheckoutId; // closed at Stripe after commit, so it cannot be paid too
       }
     }
 
@@ -194,7 +194,7 @@ export async function handlePaymentEvent(deps: WebhookDeps, event: PaymentEvent)
           .onConflictDoNothing().returning({ id: paymentEvents.id });
         if (ins.length === 0) return { outcome: "duplicate" as const };
         const moved = await tx.update(orders).set({ paymentStatus: "expired", updatedAt: now })
-          .where(and(eq(orders.stripeSessionId, event.sessionId), eq(orders.paymentStatus, "open"))).returning({ id: orders.id });
+          .where(and(eq(orders.providerCheckoutId, event.sessionId), eq(orders.paymentStatus, "open"))).returning({ id: orders.id });
         return { outcome: moved.length ? "expired" as const : "no_transition" as const };
       });
     }
@@ -207,7 +207,7 @@ export async function handlePaymentEvent(deps: WebhookDeps, event: PaymentEvent)
         if (ins.length === 0) return { outcome: "duplicate" as const };
         if (!event.paymentIntentId) return { outcome: "ignored" as const };
         // No order row lock here: the sync takes order → refund_syncs; this path only touches refund_syncs.
-        const [order] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.stripePaymentIntentId, event.paymentIntentId));
+        const [order] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.providerPaymentId, event.paymentIntentId));
         if (!order) return { outcome: "ignored" as const, reason: "unknown_payment_intent" };
         await tx.update(paymentEvents).set({ orderId: order.id }).where(eq(paymentEvents.id, ins[0]!.id));
 
@@ -223,9 +223,9 @@ export async function handlePaymentEvent(deps: WebhookDeps, event: PaymentEvent)
         const ins = await tx.insert(paymentEvents).values({ provider: deps.payments.provider, eventId: event.id, type: event.type, livemode: event.livemode, handledAt: now })
           .onConflictDoNothing().returning({ id: paymentEvents.id });
         if (ins.length === 0) return { outcome: "duplicate" as const };
-        const [order] = event.paymentIntentId ? await tx.select({ id: orders.id }).from(orders).where(eq(orders.stripePaymentIntentId, event.paymentIntentId)) : [];
-        await tx.insert(disputes).values({ orderId: order?.id ?? null, stripeDisputeId: event.disputeId, status: event.status, reason: event.reason, evidenceDueBy: event.evidenceDueBy })
-          .onConflictDoUpdate({ target: disputes.stripeDisputeId, set: { status: event.status, reason: event.reason, evidenceDueBy: event.evidenceDueBy, updatedAt: now } });
+        const [order] = event.paymentIntentId ? await tx.select({ id: orders.id }).from(orders).where(eq(orders.providerPaymentId, event.paymentIntentId)) : [];
+        await tx.insert(disputes).values({ orderId: order?.id ?? null, providerDisputeId: event.disputeId, status: event.status, reason: event.reason, evidenceDueBy: event.evidenceDueBy })
+          .onConflictDoUpdate({ target: disputes.providerDisputeId, set: { status: event.status, reason: event.reason, evidenceDueBy: event.evidenceDueBy, updatedAt: now } });
         return { outcome: "dispute_updated" as const };
       });
     }
