@@ -1,5 +1,6 @@
 // M2 end-to-end: input → free chart on a phone viewport, including fold, gap and unknown-time cases (TASKS M2).
 import { expect, test, type Page } from "@playwright/test";
+import { DAY_MASTERS } from "../../src/content/library";
 
 test.skip(!(process.env.E2E_DATABASE_URL ?? process.env.TEST_DATABASE_URL), "needs a database");
 
@@ -19,6 +20,7 @@ test("exact time: landing → input → chart with pillars, Day Master, details 
   await expect(page).toHaveURL(/\/saju$/);
   await fill(page, "1990-05-12", "I know it", "09:30", "seoul", /^Seoul, South Korea$/);
   await expect(page).toHaveURL(/\/chart\/[0-9a-f-]{36}$/);
+  await expect(page.getByText(DAY_MASTERS["丁"]!.line, { exact: true })).toHaveCount(0); // unapproved legacy interpretation must not bypass preview approval
   const pillars = page.getByRole("list", { name: "Your four pillars" });
   for (const p of ["Year pillar: 庚午", "Month pillar: 辛巳", "Day pillar: 丁丑", "Hour pillar: 甲辰"]) await expect(pillars).toContainText(p);
   await expect(page.getByRole("heading", { name: /Yin Fire/ })).toBeVisible();

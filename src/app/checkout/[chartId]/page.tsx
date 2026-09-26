@@ -1,6 +1,7 @@
 // Checkout step (PRD §5): consent checkbox, then Stripe Checkout. The server re-validates everything.
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formatDate, formatTime } from "@/lib/format";
 import { notFound } from "next/navigation";
 import { loadChart } from "@/server/charts/service";
 import { headers } from "next/headers";
@@ -36,6 +37,16 @@ export default async function CheckoutPage({ params }: { params: Promise<{ chart
     <main className="app">
       <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday</Link></header>
       <h1>Unlock your reading</h1>
+      <section className="card" aria-labelledby="confirm-details">
+        <p className="eyebrow">ONE LAST LOOK</p>
+        <h2 id="confirm-details">Check your birth details</h2>
+        <p>{formatDate(chart.input.birthDate)} · {chart.input.time.kind === "unknown" ? "Time unknown" : `${chart.input.time.kind === "approximate" ? "About " : ""}${formatTime(chart.input.time.hhmm)}`}
+          {chart.input.foldChoice ? ` (${chart.input.foldChoice === "earlier" ? "first" : "second"} occurrence)` : ""}<br />{chart.input.placeLabel}</p>
+        <p className="note">These details determine the chart used for this reading. Correct any mistakes before paying.</p>
+        {chart.response.chart.disclosure && <p className="disclosure">{chart.response.chart.disclosure}</p>}
+        {chart.response.warnings.length > 0 && <p className="note">Your chart includes a time or calendar uncertainty. <Link href={`/chart/${chartId}`}>Review the explanation</Link> before paying.</p>}
+        <Link href={`/saju?edit=${chartId}`}>Edit birth details</Link>
+      </section>
       <section className="card">
         <p style={{ margin: "0 0 8px" }}>One personal reading for the chart you just made: about 900 words on your Day Master, elements, love, work and money, and your 2027 energy.</p>
         <p className="note" style={{ margin: 0 }}>$3.99 one-time · No subscription · AI-assisted, grounded in a curated interpretation library · {capacity === "paused" ? "Opening again soon" : delayed ? "Delivered within 24 hours" : "Delivered in about a minute"}</p>

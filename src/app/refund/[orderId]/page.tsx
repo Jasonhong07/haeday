@@ -6,6 +6,7 @@ import { loadOrderView } from "@/server/orders";
 import { currentViewer } from "@/server/viewer";
 import { RefundButton } from "./RefundButton";
 import { SITE } from "@/lib/site";
+import { ORDER_COPY } from "@/lib/order-status";
 
 export const metadata: Metadata = { title: "Refund · Haeday", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -19,12 +20,13 @@ export default async function RefundPage({ params }: { params: Promise<{ orderId
     <main className="app">
       <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday</Link></header>
       <h1>Request a refund</h1>
-      {view.state === "refunded" || view.state === "failed_refunded" ? <p className="lede" role="status">This order has already been refunded (or the refund is on its way).</p> : (
+      {["refunded", "refund_pending", "refund_attention", "failed", "expired", "awaiting_payment"].includes(view.state) ? <p className="lede" role="status">{ORDER_COPY[view.state][1]}</p> : (
         <>
           <p className="lede">Not what you hoped for? Within 7 days of purchase we refund one reading per customer every 12 months, no questions asked. Banks usually show it in 5–10 business days.</p>
           <RefundButton orderId={orderId} />
         </>
       )}
+      <Link className="btn btn-ghost" href={`/order/${orderId}`}>Check order status</Link>
       <p className="fine"><Link href="/refunds">Refund policy</Link> · Questions? {SITE.support}</p>
     </main>
   );

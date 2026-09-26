@@ -2,6 +2,7 @@
 // CC4c: PayPal + Venmo buttons (PayPal's JS SDK, loaded only on this page). The buyer types the email for the
 // reading link here (Jason 2026-09-26), approves in PayPal's window, and our server captures and validates.
 // In the local end-to-end setup (DEV_FAKE_PROVIDERS) a plain test button walks the same server routes instead.
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -26,6 +27,7 @@ export function PayPalCheckout({ chartId, promise, consent, mode, clientId, nonc
   const box = useRef<HTMLDivElement>(null);
   const live = useRef({ email, consent });
   const orderRef = useRef<string | null>(null);
+  const [statusOrderId, setStatusOrderId] = useState<string | null>(null);
   useEffect(() => { live.current = { email, consent }; }, [email, consent]);
 
   const ready = () => {
@@ -40,6 +42,7 @@ export function PayPalCheckout({ chartId, promise, consent, mode, clientId, nonc
     if ((b?.error === "already_owned" || b?.error === "processing") && b.orderId) { router.push(`/order/${b.orderId}`); throw new Error("redirect"); }
     if (!b?.paypalOrderId || !b.orderId) { setError(ERRORS[b?.error ?? ""] ?? "Something went wrong. Please try again."); throw new Error("create_failed"); }
     orderRef.current = b.orderId;
+    setStatusOrderId(b.orderId);
     return b.paypalOrderId;
   }
 
@@ -72,7 +75,7 @@ export function PayPalCheckout({ chartId, promise, consent, mode, clientId, nonc
         createOrder: () => create(),
         onApprove: (_d: unknown, actions: PayPalActions) => capture(actions),
         onCancel: () => setError(null),
-        onError: () => setError("PayPal ran into a problem. Nothing was charged. Please try again or pay by card."),
+        onError: () => setError("PayPal ran into a problem. If you approved a payment, check its status before trying again."),
       }).render(el);
     };
     s.onerror = () => setError("PayPal couldn't load. Please pay by card, or try again later.");
@@ -99,7 +102,7 @@ export function PayPalCheckout({ chartId, promise, consent, mode, clientId, nonc
       <p style={{ margin: "0 0 8px" }}><b>Or pay with PayPal or Venmo</b></p>
       <label className="note" htmlFor="pp-email">Email for your reading link</label>
       <input id="pp-email" className="input" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} style={{ margin: "6px 0 12px" }} />
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && <div className="error" role="alert"><p style={{ margin: 0 }}>{error}</p>{statusOrderId && <Link href={`/order/${statusOrderId}`}>Check payment status</Link>}</div>}
       {mode === "sdk" ? <div ref={box} /> : <button className="btn btn-ghost" type="button" onClick={fakeFlow} disabled={busy}>{busy ? "Paying…" : "PayPal (test)"}</button>}
       <p className="fine">Venmo appears on phones in the US where Venmo is installed. Promotion codes work with card payment only.</p>
     </section>

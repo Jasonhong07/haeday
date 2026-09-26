@@ -99,12 +99,11 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
           <QuestionCard chartId={id} allowUnknown title="Your chart changes during that day. When were you born?"
             choices={q.windows.map((w) => ({ label: `Between ${formatClock(w.from)} and ${formatClock(w.to)}`, body: { boundaryChoice: w.index } }))} />
         )}
-        <PillarTiles pillars={c.pillars} />
-        <section className="card" aria-labelledby="dm">
+        <section className="card chart-identity" aria-labelledby="dm">
           <span className="dm-hanja" aria-hidden="true">{dm.stem}</span>
           <p className="eyebrow">YOUR DAY MASTER</p>
           <h2 id="dm">{dm.name} · {dm.image}</h2>
-          <p style={{ margin: 0 }}>{dm.line}</p>
+          <p style={{ margin: 0 }}>Your Day Master is the heavenly stem of your day pillar. It is the starting point for reading your chart.</p>
         </section>
         {preview && (
           // C2 / D46: approved day-master text only. The paid sections are listed by title; their text is not on this page.
@@ -116,6 +115,7 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
             <ul className="locked">{OFFER_ITEMS.filter((i) => !/Day Master/.test(i)).map((i) => <li key={i}>{i}</li>)}</ul>
           </section>
         )}
+        <section className="card chart-pillars" aria-labelledby="pillar-title"><p className="eyebrow">THE STRUCTURE OF YOUR CHART</p><h2 id="pillar-title">Your four pillars</h2><PillarTiles pillars={c.pillars} /><p className="note">Each pillar pairs a heavenly stem with an earthly branch. Your Day Master is the stem of your day pillar.</p></section>
         <section className="card" aria-labelledby="el">
           <h2 id="el">Your visible elements</h2>
           <div className="bars">
@@ -152,16 +152,20 @@ export default async function ChartPage({ params }: { params: Promise<{ id: stri
 
 function Shell({ chart, salesOpen, share, children }: { chart: LoadedChart; salesOpen: boolean; share?: ShareData; children: React.ReactNode }) {
   return (
-    <main className="app">
+    <main className="app chart-page">
       <header className="brand"><Link href="/"><span aria-hidden="true" className="moon">☾</span> Haeday</Link></header>
+      <p className="eyebrow chart-kicker">YOUR FREE KOREAN SAJU CHART</p>
       <h1>Your birth chart</h1>
+      <p className="lede">A starting point for self-reflection.</p>
       {children}
       <section className="card" aria-label="Your details">
         <p style={{ margin: 0 }}>Your details: {detailsLine(chart)}. Solar time adjusted. <Link href={`/saju?edit=${chart.id}`}>Edit</Link></p>
       </section>
       {chart.response.kind === "computed" && (
-        <section className="card offer" aria-labelledby="offer">
+        <section className="card offer chart-offer" aria-labelledby="offer">
+          <p className="eyebrow">GO BEYOND THE CHART</p>
           <h2 id="offer">Your full reading includes</h2>
+          <p className="note">About 900 words connecting the pieces, including your 2027 energy.</p>
           <ul>{OFFER_ITEMS.map((i) => <li key={i}>{i}</li>)}</ul>
           {chart.ownedOrderId ? <Link className="btn btn-primary" href={`/order/${chart.ownedOrderId}`}>You already own this reading → Open</Link>
             : salesOpen

@@ -27,7 +27,10 @@ export default async function MyPage() {
           {rows.map((r) => (
             <li key={r.id} className="card">
               <p style={{ margin: "0 0 8px" }}>Reading · {r.paidAt ? r.paidAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }) : ""}{r.status === "refunded" ? " · refunded" : ""}</p>
-              {r.readingId ? <Link className="btn btn-ghost" href={`/r/${r.readingId}`}>Open</Link> : <Link className="btn btn-ghost" href={`/order/${r.id}`}>Status</Link>}
+              <div className="btn-row">
+                {r.readingId && <Link className="btn btn-ghost" href={`/r/${r.readingId}`}>Open</Link>}
+                <Link className="btn btn-ghost" href={`/order/${r.id}`}>Status</Link>
+              </div>
             </li>
           ))}
         </ul>

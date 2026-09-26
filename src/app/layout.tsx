@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { devFakes, getEnv } from "@/server/env";
 // L2: fonts are bundled from npm (SIL OFL 1.1) and served from our own origin; visitors never contact Google.
 import "@fontsource/plus-jakarta-sans/400.css";
 import "@fontsource/plus-jakarta-sans/500.css";
@@ -26,5 +27,7 @@ export function generateMetadata(): Metadata {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   await headers(); // L1: every page renders per request so Next can stamp the CSP nonce on its scripts
-  return <html lang="en"><body>{children}</body></html>;
+  let demo = false;
+  try { demo = devFakes(getEnv()); } catch { /* Public pages remain readable; private operations validate separately. */ }
+  return <html lang="en"><body>{demo && <aside className="local-demo-banner">LOCAL DEMO · No charges or emails. Reading text is a test placeholder, not a real AI reading.</aside>}{children}</body></html>;
 }

@@ -69,20 +69,38 @@ async function drawShare(d: ShareData): Promise<string> {
 export function ShareButton({ data }: { data: ShareData }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [src, setSrc] = useState<string | null>(null);
-  async function preview() { setSrc(await drawShare(data)); dialog.current?.showModal(); }
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  async function preview() {
+    setBusy(true); setMessage(null); setSrc(null);
+    try { setSrc(await drawShare(data)); if (!dialog.current?.open) dialog.current?.showModal(); }
+    catch { setMessage("The image couldn't be prepared. Please try again."); }
+    finally { setBusy(false); }
+  }
   async function share() {
     if (!src) return;
-    const blob = await (await fetch(src)).blob();
-    const file = new File([blob], "haeday-day-master.png", { type: "image/png" });
-    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file] }).catch(() => undefined);
+    setMessage(null);
+    try {
+      const blob = await (await fetch(src)).blob();
+      const file = new File([blob], "haeday-day-master.png", { type: "image/png" });
+      if (!navigator.share || !navigator.canShare?.({ files: [file] })) {
+        setMessage("Sharing isn't supported in this browser. Choose Save image, then share it from your photos or files.");
+        return;
+      }
+      await navigator.share({ files: [file] });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) setMessage("Sharing didn't finish. You can still save the image below.");
+    }
   }
   return (
     <>
-      <button type="button" className="btn btn-ghost" onClick={preview}>Share my Day Master</button>
+      <button type="button" className="btn btn-ghost" onClick={preview} disabled={busy}>{busy ? "Preparing image…" : "Share my Day Master"}</button>
+      {message && !src && <p className="note" role="status">{message}</p>}
       <dialog ref={dialog} className="sheet" aria-label="Share image preview">
         {/* eslint-disable-next-line @next/next/no-img-element -- local data: URL preview, nothing to optimize */}
         {src && <img src={src} alt={`Share image: Day Master ${data.dayMasterHanja} ${data.dayMasterName} and four pillars. No birth date, time or place.`} />}
         <p className="note">Shows your Day Master and pillars only. No birth date, time or place.</p>
+        {message && <p className="note" role="status">{message}</p>}
         <div className="btn-row">
           <a className="btn btn-primary" href={src ?? "#"} download="haeday-day-master.png">Save image</a>
           <button type="button" className="btn btn-ghost" onClick={share}>Share…</button>

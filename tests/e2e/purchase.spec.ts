@@ -44,6 +44,15 @@ test("paid order → processing → delivered reading; other browsers must sign 
   await expect(page.getByRole("link", { name: "Open my reading" })).toBeVisible({ timeout: 15000 }); // auto refresh
   await page.getByRole("link", { name: "Open my reading" }).click();
   await expect(page.getByRole("heading", { name: "Your personal reading" })).toBeVisible();
+  const largerText = page.getByRole("button", { name: "Larger text" });
+  await largerText.click();
+  await expect(largerText).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("article")).toHaveCSS("font-size", "20px");
+  await page.getByRole("navigation", { name: "Reading contents" }).getByRole("link", { name: "Your 2027 energy" }).click();
+  await expect(page).toHaveURL(/#reading-year2027$/);
+  await expect(page.getByRole("heading", { name: "Your 2027 energy" })).toBeInViewport();
+  await largerText.click();
+  await expect(page.locator("article")).toHaveCSS("font-size", "17px");
   for (const h of ["Your Day Master", "Love and relationships", "Your 2027 energy", "A question to reflect on"]) await expect(page.getByRole("heading", { name: h })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 

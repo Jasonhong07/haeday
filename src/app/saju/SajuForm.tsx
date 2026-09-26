@@ -1,7 +1,7 @@
 "use client";
 // Input screen (PRD §3): date, time mode, city autocomplete. Posts to /api/charts and opens the chart.
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { sendEvent } from "../Beacon";
 
 type Mode = "exact" | "approximate" | "unknown";
@@ -27,26 +27,34 @@ export function SajuForm({ initial, today }: { initial?: SajuInitial; today: str
   const [place, setPlace] = useState<Suggestion | null>(initial ? { placeId: initial.placeId, label: initial.placeLabel } : null);
   const [options, setOptions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<"idle" | "loading" | "empty" | "error" | "ready">("idle");
   const [active, setActive] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const seq = useRef(0);
 
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => { clearTimeout(timer.current); seq.current++; }, []);
+
   function search(text: string) {
     clearTimeout(timer.current);
     const q = text.trim();
     const mine = ++seq.current;
-    if (q.length < 2) { setOptions([]); setOpen(false); return; }
+    setOptions([]); setOpen(false); setActive(-1);
+    if (q.length < 2) { setSearchStatus("idle"); return; }
+    setSearchStatus("loading");
     timer.current = setTimeout(async () => {
       const res = await fetch(`/api/places?q=${encodeURIComponent(q)}`).catch(() => null);
-      if (!res?.ok || mine !== seq.current) return;
-      const body = (await res.json()) as { results: Suggestion[] };
+      if (mine !== seq.current) return;
+      const body = res?.ok ? await res.json().catch(() => null) as { results?: Suggestion[] } | null : null;
+      if (mine !== seq.current) return;
+      if (!body?.results) { setSearchStatus("error"); return; }
       setOptions(body.results); setOpen(true); setActive(body.results.length ? 0 : -1);
+      setSearchStatus(body.results.length ? "ready" : "empty");
     }, 150);
   }
 
-  function choose(s: Suggestion) { seq.current++; setPlace(s); setQuery(s.label); setOpen(false); setOptions([]); }
+  function choose(s: Suggestion) { seq.current++; setPlace(s); setSearchStatus("idle"); setQuery(s.label); setOpen(false); setOptions([]); }
 
   function onCityKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open || options.length === 0) return;
@@ -87,7 +95,16 @@ export function SajuForm({ initial, today }: { initial?: SajuInitial; today: str
         <span className="label" id={`${ids.time}-l`}>Birth time</span>
         <div className="seg" role="radiogroup" aria-labelledby={`${ids.time}-l`}>
           {([["exact", "I know it"], ["approximate", "Roughly"], ["unknown", "I don't know"]] as const).map(([m, label]) => (
-            <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)}>{label}</button>
+            <button key={m} type="button" role="radio" aria-checked={mode === m} tabIndex={mode === m ? 0 : -1} onClick={() => setMode(m)}
+              onKeyDown={(e) => {
+                const modes: Mode[] = ["exact", "approximate", "unknown"];
+                const direction = ["ArrowRight", "ArrowDown"].includes(e.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(e.key) ? -1 : 0;
+                if (!direction && e.key !== "Home" && e.key !== "End") return;
+                e.preventDefault();
+                const next = e.key === "Home" ? 0 : e.key === "End" ? 2 : (modes.indexOf(m) + direction + 3) % 3;
+                setMode(modes[next]!);
+                e.currentTarget.parentElement?.querySelectorAll("button")[next]?.focus();
+              }}>{label}</button>
           ))}
         </div>
         {mode !== "unknown" && (
@@ -111,6 +128,7 @@ export function SajuForm({ initial, today }: { initial?: SajuInitial; today: str
             ))}
           </ul>
         )}
+        <p className="help" role="status" aria-live="polite">{searchStatus === "loading" ? "Looking for your city…" : searchStatus === "empty" ? "No matching city. Try another spelling or a nearby larger city; location can affect charts near a time boundary." : searchStatus === "error" ? "City search is unavailable. Please try typing again in a moment." : ""}</p>
         <p className="help" id={ids.cityHelp}>Used only to adjust for your birthplace&apos;s solar time.</p>
       </div>
       <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? "Reading the stars…" : "See my birth chart · Free"}</button>

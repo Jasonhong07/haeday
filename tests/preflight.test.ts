@@ -8,6 +8,16 @@ const keys = { ENCRYPTION_KEYS: JSON.stringify({ k1: Buffer.alloc(32, 1).toStrin
 const prodBase = { NODE_ENV: "production", APP_ENV: "production", APP_ORIGIN: "https://haeday.net", DATABASE_URL: "postgres://u:p@h:5432/db", SESSION_SECRET: "s".repeat(40), ...keys };
 
 describe("preflight (CC4a)", () => {
+  it("rejects present but unusable encryption keys without showing their values", () => {
+    for (const broken of [{ ENCRYPTION_KEYS: "PRIVATE_INVALID_JSON" }, { ENCRYPTION_ACTIVE_KEY_ID: "absent" }, { EMAIL_LOOKUP_KEY: "short" }]) {
+      const checks = preflight(parseEnv({ ...prodBase, ...broken }));
+      expect(checks.find(c => c.area === "Encryption")?.level).toBe("block");
+      expect(JSON.stringify(checks)).not.toContain("PRIVATE_INVALID_JSON");
+    }
+  });
+  it("does not mistake a tax configuration flag for legal clearance", () => {
+    for (const value of ["true", "false"]) expect(preflight(parseEnv({ ...prodBase, STRIPE_AUTOMATIC_TAX: value })).find(c => c.area === "Sales tax")?.level).toBe("warn");
+  });
   it("an empty production setup is blocked on payments, AI, email, admin and content; secrets are never echoed", () => {
     const checks = preflight(parseEnv(prodBase));
     const blocked = checks.filter((c) => c.level === "block").map((c) => c.area);

@@ -4,6 +4,7 @@ import { DAY_MASTER_SNIPPETS, ELEMENT_SNIPPETS, TEN_GOD_SNIPPETS, TONE, YEAR_202
 import { SAMPLE_READING } from "@/content/sample";
 import { LEGAL_APPROVED } from "@/lib/legal";
 import type { Env } from "./env";
+import { loadKeyring } from "./security/keyring";
 
 export type CheckLevel = "ok" | "todo" | "warn" | "block";
 export interface Check { area: string; level: CheckLevel; text: string }
@@ -27,13 +28,16 @@ export function preflight(env: Env): Check[] {
   else add("Domain", "ok", "APP_ORIGIN uses your own domain");
 
   if (!env.ENCRYPTION_KEYS || !env.ENCRYPTION_ACTIVE_KEY_ID || !env.EMAIL_LOOKUP_KEY) add("Encryption", "block", "ENCRYPTION_KEYS / ENCRYPTION_ACTIVE_KEY_ID / EMAIL_LOOKUP_KEY missing: nothing private can be stored");
-  else add("Encryption", "ok", "Encryption keys present (keep an offline copy: backups are unreadable without them)");
+  else {
+    try { loadKeyring(env); add("Encryption", "ok", "Encryption key format and active id valid (keep an offline copy: backups are unreadable without them)"); }
+    catch { add("Encryption", "block", "Encryption key format or active id invalid: private data cannot be stored or opened"); }
+  }
 
   if (!(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_SAJU)) add("Payments", need, "Stripe: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_PRICE_SAJU all needed to sell");
   else if (!env.STRIPE_PRICE_SAJU.startsWith("price_")) add("Payments", "block", "STRIPE_PRICE_SAJU should start with price_");
   else add("Payments", "ok", `Stripe configured (${env.PAYMENTS_MODE} mode)`);
   if (prod && env.PAYMENTS_MODE === "test") add("Payments", "warn", "Production is still in TEST mode: nobody can pay real money (expected until you approve going live)");
-  add("Sales tax", "ok", env.STRIPE_AUTOMATIC_TAX ? "Stripe Tax ON (PayPal is hidden while tax is collected)" : "Stripe Tax OFF (waiting for the CPA answer, Q4)");
+  add("Sales tax", "warn", env.STRIPE_AUTOMATIC_TAX ? "Stripe Tax ON (PayPal hidden). Verify registrations and product tax treatment; this configuration is not tax clearance." : "Stripe Tax OFF: confirm launch treatment and monitoring with your CPA (Q4). Configuration alone is not tax clearance.");
   if (!(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET && env.PAYPAL_WEBHOOK_ID)) add("PayPal", "todo", "PayPal/Venmo off: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET and PAYPAL_WEBHOOK_ID needed (card checkout works without it)");
   else add("PayPal", "ok", env.STRIPE_AUTOMATIC_TAX ? "PayPal configured but hidden (sales tax is on); refunds of past PayPal orders still work" : `PayPal/Venmo configured (${env.PAYMENTS_MODE === "live" ? "live" : "sandbox"})`);
 

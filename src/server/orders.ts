@@ -1,8 +1,8 @@
 // Read models for customer pages. Access: the guest who created the order (and, in M6, the verified customer).
-import { and, eq, or, type SQL, isNull } from "drizzle-orm";
+import { and, eq, or, type SQL, isNull, desc } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "./db/client";
-import { orders, readings } from "./db/schema";
+import { orders, readings, refunds } from "./db/schema";
 import type { Reading } from "./fulfillment/prompt";
 import type { OrderSnapshot } from "./payments/checkout";
 import { decryptPrivate, type Keyring } from "./security/encryption";
@@ -15,7 +15,8 @@ function owns(v: Viewer): SQL | undefined {
   return parts.length ? or(...parts) : undefined;
 }
 
-export type OrderState = "awaiting_payment" | "processing" | "delivered" | "failed_refunded" | "refunded" | "expired";
+export type { OrderState } from "@/lib/order-status";
+import { orderState, refundStatusForDisplay } from "@/lib/order-status";
 
 export async function loadOrderView(db: Db, orderId: string, v: Viewer) {
   const access = owns(v);
@@ -23,13 +24,8 @@ export async function loadOrderView(db: Db, orderId: string, v: Viewer) {
   const o = await db.query.orders.findFirst({ where: and(eq(orders.id, orderId), access) });
   if (!o) return null;
   const reading = await db.query.readings.findFirst({ where: eq(readings.orderId, o.id), columns: { id: true } });
-  let state: OrderState;
-  if (o.paymentStatus === "open") state = "awaiting_payment";
-  else if (o.paymentStatus === "expired") state = "expired";
-  else if (o.fulfillmentStatus === "delivered" && reading) state = "delivered";
-  else if (o.fulfillmentStatus === "failed") state = "failed_refunded";
-  else if (o.paymentStatus === "refunded" || o.paymentStatus === "refund_pending") state = "refunded";
-  else state = "processing";
+  const refundRows = await db.query.refunds.findMany({ where: eq(refunds.orderId, o.id), orderBy: [desc(refunds.updatedAt)], columns: { status: true } });
+  const state = orderState({ paymentStatus: o.paymentStatus, fulfillmentStatus: o.fulfillmentStatus, hasReading: Boolean(reading), refundStatus: refundStatusForDisplay(refundRows) });
   return { id: o.id, state, readingId: reading?.id ?? null, chartRevisionId: o.chartRevisionId, paidAt: o.paidAt, delayed: o.deliveryPromise === "24h" };
 }
 

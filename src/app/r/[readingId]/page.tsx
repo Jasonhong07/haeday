@@ -7,6 +7,7 @@ import { serverContext } from "@/server/http";
 import { loadReadingView } from "@/server/orders";
 import { currentViewer } from "@/server/viewer";
 import { SITE } from "@/lib/site";
+import { ReadingTools } from "./ReadingTools";
 
 export const metadata: Metadata = { title: "Your reading · Haeday", robots: { index: false, follow: false }, referrer: "no-referrer" };
 export const dynamic = "force-dynamic";
@@ -46,13 +47,18 @@ export default async function ReadingPage({ params }: { params: Promise<{ readin
         <Link href="/" className="reading-brand"><span aria-hidden="true">☾</span> Haeday</Link>
         {dm && <p className="reading-dm"><span className="reading-dm-hanja" aria-hidden="true">{dm.stem}</span>{dm.name} · {dm.image}</p>}
       </header>
+      <ReadingTools>
       <article>
+        <p className="reading-kicker">HAEDAY · A MOMENT FOR REFLECTION</p>
         <h1>Your personal reading</h1>
+        <p className="reading-intro">Take what resonates. Leave room for your own story.</p>
         {view.disclosure && <p className="reading-disclosure">{view.disclosure}</p>}
         {view.refunded && <p className="reading-disclosure">This order was refunded. You can keep reading.</p>}
-        {SECTIONS.map(([key, title]) => (
-          <section key={key}>
-            <h2>{title}</h2>
+        <nav className="reading-contents" aria-label="Reading contents"><p>IN THIS READING</p><ol>{SECTIONS.map(([key, title]) => <li key={key}><a href={`#reading-${key}`}>{title}</a></li>)}</ol></nav>
+        {SECTIONS.map(([key, title], index) => (
+          <section key={key} className="reading-chapter" aria-labelledby={`reading-${key}`}>
+            <p className="chapter-number" aria-hidden="true">0{index + 1} /</p>
+            <h2 id={`reading-${key}`} tabIndex={-1}>{title}</h2>
             {r[key].split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)}
           </section>
         ))}
@@ -64,7 +70,9 @@ export default async function ReadingPage({ params }: { params: Promise<{ readin
           </section>
         )}
         <p className="reading-fine">{r.disclaimer} Questions? {SITE.support}</p>
+        <Link href="/my" className="reading-back">Back to my readings →</Link>
       </article>
+      </ReadingTools>
     </main>
   );
 }
