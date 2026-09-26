@@ -2,7 +2,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { getDb } from "../server/db/client";
 import { settings } from "../server/db/schema";
-import { emailAdapter, llmAdapter, paymentAdapter, supportEmail } from "../server/deps";
+import { emailAdapter, llmAdapter, paymentAdapter, paypalAdapter, supportEmail } from "../server/deps";
 import { requeueDueEmails, sendQueuedEmail } from "../server/email/outbox";
 import { getEnv } from "../server/env";
 import { RetryGeneration, generateReading, releaseDeferred, sweepDeadlines } from "../server/fulfillment/generate";
@@ -46,10 +46,11 @@ async function main(): Promise<void> {
   let ring;
   try { ring = loadKeyring(env); } catch { console.error("[worker] encryption keys unavailable: order jobs paused"); Sentry.captureMessage("Worker without encryption keys", "error"); }
   const payments = paymentAdapter(env);
+  const paypal = paypalAdapter(env); // CC4c: captures, reconciliation and refunds of PayPal/Venmo orders
 
   if (ring && payments) {
     const deps = {
-      db, ring, boss, payments, llm: llmAdapter(env),
+      db, ring, boss, payments, paypal, llm: llmAdapter(env),
       approvedSnippetsOnly: env.APP_ENV === "production", dailyCap: env.LLM_DAILY_CAP,
     };
     await boss.work<{ orderId: string }>(QUEUES.generateReading, async ([job]) => {
@@ -78,14 +79,18 @@ async function main(): Promise<void> {
     await boss.schedule(QUEUES.deferredGeneration, "* * * * *");
     await boss.work(QUEUES.deferredGeneration, async () => { await releaseDeferred(deps); });
     await boss.schedule(QUEUES.reconcileRefunds, "*/15 * * * *");
-    await boss.work(QUEUES.reconcileRefunds, async () => { await reconcileRefunds({ db, payments }); });
+    await boss.work(QUEUES.reconcileRefunds, async () => { await reconcileRefunds({ db, payments, paypal }); });
     // CC1b F12: missed or failed checkout webhooks. Same validation/transaction as the webhook (applyPaidSession).
     if (env.STRIPE_PRICE_SAJU) {
-      const wh = { db, ring, boss, payments, paymentsMode: env.PAYMENTS_MODE, priceId: env.STRIPE_PRICE_SAJU };
+      const wh = { db, ring, boss, payments, others: { paypal }, paymentsMode: env.PAYMENTS_MODE, priceId: env.STRIPE_PRICE_SAJU };
+      const whPayPal = paypal ? { db, ring, boss, payments: paypal, others: { stripe: payments }, paymentsMode: env.PAYMENTS_MODE, priceId: "saju_reading" } : null;
       await boss.schedule(QUEUES.reconcileOpen, "*/3 * * * *");
       await boss.work(QUEUES.reconcileOpen, async () => {
         const r = await reconcileOpenSessions(wh);
         if (r.paid) Sentry.captureMessage(`Reconciliation unlocked ${r.paid} paid order(s) the webhook missed`, "warning");
+        // CC4c: PayPal orders approved but never captured, captured but never recorded, or abandoned.
+        const p = whPayPal ? await reconcileOpenSessions(whPayPal) : null;
+        if (p?.paid) Sentry.captureMessage(`PayPal reconciliation unlocked ${p.paid} paid order(s)`, "warning");
       });
       await boss.schedule(QUEUES.reconcileSessions, "*/30 * * * *");
       await boss.work(QUEUES.reconcileSessions, async () => {
@@ -96,12 +101,12 @@ async function main(): Promise<void> {
     // CC1a: provider calls for committed refund claims, and provider re-reads triggered by refund webhooks.
     await boss.work<{ refundId: string }>(QUEUES.refundExecute, async ([job]) => {
       if (!job) return;
-      const status = await executeRefund({ db, payments }, job.data.refundId);
+      const status = await executeRefund({ db, payments, paypal }, job.data.refundId);
       if (status === "requested") throw new Error("refund lease busy"); // another executor holds it: retry later
     });
     await boss.work<{ orderId: string }>(QUEUES.refundSync, async ([job]) => {
       if (!job) return;
-      const r = await syncOrderRefunds({ db, payments }, job.data.orderId);
+      const r = await syncOrderRefunds({ db, payments, paypal }, job.data.orderId);
       if (r === "busy") throw new Error("refund sync busy"); // the holder saw `dirty` or will; retry keeps it certain
     });
   } else {

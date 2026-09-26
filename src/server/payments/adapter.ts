@@ -31,7 +31,11 @@ export class PaymentProviderError extends Error {
 
 /** Minimal view of a completed Checkout Session for reconciliation (F12). */
 export interface CompletedSessionRef { id: string; created: number; livemode: boolean; clientReferenceId: string | null; metadataOrderId: string | null }
-export interface CheckoutSessionRef { id: string; url: string | null; status: "open" | "complete" | "expired" }
+/**
+ * `url`: Stripe's hosted page; null for PayPal (the buyer approves in PayPal's own window on our checkout page).
+ * `approved` (PayPal only): the buyer approved but we have not captured yet; capturing is our job.
+ */
+export interface CheckoutSessionRef { id: string; url: string | null; status: "open" | "approved" | "complete" | "expired"; createdUnix?: number }
 
 /** Everything the webhook validation needs, normalized from the provider. */
 export interface CheckoutDetails {
@@ -82,17 +86,34 @@ export interface PaymentRefundSummary {
   /** Provider's charge.amount_refunded (non-failed, non-canceled refunds). Cross-checked against the list. */
   amountRefundedCents: number;
   refunds: ProviderRefund[];
+  /**
+   * True when `refunds` is provably EVERY refund of this payment (Stripe lists them all). PayPal has no list
+   * endpoint, so its summary holds only refunds we know by id and is never complete: "our refund was never
+   * created" is then never concluded automatically (a person checks the PayPal dashboard).
+   */
+  complete: boolean;
 }
+
+/** PayPal capture outcome. `pending` = PayPal holds the money for review; the webhook finishes it. */
+export type CaptureOutcome = "completed" | "pending" | "declined" | "not_approved" | "already_captured" | "failed";
+/** `failed` = PayPal refused for good (compliance, payer cannot pay, too many attempts): nothing was charged. */
+export interface CaptureResult { outcome: CaptureOutcome; code?: string }
 
 export type PaymentEvent =
   | { id: string; livemode: boolean; type: "checkout.completed" | "checkout.async_succeeded" | "checkout.async_failed" | "checkout.expired"; sessionId: string }
-  | { id: string; livemode: boolean; type: "refund.updated"; refundId: string; paymentIntentId: string | null; status: RefundStatus; amountCents: number; orderId: string | null }
+  | { id: string; livemode: boolean; type: "checkout.approved"; sessionId: string }
+  | { id: string; livemode: boolean; type: "refund.updated"; refundId: string; paymentIntentId: string | null; status: RefundStatus; amountCents: number; orderId: string | null; refundRowId?: string | null }
   | { id: string; livemode: boolean; type: "charge.refunded"; paymentIntentId: string | null; amountRefundedCents: number; amountCents: number }
   | { id: string; livemode: boolean; type: "dispute.updated"; disputeId: string; paymentIntentId: string | null; status: string; reason: string | null; evidenceDueBy: Date | null }
   | { id: string; livemode: boolean; type: "ignored"; providerType: string };
 
+export type ProviderKind = "stripe" | "paypal";
+
 export interface PaymentAdapter {
-  readonly provider: "stripe" | "fake";
+  /** Label stored on payment_events (test fakes say "fake"). */
+  readonly provider: "stripe" | "paypal" | "fake";
+  /** Which kind of order this adapter serves (orders.payment_provider). Fakes pretend to be one of the two. */
+  readonly kind: ProviderKind;
   /** Mode of the configured key (live keys start with sk_live_/rk_live_). Used to label issues. */
   readonly livemode: boolean;
   /** Pure: the exact provider body for this request (no network). Frozen by checkout; see providerParams. */
@@ -104,8 +125,15 @@ export interface PaymentAdapter {
   listCompletedSessions(sinceUnix: number, untilUnix: number): Promise<CompletedSessionRef[]>;
   expireCheckoutSession(sessionId: string): Promise<void>;
   createRefund(req: { paymentIntentId: string; amountCents: number; idempotencyKey: string; orderId: string; refundRowId: string }): Promise<RefundResult>;
-  /** Current refunds (all pages) and charge totals for one payment. Throws on network/provider error. */
-  getRefundSummary(paymentIntentId: string): Promise<PaymentRefundSummary>;
-  /** Throws on a bad signature. */
+  /**
+   * Current refunds and charge totals for one payment. Throws on network/provider error. `knownRefundIds`: provider
+   * refund ids we have on record for it (PayPal can only fetch refunds by id; Stripe ignores it and lists all).
+   */
+  getRefundSummary(paymentIntentId: string, knownRefundIds?: string[]): Promise<PaymentRefundSummary>;
+  /** Throws on a bad signature. (PayPal verifies asynchronously: see verifyWebhook.) */
   parseWebhook(rawBody: string, signature: string | null): PaymentEvent;
+  /** PayPal only: capture an approved order (idempotent by key). Throws PaymentProviderError when unknown. */
+  capture?(checkoutId: string, idempotencyKey: string): Promise<CaptureResult>;
+  /** PayPal only: verify a webhook with PayPal's API, then normalize it. Throws on a bad signature. */
+  verifyWebhook?(rawBody: string, headers: Headers): Promise<PaymentEvent>;
 }

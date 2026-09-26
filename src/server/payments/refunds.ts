@@ -36,6 +36,8 @@ const CLOSED_DISPUTE = ["won", "lost", "warning_closed", "prevented"];
 
 export interface RefundDeps {
   db: Db; payments: PaymentAdapter; boss: PgBoss; now?: () => Date;
+  /** CC4c: refunds of PayPal orders go to PayPal. Absent/null = PayPal not configured here (claims wait, retried later). */
+  paypal?: PaymentAdapter | null;
   /** Test hook: runs at the start of the goodwill transaction, before any lock (forces a real race). */
   hooks?: { goodwillStart?: () => Promise<void> };
 }
@@ -49,6 +51,12 @@ const isUniqueViolation = (err: unknown): boolean => {
   const e = err as { code?: string; cause?: { code?: string } } | null;
   return e?.code === "23505" || e?.cause?.code === "23505";
 };
+
+/** The adapter that owns this order's payment (orders.payment_provider). Null when that provider is not configured. */
+export function adapterFor(deps: { payments: PaymentAdapter; paypal?: PaymentAdapter | null }, provider: string): PaymentAdapter | null {
+  if (provider === "paypal") return deps.paypal ?? (deps.payments.kind === "paypal" ? deps.payments : null);
+  return provider === "stripe" && deps.payments.kind === "stripe" ? deps.payments : null;
+}
 
 async function openDisputeFor(tx: Db | Tx, orderId: string): Promise<boolean> {
   const [d] = await tx.select({ id: disputes.id }).from(disputes).where(and(eq(disputes.orderId, orderId), notInArray(disputes.status, CLOSED_DISPUTE))).limit(1);
@@ -112,18 +120,16 @@ export async function claimRefundInTx(
 /** Customer, admin and worker entry point: claim (one transaction), then try the provider call right away. */
 export async function requestRefund(deps: RefundDeps, input: { orderId: string; reason: RefundReason; requestedBy: RequestedBy }): Promise<RefundOutcome> {
   const now = deps.now?.() ?? new Date();
-  let lookup: string | null = null;
-  if (input.reason === "goodwill") {
-    const [o] = await deps.db.select({ lookup: orders.deliveryEmailLookup }).from(orders).where(eq(orders.id, input.orderId));
-    lookup = o?.lookup ?? null;
-  }
+  const [pre] = await deps.db.select({ lookup: orders.deliveryEmailLookup, provider: orders.paymentProvider }).from(orders).where(eq(orders.id, input.orderId));
+  const lookup = input.reason === "goodwill" ? pre?.lookup ?? null : null;
+  const livemode = (pre ? adapterFor(deps, pre.provider) : null)?.livemode ?? deps.payments.livemode;
   const claim = await deps.db.transaction(async (tx) => {
     if (input.reason === "goodwill") {
       await deps.hooks?.goodwillStart?.();
       // Lock order: email lock first, then the order row (claimRefundInTx). Every goodwill path uses this order.
       if (lookup) await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`goodwill:${lookup}`}, 0))`);
     }
-    return claimRefundInTx(tx, deps.boss, { ...input, now, livemode: deps.payments.livemode });
+    return claimRefundInTx(tx, deps.boss, { ...input, now, livemode });
   }).catch((err: unknown) => { if (isUniqueViolation(err)) return { ok: false as const, error: "in_progress" as const }; throw err; });
   if (!claim.ok) return claim;
   const status = await executeRefund(deps, claim.refundId).catch(() => "requested" as const); // the queued job retries
@@ -135,7 +141,7 @@ export async function requestRefund(deps: RefundDeps, input: { orderId: string; 
  * same time: the lease lets one executor call the provider, and the idempotency key makes a repeated call
  * return the same refund.
  */
-export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "now">, refundId: string): Promise<RefundStatus | "unknown" | "requested"> {
+export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "paypal" | "now">, refundId: string): Promise<RefundStatus | "unknown" | "requested"> {
   const now = deps.now?.() ?? new Date();
   const token = randomUUID();
   const taken = await deps.db.transaction(async (tx) => {
@@ -145,30 +151,43 @@ export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "
     if (row.leaseToken && row.leaseExpiresAt && row.leaseExpiresAt > now) return { row, skip: true as const };
     const [order] = await tx.select().from(orders).where(eq(orders.id, row.orderId));
     if (!order?.providerPaymentId) return { row, skip: true as const };
+    // The provider that holds this payment must be configured here; otherwise leave the claim for a worker that has it.
+    const adapter = adapterFor(deps, order.paymentProvider);
+    if (!adapter) return { row, skip: true as const };
     if (await openDisputeFor(tx, order.id)) {
-      await openIssue(tx, { kind: "refund_blocked_dispute", objectId: order.providerPaymentId, livemode: deps.payments.livemode, orderId: order.id, nextAction: "answer_dispute_no_refund" });
+      await openIssue(tx, { kind: "refund_blocked_dispute", objectId: order.providerPaymentId, livemode: adapter.livemode, orderId: order.id, nextAction: "answer_dispute_no_refund" });
       return { row, skip: true as const };
     }
     // Past the idempotency window (measured from the FIRST provider call) we look up instead of sending.
     const expired = row.firstSentAt !== null && now.getTime() - row.firstSentAt.getTime() > IDEMPOTENCY_SAFE_MS;
     await tx.update(refunds).set({ leaseToken: token, leaseExpiresAt: new Date(now.getTime() + LEASE_MS), ...(row.firstSentAt || expired ? {} : { firstSentAt: now }) }).where(eq(refunds.id, row.id));
-    return { row, skip: false as const, paymentIntentId: order.providerPaymentId, expired };
+    return { row, skip: false as const, paymentIntentId: order.providerPaymentId, expired, adapter };
   });
   if (!taken) return "unknown";
   if (taken.skip) return taken.row.status;
-  const { row } = taken;
+  const { row, adapter } = taken;
 
   // Past the idempotency window a repeated create could make a SECOND refund: look it up instead.
   if (taken.expired) {
     await releaseLease(deps.db, row.id, token);
+    if (adapter.kind === "paypal") {
+      // PayPal cannot list a capture's refunds, so "it was never created" can't be proven: a person checks the
+      // PayPal dashboard (never a blind second refund).
+      await syncOrderRefunds(deps, row.orderId).catch(() => undefined);
+      const [cur] = await deps.db.select().from(refunds).where(eq(refunds.id, row.id));
+      if (cur && !cur.providerRefundId && (NOT_AT_PROVIDER as readonly string[]).includes(cur.status)) {
+        await openIssue(deps.db, { kind: "refund_unknown_stale", objectId: row.id, livemode: adapter.livemode, orderId: row.orderId, nextAction: "check_paypal_dashboard_for_this_refund" });
+      }
+      return cur?.status ?? "unknown";
+    }
     const synced = await syncOrderRefunds(deps, row.orderId);
     const [after] = await deps.db.select().from(refunds).where(eq(refunds.id, row.id));
-    if (synced === "synced" && after && !after.providerRefundId && (NOT_AT_PROVIDER as readonly string[]).includes(after.status)) {
+    if (synced === "synced" && lastSummaryComplete.get(row.orderId) === true && after && !after.providerRefundId && (NOT_AT_PROVIDER as readonly string[]).includes(after.status)) {
       // The provider's full refund list for this payment has no refund carrying our row id: it was never created.
       // Close the attempt (frees the one-claim index for a deliberate new attempt) and keep the obligation visible.
       await deps.db.update(refunds).set({ status: "failed", failureReason: "never_created", updatedAt: now })
         .where(and(eq(refunds.id, row.id), inArray(refunds.status, [...NOT_AT_PROVIDER]), isNull(refunds.providerRefundId)));
-      await openIssue(deps.db, { kind: "refund_unknown_stale", objectId: row.id, livemode: deps.payments.livemode, orderId: row.orderId, nextAction: "never_created_start_new_refund" });
+      await openIssue(deps.db, { kind: "refund_unknown_stale", objectId: row.id, livemode: adapter.livemode, orderId: row.orderId, nextAction: "never_created_start_new_refund" });
       await syncOrderRefunds(deps, row.orderId);
       return "failed";
     }
@@ -177,7 +196,7 @@ export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "
 
   let result: { id: string; status: RefundStatus } | null = null;
   try {
-    result = await deps.payments.createRefund({ paymentIntentId: taken.paymentIntentId, amountCents: row.amountCents, idempotencyKey: row.idempotencyKey, orderId: row.orderId, refundRowId: row.id });
+    result = await adapter.createRefund({ paymentIntentId: taken.paymentIntentId, amountCents: row.amountCents, idempotencyKey: row.idempotencyKey, orderId: row.orderId, refundRowId: row.id });
   } catch { /* network or provider error: outcome unknown, looked up later with the same key */ }
 
   await deps.db.transaction(async (tx) => {
@@ -191,7 +210,7 @@ export async function executeRefund(deps: Pick<RefundDeps, "db" | "payments" | "
         set.status = result.status;
         // This save IS the transition to a failed state (the sync will then see "failed" already): open it here.
         if (result.status === "failed" || result.status === "canceled") {
-          await openIssue(tx, { kind: "refund_failed", objectId: result.id, livemode: deps.payments.livemode, orderId: row.orderId, nextAction: "contact_customer_then_new_refund" });
+          await openIssue(tx, { kind: "refund_failed", objectId: result.id, livemode: adapter.livemode, orderId: row.orderId, nextAction: "contact_customer_then_new_refund" });
         }
       }
     } else if (cur.status === "requested") {
@@ -221,7 +240,10 @@ async function releaseLease(db: Db, refundId: string, token: string): Promise<vo
 export type SyncOutcome = "synced" | "busy" | "stale" | "no_payment";
 
 /** Re-read every provider refund of this order's payment and derive the order's refund state from it. */
-export async function syncOrderRefunds(deps: Pick<RefundDeps, "db" | "payments" | "now">, orderId: string): Promise<SyncOutcome> {
+/** Whether the last summary read for an order listed every refund (Stripe yes, PayPal no). Process-local. */
+const lastSummaryComplete = new Map<string, boolean>();
+
+export async function syncOrderRefunds(deps: Pick<RefundDeps, "db" | "payments" | "paypal" | "now">, orderId: string): Promise<SyncOutcome> {
   for (let round = 0; round < 3; round++) {
     const now = deps.now?.() ?? new Date();
     const token = randomUUID();
@@ -236,12 +258,17 @@ export async function syncOrderRefunds(deps: Pick<RefundDeps, "db" | "payments" 
       await deps.db.update(refundSyncs).set({ dirty: true }).where(eq(refundSyncs.orderId, orderId));
       return "busy";
     }
-    const [order] = await deps.db.select({ pi: orders.providerPaymentId }).from(orders).where(eq(orders.id, orderId));
-    if (!order?.pi) { await releaseSync(deps.db, orderId, token, now); return "no_payment"; }
+    const [order] = await deps.db.select({ pi: orders.providerPaymentId, provider: orders.paymentProvider }).from(orders).where(eq(orders.id, orderId));
+    const adapter = order ? adapterFor(deps, order.provider) : null;
+    if (!order?.pi || !adapter) { await releaseSync(deps.db, orderId, token, adapter ? now : null); return "no_payment"; }
+    // PayPal reads refunds by id only: every refund id we hold for this order (ours and ones webhooks told us about).
+    const known = (await deps.db.select({ id: refunds.providerRefundId }).from(refunds).where(eq(refunds.orderId, orderId)))
+      .map((r) => r.id).filter((x): x is string => Boolean(x));
 
     let summary: PaymentRefundSummary;
     try {
-      summary = await deps.payments.getRefundSummary(order.pi);
+      summary = await adapter.getRefundSummary(order.pi, known);
+      lastSummaryComplete.set(orderId, summary.complete);
     } catch (err) {
       await releaseSync(deps.db, orderId, token, null);
       throw err;
@@ -295,7 +322,7 @@ async function applySummary(deps: Pick<RefundDeps, "db" | "now">, orderId: strin
         // Created outside the app (Stripe dashboard): recorded, never blocked by the one-claim rule (D22).
         const [ins] = await tx.insert(refunds).values({
           orderId, source: "provider", reason: "admin", idempotencyKey: `provider:${pr.id}`, amountCents: pr.amountCents,
-          providerRefundId: pr.id, status: pr.status, failureReason: pr.failureReason, requestedBy: "stripe_dashboard", lastCheckedAt: now,
+          providerRefundId: pr.id, status: pr.status, failureReason: pr.failureReason, requestedBy: order.paymentProvider === "paypal" ? "paypal_dashboard" : "stripe_dashboard", lastCheckedAt: now,
         }).onConflictDoNothing().returning();
         if (ins) rows.push(ins);
       }
@@ -331,7 +358,7 @@ export async function markRefundSyncInTx(tx: Tx, boss: PgBoss, orderId: string):
  * Cron: finish claims that never reached the provider (crash, network) and re-read long-pending refunds.
  * It never creates a new provider attempt on its own: a confirmed failure is an issue for a person.
  */
-export async function reconcileRefunds(deps: Pick<RefundDeps, "db" | "payments" | "now">): Promise<number> {
+export async function reconcileRefunds(deps: Pick<RefundDeps, "db" | "payments" | "paypal" | "now">): Promise<number> {
   const now = deps.now?.() ?? new Date();
   let touched = 0;
   const notSent = await deps.db.select({ id: refunds.id }).from(refunds)

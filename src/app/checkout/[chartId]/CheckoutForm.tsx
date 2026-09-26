@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { PayPalCheckout } from "./PayPalCheckout";
 
 const ERRORS: Record<string, string> = {
   sales_closed: "Full readings aren't open right now. Please try again later.",
@@ -11,7 +12,7 @@ const ERRORS: Record<string, string> = {
   content_not_ready: "Readings for this chart open soon.",
 };
 
-export function CheckoutForm({ chartId, consentText, promise }: { chartId: string; consentText: string; promise: "minutes" | "24h" }) {
+export function CheckoutForm({ chartId, consentText, promise, paypal }: { chartId: string; consentText: string; promise: "minutes" | "24h"; paypal?: { mode: "sdk" | "fake"; clientId?: string; nonce?: string; sandbox?: boolean } | null }) {
   const router = useRouter();
   const [consent, setConsent] = useState(false);
   // A tap that lands before hydration ticks the real checkbox but not React state: pick it up once hydrated.
@@ -37,7 +38,8 @@ export function CheckoutForm({ chartId, consentText, promise }: { chartId: strin
         <span>{consentText}</span>
       </label>
       <button className="btn btn-primary" type="button" disabled={!consent || busy} onClick={go}>{busy ? "Opening secure checkout…" : "Continue to payment · $3.99"}</button>
-      <p className="fine">Secure payment by Stripe. If sales tax applies, Stripe shows the total before you pay.</p>
+      <p className="fine">Card, Apple Pay or Google Pay on Stripe&apos;s secure page. If sales tax applies, Stripe shows the total before you pay.</p>
+      {paypal && <PayPalCheckout chartId={chartId} promise={promise} consent={consent} mode={paypal.mode} clientId={paypal.clientId} nonce={paypal.nonce} sandbox={paypal.sandbox} />}
     </section>
   );
 }

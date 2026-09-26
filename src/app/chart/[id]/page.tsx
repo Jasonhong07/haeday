@@ -164,7 +164,10 @@ function Shell({ chart, salesOpen, share, children }: { chart: LoadedChart; sale
           <h2 id="offer">Your full reading includes</h2>
           <ul>{OFFER_ITEMS.map((i) => <li key={i}>{i}</li>)}</ul>
           {chart.ownedOrderId ? <Link className="btn btn-primary" href={`/order/${chart.ownedOrderId}`}>You already own this reading → Open</Link>
-            : salesOpen ? <Link className="btn btn-primary" href={`/checkout/${chart.id}`}>Unlock my reading · $3.99</Link>
+            : salesOpen
+              // CC4c: a full page load (not a client-side <Link>), so the checkout page gets its own CSP, which allows
+              // PayPal's frames; a soft navigation would keep this page's stricter policy and block the PayPal buttons.
+              ? <a className="btn btn-primary" href={`/checkout/${chart.id}`}>Unlock my reading · $3.99</a>
             : <button className="btn btn-primary" type="button" disabled>Unlock my reading · $3.99</button>}
           <p className="fine">{salesOpen || chart.ownedOrderId ? "One-time payment · No subscription · AI-assisted" : "Full readings open soon · One-time payment · No subscription"}</p>
         </section>

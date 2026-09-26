@@ -50,3 +50,25 @@ test("the dev pay route is not reachable from other sites", async ({ request }) 
   const r = await request.post("/api/dev/pay", { form: { s: "cs_test_x" }, headers: { Origin: "https://evil.example" } });
   expect(r.status()).toBe(404);
 });
+
+test("PayPal path: email on our page → approve → server capture → reading (dev fake PayPal, CSP enforced)", async ({ page }) => {
+  const violations: string[] = [];
+  page.on("console", (m) => { if (/Content Security Policy/i.test(m.text())) violations.push(m.text()); });
+  await page.goto("/saju");
+  await page.getByLabel("Birth date").fill("1991-11-11");
+  await page.getByRole("textbox", { name: /birth time/i }).fill("11:11");
+  await page.getByRole("combobox", { name: "Birth city" }).fill("chicago");
+  await page.getByRole("option", { name: /^Chicago, IL, United States$/ }).click();
+  await page.getByRole("button", { name: "See my birth chart · Free" }).click();
+  await expect(page).toHaveURL(/\/chart\/[0-9a-f-]{36}$/);
+  await page.getByRole("link", { name: /Unlock my reading/ }).click();
+  const pp = page.getByRole("button", { name: "PayPal (test)" });
+  await pp.click(); // without consent or email: refused on our side, nothing created
+  await expect(page.getByText(/Please tick the box above first/)).toBeVisible();
+  await expect(async () => { await page.getByRole("checkbox").check(); await expect(page.getByRole("button", { name: /Continue to payment/ })).toBeEnabled({ timeout: 1000 }); }).toPass({ timeout: 15000 });
+  await page.getByLabel("Email for your reading link").fill("paypal.buyer@example.test");
+  await pp.click();
+  await expect(page).toHaveURL(/\/order\/[0-9a-f-]{36}$/, { timeout: 15000 });
+  await expect(page.getByRole("heading", { name: "Your reading is ready" })).toBeVisible({ timeout: 15000 });
+  expect(violations).toEqual([]);
+});

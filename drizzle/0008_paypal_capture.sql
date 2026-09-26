@@ -1,0 +1,2 @@
+ALTER TABLE "checkout_attempts" ADD COLUMN "capture_declines" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_payment_provider_known" CHECK ("orders"."payment_provider" in ('stripe', 'paypal'));

@@ -53,3 +53,15 @@ web 서비스 Variables: `NEXT_PUBLIC_SITE_DOMAIN` = `haeday.net`(산 도메인)
 ## 7. 이메일 (Resend) — 도메인(Q3) 정한 뒤
 resend.com 가입 → Domains → Add domain → 알려주는 DNS 레코드(SPF/DKIM)를 도메인 회사에 입력 → Verified 확인 → API Keys → `re_...` 복사.
 Railway 변수(web, worker): `RESEND_API_KEY`, `EMAIL_FROM` = `Haeday <hello@도메인>`, `SUPPORT_EMAIL` = `hello@도메인`, `ADMIN_EMAILS` = 관리자 이메일(Q10).
+
+
+## 8. PayPal + Venmo (CC4c, 선택 · 약 20분)
+카드 결제(Stripe)만으로도 판매됩니다. PayPal/Venmo는 이 설정을 넣어야 결제 화면에 나타납니다. **판매세(Stripe Tax)를 켜면 PayPal은 자동으로 숨겨집니다.**
+1. https://www.paypal.com/business 에서 **Business 계정** 만들기(개인사업자 정보, EIN 또는 SSN, 미국 은행 계좌 연결).
+2. https://developer.paypal.com → 로그인 → 위쪽 **Sandbox** 선택 → **Apps & Credentials** → **Create App**(이름: Haeday) → 만들어진 앱에서 **Client ID**와 **Secret** 확인(채팅에 붙이지 말 것).
+3. 같은 앱 화면 아래 **Webhooks → Add Webhook**: URL `https://<staging 도메인>/api/webhooks/paypal`, 이벤트 선택: `Checkout order approved`, `Payment capture completed`, `Payment capture denied`, `Payment capture declined`, `Payment capture refunded`, `Payment capture reversed`, `Customer dispute created`, `Customer dispute updated`, `Customer dispute resolved` → 저장 후 표시되는 **Webhook ID** 확인.
+4. Railway(web, worker 둘 다) 변수: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`. `PAYMENTS_MODE=test`인 동안은 자동으로 **Sandbox**에 연결됩니다.
+5. 확인: /admin의 Launch checklist에서 "PayPal/Venmo configured (sandbox)". 결제 화면에 PayPal 버튼이 보이면 developer.paypal.com → **Sandbox accounts**의 가상 구매자(Personal) 계정으로 결제 테스트.
+6. (선택) 계약 테스트: 로컬에서 `PAYPAL_CONTRACT_CLIENT_ID=… PAYPAL_CONTRACT_SECRET=… pnpm vitest run tests/contract/paypal.contract.test.ts` (sandbox 키만).
+7. 실결제(live) 전환은 Stripe와 같은 규칙: Jason의 명시적 OK 후 **Live** 앱의 Client ID/Secret/Webhook ID로 교체.
+Venmo는 미국, 휴대폰, Venmo 앱이 설치된 구매자에게만 보입니다(PayPal 규칙).

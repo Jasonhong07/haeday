@@ -14,6 +14,10 @@ const schema = z.object({
   STRIPE_PRICE_SAJU: optionalText,
   // Stripe Tax must be set up in the Stripe dashboard before this is turned on (docs/QUESTIONS.md Q4).
   STRIPE_AUTOMATIC_TAX: z.enum(["true", "false"]).default("false").transform(v => v === "true"),
+  // CC4c: PayPal + Venmo (sandbox when PAYMENTS_MODE=test). The client id is public (it goes in the SDK URL).
+  PAYPAL_CLIENT_ID: optionalText,
+  PAYPAL_CLIENT_SECRET: optionalText,
+  PAYPAL_WEBHOOK_ID: optionalText,
   LLM_API_KEY: optionalText,
   LLM_MODEL: optionalText,
   LLM_DAILY_CAP: z.coerce.number().nonnegative().finite().default(0),
@@ -54,7 +58,7 @@ const schema = z.object({
     if (!env.APP_ORIGIN.startsWith("https://")) issue("APP_ORIGIN");
   }
   // L6: fakes can never be switched on in staging/production, in live mode, or next to real Stripe keys.
-  if (env.DEV_FAKE_PROVIDERS && (env.APP_ENV !== "dev" || env.PAYMENTS_MODE !== "test" || env.STRIPE_SECRET_KEY || env.LLM_API_KEY)) issue("DEV_FAKE_PROVIDERS");
+  if (env.DEV_FAKE_PROVIDERS && (env.APP_ENV !== "dev" || env.PAYMENTS_MODE !== "test" || env.STRIPE_SECRET_KEY || env.LLM_API_KEY || env.PAYPAL_CLIENT_SECRET)) issue("DEV_FAKE_PROVIDERS");
   if (env.STRIPE_SECRET_KEY && !env.STRIPE_SECRET_KEY.startsWith(env.PAYMENTS_MODE === "live" ? "sk_live_" : "sk_test_")) issue("STRIPE_SECRET_KEY");
 });
 export type Env = z.infer<typeof schema>;
@@ -82,4 +86,14 @@ export function llmConfigured(env: Env): boolean {
 
 export function paymentsConfigured(env: Env): boolean {
   return devFakes(env) || Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_SAJU);
+}
+
+/**
+ * CC4c: PayPal/Venmo is offered only when fully configured (incl. the webhook id that verifies PayPal's
+ * notifications) and while sales tax collection is OFF: Stripe Tax cannot tax PayPal payments, so turning tax on
+ * hides PayPal automatically (Jason 2026-09-26).
+ */
+export function paypalConfigured(env: Env): boolean {
+  if (env.STRIPE_AUTOMATIC_TAX) return false;
+  return devFakes(env) || Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET && env.PAYPAL_WEBHOOK_ID);
 }

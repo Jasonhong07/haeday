@@ -2,14 +2,19 @@
 // Styles allow 'unsafe-inline' because React renders style="" attributes; script injection is the risk CSP guards.
 export type CspMode = "report-only" | "enforce" | "off";
 
-export function buildCsp(nonce: string, opts: { dev: boolean; https: boolean }): string {
+/** CC4c: PayPal/Venmo buttons (checkout page only) need PayPal's frames, images and API calls. */
+const PAYPAL = { img: "https://*.paypal.com https://*.paypalobjects.com", connect: "https://*.paypal.com https://*.paypalobjects.com https://*.venmo.com", frame: "https://*.paypal.com https://*.venmo.com" };
+
+export function buildCsp(nonce: string, opts: { dev: boolean; https: boolean; paypal?: boolean }): string {
+  const pp = opts.paypal === true;
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${opts.dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",       // the share image is drawn on a canvas (data:/blob:)
+    `img-src 'self' data: blob:${pp ? ` ${PAYPAL.img}` : ""}`,       // the share image is drawn on a canvas (data:/blob:)
     "font-src 'self'",                  // L2: fonts are self-hosted
-    "connect-src 'self'",               // first-party events only; no third-party analytics in the browser
+    `connect-src 'self'${pp ? ` ${PAYPAL.connect}` : ""}`,               // first-party events only; no third-party analytics in the browser
+    `frame-src ${pp ? PAYPAL.frame : "'none'"}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

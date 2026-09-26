@@ -34,6 +34,8 @@ export function preflight(env: Env): Check[] {
   else add("Payments", "ok", `Stripe configured (${env.PAYMENTS_MODE} mode)`);
   if (prod && env.PAYMENTS_MODE === "test") add("Payments", "warn", "Production is still in TEST mode: nobody can pay real money (expected until you approve going live)");
   add("Sales tax", "ok", env.STRIPE_AUTOMATIC_TAX ? "Stripe Tax ON (PayPal is hidden while tax is collected)" : "Stripe Tax OFF (waiting for the CPA answer, Q4)");
+  if (!(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET && env.PAYPAL_WEBHOOK_ID)) add("PayPal", "todo", "PayPal/Venmo off: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET and PAYPAL_WEBHOOK_ID needed (card checkout works without it)");
+  else add("PayPal", "ok", env.STRIPE_AUTOMATIC_TAX ? "PayPal configured but hidden (sales tax is on); refunds of past PayPal orders still work" : `PayPal/Venmo configured (${env.PAYMENTS_MODE === "live" ? "live" : "sandbox"})`);
 
   if (!(env.LLM_API_KEY && env.LLM_MODEL)) add("AI", need, "LLM_API_KEY and LLM_MODEL needed to write readings");
   else if (env.LLM_DAILY_CAP <= 0) add("AI", need, "LLM_DAILY_CAP is 0: sales stay closed");

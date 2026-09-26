@@ -9,6 +9,7 @@ interface FakeSession { ref: CheckoutSessionRef; req: CheckoutSessionRequest; de
 
 export class FakePaymentAdapter implements PaymentAdapter {
   readonly provider = "fake" as const;
+  readonly kind = "stripe" as const;
   sessions = new Map<string, FakeSession>();
   byIdempotency = new Map<string, string>();
   refunds = new Map<string, ProviderRefund & { idempotencyKey: string | null; paymentIntentId: string }>();
@@ -79,7 +80,7 @@ export class FakePaymentAdapter implements PaymentAdapter {
     const s = this.sessions.get(sessionId);
     if (!s) throw new Error("No such session");
     return {
-      id: sessionId, livemode: this.livemode, status: s.ref.status, paymentStatus: "unpaid",
+      id: sessionId, livemode: this.livemode, status: s.ref.status === "approved" ? "open" : s.ref.status, paymentStatus: "unpaid",
       currency: "usd", amountSubtotal: 399, amountTax: 0, amountTotal: 399,
       clientReferenceId: s.req.orderId, metadataOrderId: s.req.orderId,
       lineItems: [{ priceId: s.req.priceId, quantity: 1 }], paymentIntentId: null, customerEmail: null,
@@ -124,6 +125,7 @@ export class FakePaymentAdapter implements PaymentAdapter {
       amountRefundedCents: this.activeRefunded(paymentIntentId),
       refunds: [...this.refunds.values()].filter((r) => r.paymentIntentId === paymentIntentId)
         .map(({ id, status, amountCents, currency, refundRowId, orderId, failureReason }) => ({ id, status, amountCents, currency, refundRowId, orderId, failureReason })),
+      complete: true,
     };
     await this.hooks.beforeSummaryReturn?.(paymentIntentId); // snapshot already taken: simulates a slow, now-stale response
     return snapshot;

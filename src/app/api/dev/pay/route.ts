@@ -1,6 +1,6 @@
 // L6: dev-only "Stripe": completes the fake session, delivers the webhook through the REAL handler, then runs the
 // real generation once (there is no worker in the end-to-end run). 404 unless devFakes().
-import { dailyCap, llmAdapter, paymentAdapter, priceId } from "@/server/deps";
+import { dailyCap, llmAdapter, paymentAdapter, paypalAdapter, priceId } from "@/server/deps";
 import { devFakes } from "@/server/env";
 import { FakePaymentAdapter } from "@/server/adapters/fake-payments";
 import { generateReading } from "@/server/fulfillment/generate";
@@ -21,7 +21,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!session) return new Response(null, { status: 404 });
   pay.complete(s, { customerEmail: null });
   const boss = await getWebBoss(ctx.env.DATABASE_URL!);
-  await handlePaymentEvent({ db: ctx.db, ring: ctx.ring, boss, payments: pay, paymentsMode: "test", priceId: priceId(ctx.env)! }, { id: `evt_dev_${s}`, livemode: false, type: "checkout.completed", sessionId: s });
+  await handlePaymentEvent({ db: ctx.db, ring: ctx.ring, boss, payments: pay, others: { paypal: paypalAdapter(ctx.env) }, paymentsMode: "test", priceId: priceId(ctx.env)! }, { id: `evt_dev_${s}`, livemode: false, type: "checkout.completed", sessionId: s });
   const orderId = session.req.orderId;
   await generateReading({ db: ctx.db, ring: ctx.ring, boss, llm: llmAdapter(ctx.env), payments: pay, approvedSnippetsOnly: false, dailyCap: dailyCap(ctx.env) }, orderId).catch(() => undefined);
   return new Response(null, { status: 303, headers: { Location: `${new URL(ctx.env.APP_ORIGIN).origin}/order/${orderId}` } });

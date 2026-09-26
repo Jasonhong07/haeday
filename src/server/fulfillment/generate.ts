@@ -25,6 +25,8 @@ export const LLM_MAX_TOKENS = 3_000;
 
 export interface GenerateDeps {
   db: Db; ring: Keyring; boss: PgBoss; llm: LlmAdapter | null; payments: PaymentAdapter;
+  /** CC4c: refunds of PayPal orders (service failure, deadline) go through PayPal. */
+  paypal?: PaymentAdapter | null;
   approvedSnippetsOnly: boolean; dailyCap: number; now?: () => Date;
   /** Test hook (F13): runs right after the capacity count, inside the admission transaction. */
   hooks?: { afterCapacityCount?: () => Promise<void> };
@@ -154,7 +156,7 @@ export async function generateReading(deps: GenerateDeps, orderId: string): Prom
  * the refund. Guards stop a stale worker (old fencing token) or a stale sweep from failing an order that moved on.
  */
 export async function failAndRefund(
-  deps: Pick<GenerateDeps, "db" | "ring" | "boss" | "payments" | "now">, orderId: string, code: string,
+  deps: Pick<GenerateDeps, "db" | "ring" | "boss" | "payments" | "paypal" | "now">, orderId: string, code: string,
   guard: { fencingToken?: string; deadlineBefore?: Date },
 ): Promise<GenerateOutcome> {
   const now = deps.now?.() ?? new Date();
@@ -180,7 +182,7 @@ export async function failAndRefund(
 }
 
 /** Cron (every minute): paid orders past their fulfillment deadline go down the failure path (ARCHITECTURE §4.4.5). */
-export async function sweepDeadlines(deps: Pick<GenerateDeps, "db" | "ring" | "boss" | "payments" | "now">): Promise<{ failed: number; slow: number }> {
+export async function sweepDeadlines(deps: Pick<GenerateDeps, "db" | "ring" | "boss" | "payments" | "paypal" | "now">): Promise<{ failed: number; slow: number }> {
   const now = deps.now?.() ?? new Date();
   const late = await deps.db.select({ id: orders.id }).from(orders)
     .where(and(eq(orders.paymentStatus, "paid"), inArray(orders.fulfillmentStatus, ["queued", "generating"]), lt(orders.fulfillmentDeadlineAt, now)));

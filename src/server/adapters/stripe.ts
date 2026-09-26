@@ -12,6 +12,7 @@ const piId = (v: string | { id: string } | null | undefined) => (typeof v === "s
 
 export class StripePaymentAdapter implements PaymentAdapter {
   readonly provider = "stripe" as const;
+  readonly kind = "stripe" as const;
   private readonly stripe: Stripe;
   readonly livemode: boolean;
   constructor(secretKey: string, private readonly webhookSecret: string | undefined) {
@@ -116,6 +117,7 @@ export class StripePaymentAdapter implements PaymentAdapter {
         id: r.id, status: refundStatus(r.status), amountCents: r.amount, currency: r.currency,
         refundRowId: r.metadata?.refundRowId ?? null, orderId: r.metadata?.orderId ?? null, failureReason: r.failure_reason ?? null,
       })),
+      complete: true, // every page of the refund list
     };
   }
 

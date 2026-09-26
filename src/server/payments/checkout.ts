@@ -7,14 +7,14 @@ import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { checkoutAttempts, orders } from "../db/schema";
 import { loadChart } from "../charts/service";
-import { encryptPrivate, type Keyring } from "../security/encryption";
+import { emailLookup, encryptPrivate, normalizeEmail, type Keyring } from "../security/encryption";
 import { aad } from "../security/keyring";
 import { isSalesEnabled } from "../settings";
 import { POLICY_VERSION } from "../engine";
 import { LIBRARY_VERSION } from "@/content/library";
 import { SNIPPETS_VERSION } from "@/content/snippets";
 import { PROMPT_VERSION, buildFacts, contentReady, selectSnippets } from "../fulfillment/prompt";
-import { PaymentProviderError, type CheckoutSessionRequest, type PaymentAdapter } from "./adapter";
+import { PaymentProviderError, type CheckoutSessionRequest, type PaymentAdapter, type ProviderKind } from "./adapter";
 import { openIssue } from "./issues";
 import { CONSENT_VERSION, CONSENT_VERSION_DELAYED, SKUS, type Sku } from "./sku";
 import { capacityState } from "../fulfillment/capacity";
@@ -22,7 +22,10 @@ import { capacityState } from "../fulfillment/capacity";
 export interface CheckoutDeps {
   db: Db;
   ring: Keyring;
+  /** The provider of THIS checkout (Stripe page, or PayPal/Venmo buttons). */
   payments: PaymentAdapter;
+  /** CC4c: the other provider, to close an open order the customer started there before switching. */
+  others?: Partial<Record<ProviderKind, PaymentAdapter | null>>;
   priceId: string;
   origin: string;
   automaticTax: boolean;
@@ -36,7 +39,8 @@ export interface CheckoutDeps {
 }
 
 export type CheckoutResult =
-  | { ok: true; url: string; orderId: string }
+  /** Stripe: `url` is the hosted page. PayPal: `url` is null and the buttons approve `providerCheckoutId`. */
+  | { ok: true; url: string | null; orderId: string; providerCheckoutId: string }
   | { ok: false; error: "consent_required" | "sales_closed" | "not_found" | "needs_answer" | "provider_error" | "content_not_ready" | "busy" }
   | { ok: false; error: "promise_changed"; promise: "minutes" | "24h" }
   | { ok: false; error: "already_owned" | "processing"; orderId: string };
@@ -69,8 +73,13 @@ export const RESEND_WINDOW_MIN = 25;
  * `quotedPromise` = the delivery promise the checkout page showed (and the customer consented to). The server
  * re-decides; if it is now WORSE than what was shown, nothing is created and the page must show the new notice.
  */
-export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRevisionId: string, consent: boolean, sku: Sku = "saju_reading", quotedPromise: "minutes" | "24h" = "minutes"): Promise<CheckoutResult> {
+export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRevisionId: string, consent: boolean, sku: Sku = "saju_reading", quotedPromise: "minutes" | "24h" = "minutes",
+  opts: { email?: string } = {}): Promise<CheckoutResult> {
   if (!consent) return { ok: false, error: "consent_required" };
+  const kind = deps.payments.kind;
+  // PayPal/Venmo: the reading link goes to the email typed on our page (Jason 2026-09-26). Stripe collects its own.
+  const email = kind === "paypal" ? (opts.email ? normalizeEmail(opts.email) : null) : null;
+  if (kind === "paypal" && !email) return { ok: false, error: "consent_required" };
   if (!(await isSalesEnabled(deps.db))) return { ok: false, error: "sales_closed" };
   const chart = await loadChart(deps.db, deps.ring, chartRevisionId, guestId);
   if (!chart) return { ok: false, error: "not_found" };
@@ -92,10 +101,20 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
     });
     if (existing && existing.paymentStatus !== "open") return { ok: false, error: "already_owned", orderId: existing.id };
 
-    if (existing && existing.deliveryPromise !== promise) {
-      // An open order made under a different promise: never charge under a promise this page did not show.
+    if (existing && (existing.deliveryPromise !== promise || existing.paymentProvider !== kind)) {
+      // An open order made under a different promise (never charge under a promise this page did not show), or
+      // with the other provider (the customer switched between card and PayPal): close it there first.
       if (existing.providerCheckoutId) {
-        try { await deps.payments.expireCheckoutSession(existing.providerCheckoutId); } catch { return { ok: false, error: "provider_error" }; }
+        const adapter = existing.paymentProvider === kind ? deps.payments : deps.others?.[existing.paymentProvider as ProviderKind];
+        if (!adapter) return { ok: false, error: "provider_error" };
+        if (existing.paymentProvider === "paypal") {
+          // PayPal cannot void an order, so ask first: if the buyer already approved it (or it is paid / under
+          // review), closing it here could strand a payment. It is being finished instead.
+          let ref;
+          try { ref = await adapter.getCheckoutSession(existing.providerCheckoutId); } catch { return { ok: false, error: "provider_error" }; }
+          if (ref.status === "approved" || ref.status === "complete") return { ok: false, error: "processing", orderId: existing.id };
+        }
+        try { await adapter.expireCheckoutSession(existing.providerCheckoutId); } catch { return { ok: false, error: "provider_error" }; }
       }
       await deps.db.update(orders).set({ paymentStatus: "expired", updatedAt: new Date() }).where(and(eq(orders.id, existing.id), eq(orders.paymentStatus, "open")));
       continue;
@@ -104,13 +123,19 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
       if (existing.providerCheckoutId) {
         let session;
         try { session = await deps.payments.getCheckoutSession(existing.providerCheckoutId); } catch { return { ok: false, error: "provider_error" }; }
-        if (session.status === "open" && session.url) return { ok: true, url: session.url, orderId: existing.id };
-        if (session.status === "complete") return { ok: false, error: "processing", orderId: existing.id };
-        // Expired at Stripe: close this order and start a fresh one on the next loop.
+        const fresh = kind !== "paypal" || (deps.now?.() ?? new Date()).getTime() - existing.createdAt.getTime() < SESSION_TTL_MIN * 60_000;
+        if (session.status === "open" && fresh && (session.url || kind === "paypal")) {
+          if (email) await setOrderEmail(deps, existing.id, email);
+          return { ok: true, url: session.url, orderId: existing.id, providerCheckoutId: session.id };
+        }
+        // PayPal "approved": the buyer already approved it; our capture (page, webhook or reconciliation) finishes it.
+        if (session.status === "complete" || session.status === "approved") return { ok: false, error: "processing", orderId: existing.id };
+        // Expired at the provider (or an old unapproved PayPal order): close this order and start a fresh one.
         await deps.db.update(orders).set({ paymentStatus: "expired", updatedAt: new Date() })
           .where(and(eq(orders.id, existing.id), eq(orders.paymentStatus, "open")));
         continue;
       }
+      if (email) await setOrderEmail(deps, existing.id, email);
       const resumed = await sendFrozen(deps, existing.id);
       if (resumed === "abandoned") continue; // provably never created: the next loop opens a new order
       return resumed;
@@ -134,8 +159,8 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
       successUrl: `${deps.origin}/order/${id}`,
       cancelUrl: `${deps.origin}/chart/${chartRevisionId}`,
       idempotencyKey: `checkout:${id}`,
-      automaticTax: deps.automaticTax,
-      allowPromotionCodes: deps.allowPromotionCodes ?? true,
+      automaticTax: kind === "paypal" ? false : deps.automaticTax,
+      allowPromotionCodes: kind === "paypal" ? false : deps.allowPromotionCodes ?? true,
       expiresAt: Math.floor(now.getTime() / 1000) + SESSION_TTL_MIN * 60,
     };
     request.providerParams = deps.payments.buildCheckoutParams(request);
@@ -144,7 +169,8 @@ export async function startCheckout(deps: CheckoutDeps, guestId: string, chartRe
         id, chartRevisionId, guestId, sku,
         unitAmountCents: SKUS[sku].amountCents, currency: SKUS[sku].currency,
         snapshotEnc: encryptPrivate(snapshot, aad("orders", id, "snapshot"), deps.ring),
-        consentVersion, deliveryPromise: promise, createdAt: now, updatedAt: now,
+        consentVersion, deliveryPromise: promise, createdAt: now, updatedAt: now, paymentProvider: kind,
+        ...(email ? { deliveryEmailEnc: encryptPrivate(email, aad("orders", id, "delivery_email"), deps.ring), deliveryEmailLookup: emailLookup(email, deps.ring) } : {}),
       }).onConflictDoNothing().returning({ id: orders.id });
       if (inserted.length === 0) return false;
       await tx.insert(checkoutAttempts).values({ orderId: id, idempotencyKey: request.idempotencyKey, request, createdAt: now });
@@ -200,10 +226,10 @@ async function sendFrozen(deps: CheckoutDeps, orderId: string): Promise<Checkout
     if (session.status === "open") await deps.payments.expireCheckoutSession(session.id).catch(() => undefined);
     return "abandoned";
   }
-  if (session.status === "complete") return { ok: false, error: "processing", orderId };
+  if (session.status === "complete" || session.status === "approved") return { ok: false, error: "processing", orderId };
   if (session.status === "expired") { await expireOpenOrder(deps.db, orderId, now); return "abandoned"; } // replayed an old, dead session
-  if (session.status !== "open" || !session.url) return { ok: false, error: "provider_error" };
-  return { ok: true, url: session.url, orderId };
+  if (session.status !== "open" || (!session.url && deps.payments.kind !== "paypal")) return { ok: false, error: "provider_error" };
+  return { ok: true, url: session.url, orderId, providerCheckoutId: session.id };
 }
 
 /** Store the provider session on the order and its attempt. False if the order is no longer open (or has another session). */
@@ -214,6 +240,12 @@ export async function linkSession(db: Db, orderId: string, sessionId: string, no
     const [o] = await tx.select({ status: orders.paymentStatus, sid: orders.providerCheckoutId }).from(orders).where(eq(orders.id, orderId));
     return o?.status === "open" && o.sid === sessionId;
   });
+}
+
+/** PayPal: the customer may correct the email on a still-open order (it is only used after payment). */
+async function setOrderEmail(deps: CheckoutDeps, orderId: string, email: string): Promise<void> {
+  await deps.db.update(orders).set({ deliveryEmailEnc: encryptPrivate(email, aad("orders", orderId, "delivery_email"), deps.ring), deliveryEmailLookup: emailLookup(email, deps.ring), updatedAt: new Date() })
+    .where(and(eq(orders.id, orderId), eq(orders.paymentStatus, "open")));
 }
 
 async function expireOpenOrder(db: Db, orderId: string, now: Date): Promise<void> {

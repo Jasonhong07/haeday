@@ -4,6 +4,8 @@ import { FakePaymentAdapter } from "./adapters/fake-payments";
 import { DevLlm } from "./adapters/dev-llm";
 import { SITE } from "@/lib/site";
 import { StripePaymentAdapter } from "./adapters/stripe";
+import { PayPalPaymentAdapter } from "./adapters/paypal";
+import { FakePayPalAdapter } from "./adapters/fake-paypal";
 import { AnthropicLlm, type LlmAdapter } from "./adapters/llm";
 import { ResendEmail, type EmailAdapter } from "./adapters/email";
 import type { PaymentAdapter } from "./payments/adapter";
@@ -15,6 +17,18 @@ export function paymentAdapter(env: Env): PaymentAdapter | null {
     else payments = env.STRIPE_SECRET_KEY ? new StripePaymentAdapter(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET) : null;
   }
   return payments;
+}
+
+let paypal: PaymentAdapter | null | undefined;
+/** CC4c: PayPal/Venmo adapter (sandbox in test mode). Refunds of PayPal orders need it even if new PayPal sales are hidden. */
+export function paypalAdapter(env: Env): PaymentAdapter | null {
+  if (paypal === undefined) {
+    if (devFakes(env)) paypal = new FakePayPalAdapter();
+    else paypal = env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET
+      ? new PayPalPaymentAdapter({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET, webhookId: env.PAYPAL_WEBHOOK_ID, live: env.PAYMENTS_MODE === "live" })
+      : null;
+  }
+  return paypal;
 }
 
 export function llmAdapter(env: Env): LlmAdapter | null {

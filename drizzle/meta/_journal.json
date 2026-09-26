@@ -57,6 +57,13 @@
       "when": 1790447134064,
       "tag": "0007_provider_neutral",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790448425529,
+      "tag": "0008_paypal_capture",
+      "breakpoints": true
     }
   ]
 }

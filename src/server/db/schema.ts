@@ -116,6 +116,7 @@ export const orders = pgTable("orders", {
   index("orders_status_paid_at_idx").on(t.paymentStatus, t.paidAt),
   index("orders_fulfillment_deadline_idx").on(t.fulfillmentStatus, t.fulfillmentDeadlineAt),
   check("orders_amount_positive", sql`${t.unitAmountCents} > 0`),
+  check("orders_payment_provider_known", sql`${t.paymentProvider} in ('stripe', 'paypal')`),
 ]);
 
 export const paymentEvents = pgTable("payment_events", {
@@ -224,6 +225,8 @@ export const checkoutAttempts = pgTable("checkout_attempts", {
   sessionId: text("session_id"),
   createdAt: createdAt(),
   lastTriedAt: ts("last_tried_at"),
+  /** CC4c PayPal: declined captures so far. The capture key includes it, so a retry after a decline is a NEW request. */
+  captureDeclines: integer("capture_declines").notNull().default(0),
 });
 
 /** D36: an extra generation attempt granted by an admin retry. One row per admin request (double click = one grant). */

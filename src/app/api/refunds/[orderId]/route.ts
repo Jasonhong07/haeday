@@ -1,5 +1,5 @@
 // POST /api/refunds/[orderId]: customer goodwill refund through the single refund service (ARCHITECTURE §4.8, D18).
-import { paymentAdapter } from "@/server/deps";
+import { paymentAdapter, paypalAdapter } from "@/server/deps";
 import { findGuest, GUEST_COOKIE } from "@/server/guest";
 import { customerFromSession, SESSION_COOKIE } from "@/server/auth";
 import { json, readCookie, sameOrigin, serverContext } from "@/server/http";
@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
   const payments = paymentAdapter(ctx.env);
   if (!payments) return json({ error: "temporary_failure" }, 503);
   const boss = await getWebBoss(ctx.env.DATABASE_URL!);
-  const r = await requestRefund({ db: ctx.db, payments, boss }, { orderId: view.id, reason: "goodwill", requestedBy: "customer" });
+  const r = await requestRefund({ db: ctx.db, payments, paypal: paypalAdapter(ctx.env), boss }, { orderId: view.id, reason: "goodwill", requestedBy: "customer" });
   if (r.ok) return json({ status: r.status === "succeeded" ? "refunded" : "pending" });
   const map = { not_found: "unavailable", not_paid: "unavailable", already_refunded: "already_refunded", in_progress: "pending", outside_window: "outside_window", goodwill_used: "outside_window", disputed: "unavailable", nothing_to_refund: "already_refunded" } as const;
   return json({ error: map[r.error] }, 409);

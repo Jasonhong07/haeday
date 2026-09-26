@@ -6,7 +6,9 @@ export function proxy(request: NextRequest) {
   const mode = (process.env.CSP_MODE ?? "report-only") as CspMode;
   if (mode === "off") return NextResponse.next();
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = buildCsp(nonce, { dev: process.env.NODE_ENV === "development", https: (process.env.APP_ORIGIN ?? "").startsWith("https://") });
+  // CC4c: PayPal's hosts are allowed only on the checkout page, where the PayPal/Venmo buttons live.
+  const paypal = request.nextUrl.pathname.startsWith("/checkout/");
+  const csp = buildCsp(nonce, { dev: process.env.NODE_ENV === "development", https: (process.env.APP_ORIGIN ?? "").startsWith("https://"), paypal });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp); // Next reads the nonce from here and stamps its own scripts
