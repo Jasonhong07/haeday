@@ -27,3 +27,10 @@ test("method page explains uncertainty and attributes the city data on mobile", 
   await expect(page.getByRole("link", { name: "GeoNames city data" })).toHaveAttribute("href", "https://www.geonames.org/");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test("draft saju guides are hidden from visitors (404) until Jason approves them", async ({ page }) => {
+  for (const path of ["/learn", "/learn/what-is-saju", "/learn/day-master/yin-wood"]) {
+    const res = await page.goto(path);
+    expect(res!.status(), path).toBe(404);
+  }
+});

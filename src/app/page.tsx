@@ -9,6 +9,7 @@ import { dailyCap, paymentAdapter } from "@/server/deps";
 import { llmConfigured, paymentsConfigured } from "@/server/env";
 import { serverContext } from "@/server/http";
 import { isSalesEnabled } from "@/server/settings";
+import { publishedGuides } from "@/lib/guides";
 
 export const metadata: Metadata = {
   title: "Haeday · Your Korean birth chart (saju), free",
@@ -76,7 +77,7 @@ export default async function Home() {
 
       <p className="fine" style={{ marginTop: 32 }}>One-time payment · No subscription · Secure checkout by Stripe · Your birth details are encrypted and never shared.</p>
       <Link className="btn btn-primary" href="/saju" style={{ maxWidth: 420, marginTop: 8 }}>See my birth chart · Free</Link>
-      <footer>AI-assisted · For entertainment and reflection · Not advice · <Link href="/method">How we calculate</Link> · <Link href="/refunds">Refunds</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></footer>
+      <footer>AI-assisted · For entertainment and reflection · Not advice · <Link href="/method">How we calculate</Link> · {publishedGuides().length > 0 && <><Link href="/learn">Saju guides</Link> · </>}<Link href="/refunds">Refunds</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></footer>
     </main>
   );
 }
