@@ -1,0 +1,51 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ReadingTools } from "@/app/r/[readingId]/ReadingTools";
+import { ShareButton } from "@/app/chart/[id]/ChartClient";
+import { shareData } from "@/lib/share";
+import { SITE } from "@/lib/site";
+const SECTIONS = [
+  ["summary", "Your chart at a glance"], ["dayMaster", "Your Day Master"], ["elements", "Your elements in balance"],
+  ["love", "Love and relationships"], ["workMoney", "Work and money"], ["year2027", "Your 2027 energy"], ["reflection", "A question to reflect on"],
+] as const;
+export default function Preview() {
+  if (process.env.NODE_ENV !== "development") notFound();
+  const dm = {stem:"丁",name:"Yin Fire",image:"The candle"};
+  const view = {disclosure:"This fixture demonstrates a birth-time uncertainty notice. No customer information is used.",refunded:false,pillars:null};
+  const paragraph = "This is layout test copy. The finished reading will use the customer's chart and approved interpretation library. This paragraph demonstrates line length, spacing and readability without making any personal claim.";
+  const r = {summary:paragraph,dayMaster:paragraph,elements:paragraph,love:paragraph,workMoney:paragraph,year2027:paragraph,reflection:paragraph,disclaimer:"Layout fixture for local review only."};
+  return (
+    <main className="reading">
+      <header className="reading-head">
+        <Link href="/" className="reading-brand"><span aria-hidden="true">☾</span> Haeday</Link>
+        {dm && <p className="reading-dm"><span className="reading-dm-hanja" aria-hidden="true">{dm.stem}</span>{dm.name} · {dm.image}</p>}
+      </header>
+      <ReadingTools>
+      <article>
+        <p className="reading-kicker">HAEDAY · A MOMENT FOR REFLECTION</p>
+        <h1>Your personal reading</h1><p className="reading-disclosure">LOCAL DESIGN FIXTURE · Placeholder text, not a personal reading.</p>
+        <p className="reading-intro">Take what resonates. Leave room for your own story.</p>
+        {view.disclosure && <p className="reading-disclosure">{view.disclosure}</p>}
+        {view.refunded && <p className="reading-disclosure">This order was refunded. You can keep reading.</p>}
+        <nav className="reading-contents" aria-label="Reading contents"><p>IN THIS READING</p><ol>{SECTIONS.map(([key, title]) => <li key={key}><a href={`#reading-${key}`}>{title}</a></li>)}</ol></nav>
+        {SECTIONS.map(([key, title], index) => (
+          <section key={key} className="reading-chapter" aria-labelledby={`reading-${key}`}>
+            <p className="chapter-number" aria-hidden="true">0{index + 1} /</p>
+            <h2 id={`reading-${key}`} tabIndex={-1}>{title}</h2>
+            {r[key].split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)}
+          </section>
+        ))}
+        {dm && view.pillars && (
+          <section className="reading-share" aria-label="Share">
+            {/* C6: same private, in-browser image as the chart page. No public link to this reading exists. */}
+            <p className="reading-fine">Share your Day Master (no birth details, no reading text):</p>
+            <ShareButton data={shareData(dm, view.pillars)} />
+          </section>
+        )}
+        <p className="reading-fine">{r.disclaimer} Questions? {SITE.support}</p>
+        <Link href="/my" className="reading-back">Back to my readings →</Link>
+      </article>
+      </ReadingTools>
+    </main>
+  );
+}

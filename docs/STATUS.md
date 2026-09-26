@@ -1,3 +1,11 @@
+# Current handoff · 2026-09-26
+
+Current queue: `growth/08_LAUNCH_HANDOFF.md`. Progress: **38/46 TASKS = 82.6% by item count**, not elapsed effort or release clearance. Remaining gates and owners: `LAUNCH_PROGRESS_2026-09-26.md`. User demo: `TRY_HAEDAY_KO.md`. Owner-only steps: `JASON_LAUNCH_STEPS.md`.
+
+Codex on base `88a9f15`: landing/input/result/reading redesign; checkout birth-detail confirmation; truthful order/refund states including $0/discounted orders and failed refunds; refund navigation; public landing isolation; encryption preflight validation; local demo launcher. **Local full suite: 376 passed / 5 external contract tests skipped (44 files passed, 2 skipped)**. Final production build (including TypeScript), full ESLint and diff whitespace checks PASS. Fake Stripe→reading and fake PayPal→reading→refund were manually exercised in the browser with real local DB and enforced CSP. Full Playwright runner / current staging / real provider sandbox NOT RUN. No deployment, actual charges or customer mail.
+
+**The snapshot below is historical; its percentages, pending items and test counts are not the current release checklist.**
+
 # Status (2026-09-24, evening)
 
 > Latest CC0 follow-up: see `review/PROPOSAL_V2_CODEX.md` and `review/CHANGES_CODEX_CC0.md`.

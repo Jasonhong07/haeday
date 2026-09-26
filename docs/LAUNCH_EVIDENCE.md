@@ -3,6 +3,30 @@
 Every TASKS item and launch-checklist item gets one row. Status: PASS / FAIL / NOT RUN. No row = not done.
 Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, PostgreSQL 16.13 (local), Chromium (preinstalled).
 
+## Codex latest launch pass · 2026-09-26
+
+Environment: Jason Windows PC, Node24.18.0, portable PostgreSQL16.14 bound to127.0.0.1:55432; isolated `haeday_test` and persistent `haeday_demo`. No production DB/provider keys used. Base88a9f15 + local diff. This section supersedes earlier NOT RUN for local DB/build, not for staging or provider sandbox.
+
+| Check | Exact execution / evidence | Result |
+|---|---|---|
+| Full unit + DB integration, first attempt | `node scripts/local-demo.mjs test`, concurrent with Next build | 362 PASS, 1 timeout (30 unknown-time charts), 5 provider contract SKIP; FAIL documented |
+| Isolated rerun | Same command, after build | 363 PASS / 5 SKIP, 43 files PASS / 2 SKIP, 105.33s |
+| Final suite after refund/preflight fixes | Same command, 16:37:26 local run | **376 PASS / 5 SKIP**, 44 files PASS / 2 SKIP, 155.90s; no timeout or expected fixture edits |
+| Final production build | `node scripts/local-demo.mjs build`, Next16.3.6 | **PASS**, compile6.6s, TypeScript21.4s, static generation15/15; no deployment |
+| Final lint | `node node_modules/eslint/bin/eslint.js .` | **PASS**, exit0 |
+| Whitespace | `git diff --check` | **PASS**, exit0; Windows line-ending notices only |
+| Local startup | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local-demo.ps1 -Mode prepare`, then serve | PASS; Unicode-safe drive mapping, migrations, localhost3008 |
+| Browser: fake card full path | /saju exact Seoul→chart→checkout confirmation→/dev/pay→order→reading | PASS; real app/DB/generation validation; fake payment and fake AI only |
+| Browser: unknown time + fake PayPal | Chicago1988-08-20 unknown→day boundary12:00–12:50 AM shown again before pay→fake PayPal | PASS; delivered |
+| Browser: fake PayPal refund | customer request→provider fake success→order refunded | PASS; no real money, `growth/demo-refunded-390.png` |
+| Browser: reading UX | 390px; larger text20px, no horizontal overflow,2027 anchor~24px, share preview | PASS; `growth/demo-reading-390.png`, `demo-share-390.png`, `demo-checkout-390.png` |
+| Formal Playwright whole suite | Updated assertions exist, runner not executed by Codex | **NOT RUN**; manual browser evidence is separate |
+| Real provider / operational proof | Stripe contract, PayPal sandbox/SDK/Venmo, actual AI quality/cost, Resend receipt, Railway restore/current staging | **NOT RUN**; existing account setup is acknowledged, URL/access verification pending |
+
+Files and rationale: `LAUNCH_PROGRESS_2026-09-26.md`. User steps: `TRY_HAEDAY_KO.md`, `JASON_LAUNCH_STEPS.md`. Next reviewer: `growth/08_LAUNCH_HANDOFF.md`. No content approval, D49 policy change, live switch or customer mail executed.
+
+## Earlier evidence (historical)
+
 | Date | Milestone / item | Environment | Command or action | Result | Status | By |
 |---|---|---|---|---|---|---|
 | 2026-09-24 | M0 install from lockfile | cloud-dev | `pnpm install` | lockfile committed, build scripts allowed only for esbuild, unrs-resolver | PASS | Claude |
@@ -84,3 +108,18 @@ Environment "cloud-dev" = Claude workspace: Linux, Node 24.18.0, pnpm 11.19.0, P
 - Mutation check: D50 12-month window → new goodwill-reset test fails.
 - Independent review: Claude sub-agent (read-only) ×1 on the CC3 diff; 2 major + 5 minor fixed. CC2 was not separately re-reviewed. ChatGPT review: **NOT RUN**.
 - NOT RUN: real Resend send + List-Unsubscribe header (domain/key pending); marketing sending stays OFF until D48.
+
+
+# Codex UI/UX follow-up · 2026-09-26
+- Base: 88a9f15. Details: growth/05_IMPLEMENTATION_REVIEW_2026-09-26.md.
+- Node 24.18.0: TypeScript noEmit PASS; ESLint of page.tsx, SajuForm.tsx, PayPalCheckout.tsx, foundation.spec.ts PASS.
+- vitest run tests/paypal-adapter.test.ts tests/paypal-webhook-route.test.ts tests/launch-protection.test.ts: 18/18 PASS (3 files). No provider network or database integration.
+- Browser: actual Next dev landing at 360/390/430/768px, no horizontal overflow; desktop visual check; free CTA to /saju; FAQ 12-month copy; keyboard time selection; empty city result and Chicago Enter-selection PASS. Screenshots in docs/growth.
+- NOT RUN: new Playwright cases, full suite, production build, actual PayPal/Venmo sandbox, staging smoke/restore. Browser preview uses an intentionally unreachable dummy DB; analytics write errors are expected in this preview.
+
+
+# Codex G2 result / reading UX · 2026-09-26
+- See growth/07_NEXT_STEP_HANDOFF.md and growth/06_DESIGN_REFERENCES_V2.md.
+- Final tsc --noEmit PASS; ESLint chart page/client, reading page/tools, purchase/chart E2E files PASS.
+- Browser layout fixture: 360/390px no overflow, larger text 20px and aria-pressed=true, contents link to 2027 puts its heading 24px from viewport top. Fixture route removed; no customer data used.
+- E2E assertions added: legacy unapproved line absent, text-size toggle, contents navigation. NOT RUN with DB. Full build/provider sandbox/native share NOT RUN.

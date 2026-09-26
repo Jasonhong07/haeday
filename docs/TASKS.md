@@ -3,11 +3,11 @@
 Rules: one milestone at a time, in order. A box is ticked only with evidence recorded in `docs/LAUNCH_EVIDENCE.md` (command, environment, result). Dates are targets (D13).
 
 Current remediation plan (2026-09-24): `review/PROPOSAL_V2_CODEX.md` and `review/HANDOFF_CC1_CODEX.md`.
-F8, F10 HTTP boundary and F5 transaction binding have local changes; see `review/CHANGES_CODEX_CC0.md` for tests and unverified DB integration. Historical checked boxes below do not certify these open payment/refund issues as fixed. D46–D48 remain proposed pending owner answers.
+Latest evidence and remaining gates: `LAUNCH_PROGRESS_2026-09-26.md`, `LAUNCH_EVIDENCE.md`; next handoff `growth/08_LAUNCH_HANDOFF.md`. D46/D47 are accepted; D48 is still proposed. Historical checked boxes below do not certify the latest deployment or external provider tests.
 
 ## M0 · Foundation (9/24)
 - [x] Repo: Next.js App Router + TS strict + pnpm, ESLint, Vitest, Playwright skeleton, GitHub Actions (typecheck, lint, test) · CI file written, first GitHub run pending repo creation
-- [x] Pin versions: Node LTS (record exact), pnpm via `npm i -g pnpm@<ver>`, Python 3.12 for tools/oracle, lockfiles committed; record in DECISIONS D12 · Python choice pending (D12/D21)
+- [x] Pin versions: Node 24.18.0, pnpm 11.19.0, Python 3.14 for tools/oracle, lockfiles committed; DECISIONS D12/D21
 - [x] server/env.ts (ARCHITECTURE §7), APP_ENV / PAYMENTS_MODE handling; app boots without Stripe/LLM keys (checkout disabled)
 - [x] Drizzle schema v1 (all ARCHITECTURE §2 tables) + migration committed
 - [x] pg-boss worker with heartbeat; **transaction proof test**: insert row + enqueue inside one Drizzle transaction, throw → both rolled back; commit → job exists
@@ -23,7 +23,7 @@ F8, F10 HTTP boundary and F5 transaction binding have local changes; see `review
 - [x] `fixtures/manifest.json` with F01–F30 (+F12z, F28b, F31 = 33 cases); `pnpm oracle:verify` in CI compares every step (utc, offsets, jie neighbors, trueSolar within tolerance, pillars, warnings)
 - [x] Unit tests: 五虎遁, 五鼠遁, ten-god tables, visible counts with 6/8 denominators, day anchor continuity 1900–2050
 - [x] Unknown-time minute enumeration: day-split (disclosure text exact), DST date, month-split (question)
-- [x] `docs/crosscheck.md`: Part A lunar_python 3,000/3,000 (414 places); Part B 천을귀인 (Jason) + 포스텔러 web (Claude): zero unexplained differences. Open policy question D28 (균시차)
+- [x] `docs/crosscheck.md`: Part A lunar_python 3,000/3,000 (414 places); Part B 천을귀인 (Jason) + 포스텔러 web (Claude): zero unexplained differences. D28 accepted: equation of time removed, policy v2
 - Gate: all fixtures pass and crosscheck explained → paid sales may open later. If not, keep building; sales stay off (D10).
 
 ## M2 · Input + free chart (9/27)
@@ -41,7 +41,7 @@ F8, F10 HTTP boundary and F5 transaction binding have local changes; see `review
 - [x] Reconciliation function shared with webhook validation · refunds (CC1a) + Stripe sessions every 3/30 min (CC1b)
 
 ## M4 · Reading generation (9/29)
-- [ ] D11: pick LLM + model with structured output; record cost per reading from 5 real test calls · adapter built (Anthropic), waiting for Q1 + key
+- [ ] D11: record exact deployed LLM model and cost per reading from 5 real test calls · Anthropic adapter built; verify current configured model/key availability, do not repeat account signup
 - [x] Prompt per PRD §7 with facts + approved snippets; Zod schema; content checks (word range, forbidden claims list, usedSnippetIds ⊆ provided)
 - [x] Worker per ARCHITECTURE §4.4 with fencing tokens and deadlines; email_outbox
 - [x] Tests: timeout twice then success (one reading, one email); refund starts during generation (late result not saved); email provider down (no regeneration, no refund); worker killed mid-generation (retry completes once)
